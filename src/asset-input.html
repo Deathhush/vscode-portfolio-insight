@@ -350,11 +350,9 @@
             summaryText = "Number of Shares";
             summaryValue = "0";
             break;
-        }
-
-        return `
+        }        return `
                 <div class="asset-group">
-                    <div class="asset-header" onclick="toggleAsset(this)">
+                    <div class="asset-header active" onclick="toggleAsset(this)">
                         <div class="asset-info">
                             <span class="asset-type-badge type-${asset.type}">${
           asset.type.charAt(0).toUpperCase() + asset.type.slice(1)
@@ -362,9 +360,9 @@
                             <span class="asset-name">${asset.name}</span>
                             ${currencyLabel}
                         </div>
-                        <span class="collapse-icon">▼</span>
+                        <span class="collapse-icon rotated">▼</span>
                     </div>
-                    <div class="asset-content">
+                    <div class="asset-content expanded">
                         ${inputFields}
                         <div class="value-summary">
                             <div class="summary-text">${summaryText}</div>
@@ -507,21 +505,14 @@
           const summaries = document.querySelectorAll(".value-summary");
           summaries.forEach((summary) => {
             summary.classList.remove("has-value");
-          });
-
-          alert("All values have been reset.");
+          });          alert("All values have been reset.");
         }
-      } // Auto-expand first asset on load
-      
+      }
+
+      // Generate all assets on page load
       document.addEventListener("DOMContentLoaded", function () {
-        // Generate all assets first
+        // Generate all assets (they will be expanded by default)
         generateAllAssets();
-
-        // Then expand the first asset
-        const firstAssetHeader = document.querySelector(".asset-header");
-        if (firstAssetHeader) {
-          toggleAsset(firstAssetHeader);
-        }
       });
     </script>
   </body>
