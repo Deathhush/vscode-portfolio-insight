@@ -251,13 +251,20 @@
         font-weight: 600;
         color: #333;
         margin-top: 3px;
-      }
-
+      }      
+      
       .transfers-section {
         margin-top: 15px;
         padding-top: 15px;
         border-top: 1px solid #e1e5e9;
-      }      .transfers-header {
+        display: none;
+      }
+
+      .transfers-section.visible {
+        display: block;
+      }
+      
+      .transfers-header {
         font-weight: 600;
         color: #333;
         font-size: 0.9em;
@@ -265,20 +272,49 @@
         display: flex;
         align-items: center;
         gap: 8px;
+      }      
+      
+      .transfer-toggle-btn {
+        background: #b2c8f2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 0.7em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 8px;
       }
 
+      .transfer-toggle-btn:hover {
+        background: #80abf4;
+      }
+
+      .transfer-toggle-btn.active {
+        background: #667eea;
+      }
+
+      .transfer-toggle-btn.active:hover {
+        background: #5a67d8;
+      }      
+      
       .transfers-help {
         font-size: 0.75em;
         color: #666;
         font-weight: normal;
         font-style: italic;
         margin-left: auto;
-      }
-
+      }      
+      
       .transfers-icon {
         color: #667eea;
         font-size: 1em;
-      }      .transfer-item {
+      }
+
+      .transfer-item {
         background: #f8f9fa;
         border: 1px solid #e1e5e9;
         border-radius: 4px;
@@ -433,10 +469,16 @@
 
         .asset-content.expanded {
           padding: 12px;
-        }
-
+        }        
+        
         .asset-header-right {
           gap: 5px;
+        }
+
+        .transfer-toggle-btn {
+          font-size: 0.6em;
+          padding: 3px 6px;
+          margin-right: 4px;
         }
 
         .asset-date-picker {
@@ -623,8 +665,10 @@
         }</span>
                             <span class="asset-name">${asset.name}</span>
                             ${currencyLabel}
-                        </div>
-                        <div class="asset-header-right">
+                        </div>                        <div class="asset-header-right">
+                            <button type="button" class="transfer-toggle-btn" onclick="toggleTransfers('${asset.id || asset.name}', event)" title="Toggle Transfers">
+                                <span>⇄</span>
+                            </button>
                             <input type="date" class="asset-date-picker" 
                                    onchange="handleAssetDateChange(this, event)" 
                                    onclick="event.stopPropagation()" />
@@ -692,6 +736,24 @@
             select.value = selectedValue;
           }
         });
+      }
+
+      function toggleTransfers(assetId, event) {
+        event.stopPropagation(); // Prevent triggering asset toggle
+        
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const transfersSection = assetGroup.querySelector('.transfers-section');
+        const toggleBtn = assetGroup.querySelector('.transfer-toggle-btn');
+        
+        if (transfersSection.classList.contains('visible')) {
+          transfersSection.classList.remove('visible');
+          toggleBtn.classList.remove('active');
+        } else {
+          transfersSection.classList.add('visible');
+          toggleBtn.classList.add('active');
+        }
       }
 
       function toggleAsset(header) {
