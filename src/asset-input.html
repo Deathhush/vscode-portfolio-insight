@@ -201,8 +201,9 @@
         transition: max-height 0.3s ease, padding 0.3s ease;
         background: white;
       }      .asset-content.expanded {
-        max-height: 300px;
+        max-height: 600px;
         padding: 15px;
+        overflow-y: auto;
       }
 
       .input-group {
@@ -245,14 +246,165 @@
       .summary-text {
         color: #666;
         font-size: 0.8em;
-      }
-
-      .summary-value {
+      }      .summary-value {
         font-size: 1.1em;
         font-weight: 600;
         color: #333;
         margin-top: 3px;
-      }      @media (max-width: 768px) {
+      }
+
+      .transfers-section {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e1e5e9;
+      }      .transfers-header {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .transfers-help {
+        font-size: 0.75em;
+        color: #666;
+        font-weight: normal;
+        font-style: italic;
+        margin-left: auto;
+      }
+
+      .transfers-icon {
+        color: #667eea;
+        font-size: 1em;
+      }      .transfer-item {
+        background: #f8f9fa;
+        border: 1px solid #e1e5e9;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 8px;
+        position: relative;
+      }
+
+      .transfer-item[data-is-paired="true"] {
+        background: #f0f8ff;
+        border-color: #cce7ff;
+      }
+
+      .transfer-item[data-is-paired="true"]::before {
+        content: "↔";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        color: #667eea;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+
+      .transfer-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .transfer-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .transfer-type-select {
+        flex: 0 0 80px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: white;
+      }
+
+      .transfer-asset-select {
+        flex: 1;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: white;
+      }
+
+      .transfer-amount-input {
+        flex: 0 0 100px;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        text-align: right;
+      }      .transfer-description-input {
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+      }
+
+      .transfer-description-input::placeholder {
+        color: #999;
+      }
+
+      .remove-transfer-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.3s ease;
+      }
+
+      .remove-transfer-btn:hover {
+        background: #c82333;
+      }
+
+      .add-transfer-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .add-transfer-btn:hover {
+        background: #218838;
+      }
+
+      .transfer-summary {
+        margin-top: 8px;
+        padding: 8px;
+        background: #e8f5e8;
+        border-radius: 4px;
+        font-size: 0.8em;
+        color: #2e7d32;
+        display: none;
+      }
+
+      .transfer-summary.has-transfers {
+        display: block;
+      }
+      
+      @media (max-width: 768px) {
         .container {
           margin: 0;
           border-radius: 0;
@@ -291,6 +443,29 @@
         .date-picker-container {
           flex-direction: column;
           gap: 5px;
+        }
+
+        .transfer-row {
+          flex-direction: column;
+          gap: 6px;
+        }
+
+        .transfer-type-select,
+        .transfer-asset-select,
+        .transfer-amount-input {
+          flex: none;
+          width: 100%;
+        }        .transfers-section {
+          margin-top: 12px;
+          padding-top: 12px;
+        }
+
+        .transfer-item {
+          padding: 10px;
+        }
+
+        .transfers-help {
+          display: none;
         }
       }
     </style>
@@ -459,6 +634,22 @@
                             <div class="summary-text">${summaryText}</div>
                             <div class="summary-value">${summaryValue}</div>
                         </div>` : ''}
+                          <div class="transfers-section">
+                            <div class="transfers-header">
+                                <span class="transfers-icon">⇄</span>
+                                Transfers
+                                <span class="transfers-help">Auto-paired with destination</span>
+                            </div>
+                            <div class="transfers-container" data-asset-id="${asset.id || asset.name}">
+                                <!-- Transfer items will be added dynamically -->
+                            </div>
+                            <button type="button" class="add-transfer-btn" onclick="addTransfer('${asset.id || asset.name}')">
+                                <span>+</span> Add Transfer
+                            </button>
+                            <div class="transfer-summary">
+                                <span class="transfer-summary-text"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -470,6 +661,33 @@
         
         // Initialize asset date pickers with the header date value
         initializeAssetDatePickers();
+        
+        // Update all transfer asset dropdowns
+        updateAllTransferAssetDropdowns();
+      }
+
+      function updateAllTransferAssetDropdowns() {
+        // Update dropdowns in existing transfer items when assets change
+        const transferSelects = document.querySelectorAll('.transfer-asset-select');
+        transferSelects.forEach(select => {
+          const transferItem = select.closest('.transfer-item');
+          const assetGroup = transferItem.closest('.asset-group');
+          const currentAssetId = assetGroup.dataset.assetId;
+          const selectedValue = select.value;
+          
+          // Get list of other assets for the dropdown
+          const otherAssets = assets.filter(asset => (asset.id || asset.name) !== currentAssetId);
+          const assetOptions = '<option value="">Select asset...</option>' + 
+            otherAssets.map(asset => 
+              `<option value="${asset.id || asset.name}">${asset.name}</option>`
+            ).join('');
+          
+          select.innerHTML = assetOptions;
+          // Restore selected value if it still exists
+          if (selectedValue && otherAssets.some(asset => (asset.id || asset.name) === selectedValue)) {
+            select.value = selectedValue;
+          }
+        });
       }
 
       function toggleAsset(header) {
@@ -545,9 +763,224 @@
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             }
-          )}`;
-        } else {
+          )}`;        } else {
           summary.classList.remove("has-value");
+        }
+      }      // Transfer management functions
+      let transferIdCounter = 0;
+      let transferPairs = new Map(); // Maps transfer IDs to their corresponding pair IDs
+
+      function addTransfer(assetId) {
+        const transfersContainer = document.querySelector(`.transfers-container[data-asset-id="${assetId}"]`);
+        if (!transfersContainer) return;
+
+        const transferId = `transfer_${transferIdCounter++}`;
+        const transferItem = createTransferItem(transferId, assetId);
+        transfersContainer.appendChild(transferItem);
+        
+        updateTransferSummary(assetId);
+      }      function createTransferItem(transferId, currentAssetId, isPaired = false) {
+        const transferDiv = document.createElement('div');
+        transferDiv.className = 'transfer-item';
+        transferDiv.dataset.transferId = transferId;
+        transferDiv.dataset.isPaired = isPaired;
+        
+        // Get list of other assets for the dropdown
+        const otherAssets = assets.filter(asset => (asset.id || asset.name) !== currentAssetId);
+        const assetOptions = otherAssets.map(asset => 
+          `<option value="${asset.id || asset.name}">${asset.name}</option>`
+        ).join('');
+
+        transferDiv.innerHTML = `
+          <button type="button" class="remove-transfer-btn" onclick="removeTransfer('${transferId}', '${currentAssetId}')" title="Remove transfer">×</button>
+          <div class="transfer-row">
+            <select class="transfer-type-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
+              <option value="to">To</option>
+              <option value="from">From</option>
+            </select>
+            <select class="transfer-asset-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
+              <option value="">Select asset...</option>
+              ${assetOptions}
+            </select>
+            <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" 
+                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+          </div>
+          <div class="transfer-row">
+            <input type="text" class="transfer-description-input" placeholder="Description (optional)" 
+                   oninput="handleDescriptionChange('${transferId}', '${currentAssetId}')" />
+          </div>
+        `;
+
+        return transferDiv;
+      }      function removeTransfer(transferId, assetId) {
+        const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        if (transferItem) {
+          // Remove paired transfer if it exists
+          const pairedTransferId = transferPairs.get(transferId);
+          if (pairedTransferId) {
+            const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+            if (pairedTransferItem) {
+              const pairedAssetGroup = pairedTransferItem.closest('.asset-group');
+              const pairedAssetId = pairedAssetGroup.dataset.assetId;
+              pairedTransferItem.remove();
+              updateTransferSummary(pairedAssetId);
+            }
+            transferPairs.delete(transferId);
+            transferPairs.delete(pairedTransferId);
+          }
+          
+          transferItem.remove();
+          updateTransferSummary(assetId);
+        }
+      }
+
+      function handleTransferChange(transferId, currentAssetId) {
+        const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        if (!transferItem) return;
+
+        const type = transferItem.querySelector('.transfer-type-select').value;
+        const targetAssetId = transferItem.querySelector('.transfer-asset-select').value;
+        const amount = transferItem.querySelector('.transfer-amount-input').value;
+        const description = transferItem.querySelector('.transfer-description-input').value;
+
+        // Update current asset summary
+        updateTransferSummary(currentAssetId);
+
+        // Handle paired transfer
+        if (targetAssetId && amount && parseFloat(amount) > 0) {
+          createOrUpdatePairedTransfer(transferId, currentAssetId, targetAssetId, type, amount, description);
+        } else {
+          // Remove paired transfer if target asset or amount is cleared
+          removePairedTransfer(transferId);
+        }
+      }
+
+      function handleDescriptionChange(transferId, currentAssetId) {
+        const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        if (!transferItem) return;
+
+        const description = transferItem.querySelector('.transfer-description-input').value;
+        
+        // Update paired transfer description
+        const pairedTransferId = transferPairs.get(transferId);
+        if (pairedTransferId) {
+          const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+          if (pairedTransferItem) {
+            const pairedDescriptionInput = pairedTransferItem.querySelector('.transfer-description-input');
+            pairedDescriptionInput.value = description;
+          }
+        }
+      }
+
+      function createOrUpdatePairedTransfer(transferId, sourceAssetId, targetAssetId, sourceType, amount, description) {
+        const targetAssetGroup = document.querySelector(`[data-asset-id="${targetAssetId}"]`);
+        if (!targetAssetGroup) return;
+
+        const targetTransfersContainer = targetAssetGroup.querySelector('.transfers-container');
+        if (!targetTransfersContainer) return;
+
+        // Check if paired transfer already exists
+        let pairedTransferId = transferPairs.get(transferId);
+        let pairedTransferItem = pairedTransferId ? document.querySelector(`[data-transfer-id="${pairedTransferId}"]`) : null;
+
+        // If paired transfer doesn't exist or is in wrong container, create new one
+        if (!pairedTransferItem || !targetTransfersContainer.contains(pairedTransferItem)) {
+          // Remove old paired transfer if it exists
+          if (pairedTransferItem) {
+            pairedTransferItem.remove();
+          }
+
+          // Create new paired transfer
+          pairedTransferId = `transfer_${transferIdCounter++}`;
+          pairedTransferItem = createTransferItem(pairedTransferId, targetAssetId, true);
+          targetTransfersContainer.appendChild(pairedTransferItem);
+
+          // Link the transfers
+          transferPairs.set(transferId, pairedTransferId);
+          transferPairs.set(pairedTransferId, transferId);
+        }
+
+        // Update paired transfer values
+        const pairedType = sourceType === 'to' ? 'from' : 'to';
+        pairedTransferItem.querySelector('.transfer-type-select').value = pairedType;
+        pairedTransferItem.querySelector('.transfer-asset-select').value = sourceAssetId;
+        pairedTransferItem.querySelector('.transfer-amount-input').value = amount;
+        pairedTransferItem.querySelector('.transfer-description-input').value = description;
+
+        // Update target asset summary
+        updateTransferSummary(targetAssetId);
+      }
+
+      function removePairedTransfer(transferId) {
+        const pairedTransferId = transferPairs.get(transferId);
+        if (pairedTransferId) {
+          const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+          if (pairedTransferItem) {
+            const pairedAssetGroup = pairedTransferItem.closest('.asset-group');
+            const pairedAssetId = pairedAssetGroup.dataset.assetId;
+            pairedTransferItem.remove();
+            updateTransferSummary(pairedAssetId);
+          }
+          transferPairs.delete(transferId);
+          transferPairs.delete(pairedTransferId);
+        }
+      }      function updateTransferSummary(assetId) {
+        const transfersContainer = document.querySelector(`.transfers-container[data-asset-id="${assetId}"]`);
+        const assetGroup = transfersContainer.closest('.asset-group');
+        const summaryDiv = assetGroup.querySelector('.transfer-summary');
+        const summaryText = summaryDiv.querySelector('.transfer-summary-text');
+
+        if (!transfersContainer || !summaryDiv || !summaryText) return;
+
+        const transferItems = transfersContainer.querySelectorAll('.transfer-item');
+        let totalIn = 0;
+        let totalOut = 0;
+        let transferCount = 0;
+
+        transferItems.forEach(item => {
+          const type = item.querySelector('.transfer-type-select').value;
+          const asset = item.querySelector('.transfer-asset-select').value;
+          const amount = parseFloat(item.querySelector('.transfer-amount-input').value) || 0;
+
+          if (asset && amount > 0) {
+            transferCount++;
+            if (type === 'from') {
+              totalIn += amount;
+            } else if (type === 'to') {
+              totalOut += amount;
+            }
+          }
+        });
+
+        if (transferCount > 0) {
+          summaryDiv.classList.add('has-transfers');
+          const netTransfer = totalIn - totalOut;
+          const assetName = assetGroup.querySelector('.asset-name').textContent;
+          
+          // Determine currency symbol
+          let currencySymbol = '¥';
+          if (assetName === 'StockAward') {
+            currencySymbol = '$';
+          }
+
+          let summaryContent = '';
+          if (totalIn > 0) {
+            summaryContent += `In: ${currencySymbol}${totalIn.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (totalOut > 0) {
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `Out: ${currencySymbol}${totalOut.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (netTransfer !== 0) {
+            const netLabel = netTransfer > 0 ? 'Net In' : 'Net Out';
+            const netAmount = Math.abs(netTransfer);
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `${netLabel}: ${currencySymbol}${netAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+
+          summaryText.textContent = summaryContent;
+        } else {
+          summaryDiv.classList.remove('has-transfers');
         }
       }      // Listen for postMessage from parent window (host.html)
       window.addEventListener('message', function(event) {
@@ -556,8 +989,10 @@
         if (event.data.type === 'INITIALIZE_ASSETS' && event.data.assets) {
           console.log('Initializing assets with data:', event.data.assets);
           assets = event.data.assets;
-          // Clear overridden dates when new assets are loaded
+          // Clear overridden dates and transfer pairs when new assets are loaded
           overriddenDates.clear();
+          transferPairs.clear();
+          transferIdCounter = 0;
           generateAllAssets();
           // Removed: sending confirmation back to parent
         }
