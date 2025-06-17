@@ -28,7 +28,7 @@
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         overflow: hidden;
       }
-      
+
       .header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
@@ -173,7 +173,7 @@
         transition: max-height 0.3s ease, padding 0.3s ease;
         background: white;
       }      .asset-content.expanded {
-        max-height: 200px;
+        max-height: 300px;
         padding: 15px;
       }
 
@@ -288,19 +288,15 @@
 
         let inputFields = "";
         let summaryText = "";
-        let summaryValue = "";
-
-        // Generate input fields based on asset type
+        let summaryValue = "";        // Generate input fields based on asset type
         switch (asset.type) {
           case "simple":
             inputFields = `
                         <div class="input-group">
                             <label class="input-label">Current Value</label>
                             <input type="number" class="input-field" placeholder="Enter current value" 
-                                   oninput="updateSummary(this)" step="0.01" min="0">
+                                   step="0.01" min="0">
                         </div>`;
-            summaryText = "Current Value";
-            summaryValue = `${currencySymbol}0.00`;
             break;
 
           case "investment":
@@ -308,10 +304,8 @@
                         <div class="input-group">
                             <label class="input-label">Current Value</label>
                             <input type="number" class="input-field" placeholder="Enter current value" 
-                                   oninput="updateSummary(this)" step="0.01" min="0">
+                                   step="0.01" min="0">
                         </div>`;
-            summaryText = "Current Value";
-            summaryValue = `${currencySymbol}0.00`;
             break;
 
           case "composite":
@@ -319,15 +313,13 @@
                         <div class="input-group">
                             <label class="input-label">Current Value</label>
                             <input type="number" class="input-field" placeholder="Enter current value" 
-                                   oninput="updateSummary(this)" step="0.01" min="0">
+                                   step="0.01" min="0">
                         </div>
                         <div class="input-group">
                             <label class="input-label">Current Market Value</label>
                             <input type="number" class="input-field" placeholder="Enter current market value" 
                                    step="0.01" min="0">
                         </div>`;
-            summaryText = "Current Value";
-            summaryValue = `${currencySymbol}0.00`;
             break;
 
           case "stock":
@@ -335,10 +327,15 @@
                         <div class="input-group">
                             <label class="input-label">Units/Shares</label>
                             <input type="number" class="input-field" placeholder="Number of shares" 
-                                   oninput="updateSharesSummary(this)" step="1" min="0">
+                                   oninput="updateStockSummary(this)" step="1" min="0" data-field="shares">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Stock Price</label>
+                            <input type="number" class="input-field" placeholder="Price per share" 
+                                   oninput="updateStockSummary(this)" step="0.01" min="0" data-field="price">
                         </div>`;
-            summaryText = "Number of Shares";
-            summaryValue = "0";
+            summaryText = "Total Value";
+            summaryValue = `${currencySymbol}0.00`;
             break;
         }        return `
                 <div class="asset-group">
@@ -354,10 +351,11 @@
                     </div>
                     <div class="asset-content expanded">
                         ${inputFields}
+                        ${asset.type === 'stock' ? `
                         <div class="value-summary">
                             <div class="summary-text">${summaryText}</div>
                             <div class="summary-value">${summaryValue}</div>
-                        </div>
+                        </div>` : ''}
                     </div>
                 </div>
             `;
@@ -414,20 +412,39 @@
         } else {
           summary.classList.remove("has-value");
         }
-      }
-
-      function updateSharesSummary(input) {
+      }      function updateStockSummary(input) {
         const assetGroup = input.closest(".asset-group");
         const summary = assetGroup.querySelector(".value-summary");
         const summaryValue = assetGroup.querySelector(".summary-value");
+        const assetName = assetGroup.querySelector(".asset-name").textContent;
 
-        const shares = parseInt(input.value) || 0;
+        // Get both shares and price inputs
+        const sharesInput = assetGroup.querySelector('input[data-field="shares"]');
+        const priceInput = assetGroup.querySelector('input[data-field="price"]');
+        
+        const shares = parseInt(sharesInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const totalValue = shares * price;
 
-        if (shares > 0) {
+        if (shares > 0 && price > 0) {
           summary.classList.add("has-value");
-          summaryValue.textContent = shares.toLocaleString("en-US");        } else {
+
+          // Determine currency based on asset
+          let currency = "¥";
+          if (assetName === "StockAward") {
+            currency = "$";
+          }
+
+          summaryValue.textContent = `${currency}${totalValue.toLocaleString(
+            "en-US",
+            {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }
+          )}`;
+        } else {
           summary.classList.remove("has-value");
-          summaryValue.textContent = "0";        }
+        }
       }
 
       // Listen for postMessage from parent window (host.html)
