@@ -110,7 +110,35 @@
 
       .asset-header.active {
         background: #e3f2fd;
-      }      .asset-info {
+      }
+
+      .asset-header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .asset-date-picker {
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        color: #333;
+        font-size: 0.8em;
+        outline: none;
+        transition: all 0.3s ease;
+        min-width: 130px;
+      }
+
+      .asset-date-picker:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+      }
+
+      .asset-date-picker.overridden {
+        border-color: #f57c00;
+        background-color: #fff8e1;
+      }.asset-info {
         display: flex;
         align-items: center;
         gap: 10px;
@@ -249,6 +277,21 @@
         .asset-content.expanded {
           padding: 12px;
         }
+
+        .asset-header-right {
+          gap: 5px;
+        }
+
+        .asset-date-picker {
+          font-size: 0.7em;
+          padding: 3px 6px;
+          min-width: 110px;
+        }
+
+        .date-picker-container {
+          flex-direction: column;
+          gap: 5px;
+        }
       }
     </style>
   </head>
@@ -266,16 +309,71 @@
         <!-- Assets will be generated dynamically -->
       </div>
     </div>
-    <script>
-      // Assets data - default values
+    <script>      // Assets data - default values
       let assets = [
       ];
 
-      // Initialize date picker with today's date
+      // Track which asset groups have overridden dates
+      let overriddenDates = new Set();      // Initialize date picker with today's date
       function initializeDatePicker() {
         const today = new Date();
         const formattedDate = today.toISOString().split('T')[0];
-        document.getElementById('portfolioDate').value = formattedDate;
+        const headerDatePicker = document.getElementById('portfolioDate');
+        headerDatePicker.value = formattedDate;
+        
+        // Add event listener for header date picker changes
+        headerDatePicker.addEventListener('change', handleHeaderDateChange);
+      }
+
+      // Initialize asset date pickers with header date value
+      function initializeAssetDatePickers() {
+        const headerDate = document.getElementById('portfolioDate').value;
+        const assetDatePickers = document.querySelectorAll('.asset-date-picker');
+        
+        assetDatePickers.forEach(picker => {
+          if (!overriddenDates.has(getAssetId(picker))) {
+            picker.value = headerDate;
+            picker.classList.remove('overridden');
+          }
+        });
+      }
+
+      // Handle header date picker changes
+      function handleHeaderDateChange() {
+        const headerDate = document.getElementById('portfolioDate').value;
+        const assetDatePickers = document.querySelectorAll('.asset-date-picker');
+        
+        assetDatePickers.forEach(picker => {
+          const assetId = getAssetId(picker);
+          // Only update if this asset date hasn't been overridden
+          if (!overriddenDates.has(assetId)) {
+            picker.value = headerDate;
+            picker.classList.remove('overridden');
+          }
+        });
+      }
+
+      // Handle individual asset date picker changes
+      function handleAssetDateChange(picker, event) {
+        event.stopPropagation();
+        const assetId = getAssetId(picker);
+        const headerDate = document.getElementById('portfolioDate').value;
+        
+        if (picker.value !== headerDate) {
+          // Mark this asset as having an overridden date
+          overriddenDates.add(assetId);
+          picker.classList.add('overridden');
+        } else {
+          // If user sets it back to header date, remove override
+          overriddenDates.delete(assetId);
+          picker.classList.remove('overridden');
+        }
+      }
+
+      // Get asset ID from a date picker element
+      function getAssetId(picker) {
+        const assetGroup = picker.closest('.asset-group');
+        return assetGroup.getAttribute('data-asset-id');
       }
 
       function generateAssetGroup(asset) {
@@ -338,7 +436,7 @@
             summaryValue = `${currencySymbol}0.00`;
             break;
         }        return `
-                <div class="asset-group">
+                <div class="asset-group" data-asset-id="${asset.id || asset.name}">
                     <div class="asset-header active" onclick="toggleAsset(this)">
                         <div class="asset-info">
                             <span class="asset-type-badge type-${asset.type}">${
@@ -347,7 +445,12 @@
                             <span class="asset-name">${asset.name}</span>
                             ${currencyLabel}
                         </div>
-                        <span class="collapse-icon rotated">▼</span>
+                        <div class="asset-header-right">
+                            <input type="date" class="asset-date-picker" 
+                                   onchange="handleAssetDateChange(this, event)" 
+                                   onclick="event.stopPropagation()" />
+                            <span class="collapse-icon rotated">▼</span>
+                        </div>
                     </div>
                     <div class="asset-content expanded">
                         ${inputFields}
@@ -359,13 +462,14 @@
                     </div>
                 </div>
             `;
-      }
-
-      function generateAllAssets() {
+      }      function generateAllAssets() {
         const container = document.getElementById("assetsContainer");
         container.innerHTML = assets
           .map((asset) => generateAssetGroup(asset))
           .join("");
+        
+        // Initialize asset date pickers with the header date value
+        initializeAssetDatePickers();
       }
 
       function toggleAsset(header) {
@@ -445,19 +549,19 @@
         } else {
           summary.classList.remove("has-value");
         }
-      }
-
-      // Listen for postMessage from parent window (host.html)
+      }      // Listen for postMessage from parent window (host.html)
       window.addEventListener('message', function(event) {
         console.log('Message received in asset-input:', event.data);
         
         if (event.data.type === 'INITIALIZE_ASSETS' && event.data.assets) {
           console.log('Initializing assets with data:', event.data.assets);
           assets = event.data.assets;
+          // Clear overridden dates when new assets are loaded
+          overriddenDates.clear();
           generateAllAssets();
           // Removed: sending confirmation back to parent
         }
-      });      // Generate all assets on page load
+      });// Generate all assets on page load
       document.addEventListener("DOMContentLoaded", function () {
         // Initialize date picker with today's date
         initializeDatePicker();
