@@ -311,34 +311,39 @@
 
       .transfer-row:last-child {
         margin-bottom: 0;
-      }
-
-      .transfer-type-select {
-        flex: 0 0 80px;
+      }      .transfer-type-select {
+        flex: 0 0 70px;
         padding: 4px 6px;
         border: 1px solid #ccc;
         border-radius: 3px;
         font-size: 0.8em;
         background: white;
-      }
-
-      .transfer-asset-select {
+      }      .transfer-asset-select {
         flex: 1;
         padding: 4px 8px;
         border: 1px solid #ccc;
         border-radius: 3px;
         font-size: 0.8em;
         background: white;
+        min-width: 140px;
+      }
+         
+      .transfer-date-input {
+        flex: 0 0 100px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
       }
 
       .transfer-amount-input {
-        flex: 0 0 100px;
-        padding: 4px 8px;
+        flex: 0 0 65px;
+        padding: 4px 6px;
         border: 1px solid #ccc;
         border-radius: 3px;
         font-size: 0.8em;
         text-align: right;
-      }      .transfer-description-input {
+      }.transfer-description-input {
         width: 100%;
         padding: 4px 8px;
         border: 1px solid #ccc;
@@ -448,14 +453,13 @@
         .transfer-row {
           flex-direction: column;
           gap: 6px;
-        }
-
-        .transfer-type-select,
+        }        .transfer-type-select,
         .transfer-asset-select,
+        .transfer-date-input,
         .transfer-amount-input {
           flex: none;
           width: 100%;
-        }        .transfers-section {
+        }.transfers-section {
           margin-top: 12px;
           padding-top: 12px;
         }
@@ -789,9 +793,7 @@
         const otherAssets = assets.filter(asset => (asset.id || asset.name) !== currentAssetId);
         const assetOptions = otherAssets.map(asset => 
           `<option value="${asset.id || asset.name}">${asset.name}</option>`
-        ).join('');
-
-        transferDiv.innerHTML = `
+        ).join('');        transferDiv.innerHTML = `
           <button type="button" class="remove-transfer-btn" onclick="removeTransfer('${transferId}', '${currentAssetId}')" title="Remove transfer">×</button>
           <div class="transfer-row">
             <select class="transfer-type-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
@@ -802,6 +804,8 @@
               <option value="">Select asset...</option>
               ${assetOptions}
             </select>
+            <input type="date" class="transfer-date-input" 
+                   onchange="handleTransferChange('${transferId}', '${currentAssetId}')" />
             <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" 
                    oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
           </div>
@@ -832,14 +836,15 @@
           transferItem.remove();
           updateTransferSummary(assetId);
         }
-      }
-
+      }      
+      
       function handleTransferChange(transferId, currentAssetId) {
         const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
         if (!transferItem) return;
 
         const type = transferItem.querySelector('.transfer-type-select').value;
         const targetAssetId = transferItem.querySelector('.transfer-asset-select').value;
+        const date = transferItem.querySelector('.transfer-date-input').value;
         const amount = transferItem.querySelector('.transfer-amount-input').value;
         const description = transferItem.querySelector('.transfer-description-input').value;
 
@@ -848,14 +853,12 @@
 
         // Handle paired transfer
         if (targetAssetId && amount && parseFloat(amount) > 0) {
-          createOrUpdatePairedTransfer(transferId, currentAssetId, targetAssetId, type, amount, description);
+          createOrUpdatePairedTransfer(transferId, currentAssetId, targetAssetId, type, amount, description, date);
         } else {
           // Remove paired transfer if target asset or amount is cleared
           removePairedTransfer(transferId);
         }
-      }
-
-      function handleDescriptionChange(transferId, currentAssetId) {
+      }      function handleDescriptionChange(transferId, currentAssetId) {
         const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
         if (!transferItem) return;
 
@@ -872,7 +875,7 @@
         }
       }
 
-      function createOrUpdatePairedTransfer(transferId, sourceAssetId, targetAssetId, sourceType, amount, description) {
+      function createOrUpdatePairedTransfer(transferId, sourceAssetId, targetAssetId, sourceType, amount, description, date) {
         const targetAssetGroup = document.querySelector(`[data-asset-id="${targetAssetId}"]`);
         if (!targetAssetGroup) return;
 
@@ -898,12 +901,11 @@
           // Link the transfers
           transferPairs.set(transferId, pairedTransferId);
           transferPairs.set(pairedTransferId, transferId);
-        }
-
-        // Update paired transfer values
+        }        // Update paired transfer values
         const pairedType = sourceType === 'to' ? 'from' : 'to';
         pairedTransferItem.querySelector('.transfer-type-select').value = pairedType;
         pairedTransferItem.querySelector('.transfer-asset-select').value = sourceAssetId;
+        pairedTransferItem.querySelector('.transfer-date-input').value = date;
         pairedTransferItem.querySelector('.transfer-amount-input').value = amount;
         pairedTransferItem.querySelector('.transfer-description-input').value = description;
 
