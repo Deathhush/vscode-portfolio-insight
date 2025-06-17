@@ -9,21 +9,27 @@
         margin: 0;
         padding: 0;
         box-sizing: border-box;
-      }      body {
+      }
+
+      body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
         background-color: #f5f5f5;
         padding: 10px;
         line-height: 1.3;
-        font-size: 13px;
-      }      .container {
+        font-size: 15px;
+      }
+
+      .container {
         max-width: 600px;
         margin: 0 auto;
         background: white;
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         overflow: hidden;
-      }      .header {
+      }
+      
+      .header {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         color: white;
         padding: 15px;
@@ -39,6 +45,41 @@
       .header p {
         opacity: 0.9;
         font-size: 0.9em;
+      }
+
+      .date-picker-container {
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .date-picker-container label {
+        font-size: 0.9em;
+        opacity: 0.9;
+        font-weight: 500;
+      }
+
+      .date-picker {
+        padding: 6px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        font-size: 0.9em;
+        outline: none;
+        transition: all 0.3s ease;
+      }
+
+      .date-picker:focus {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }
+
+      .date-picker::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
       }      .assets-container {
         padding: 15px;
       }
@@ -215,14 +256,27 @@
     <div class="container">
       <div class="header">
         <h1>Asset Portfolio</h1>
-        <p>Update current values for your assets</p>
-      </div>      <div class="assets-container" id="assetsContainer">
+        <p>Update current values for your assets</p>        
+        <div class="date-picker-container">
+          <label for="portfolioDate">As of:</label>
+          <input type="date" id="portfolioDate" class="date-picker" />
+        </div>
+      </div>     
+      <div class="assets-container" id="assetsContainer">
         <!-- Assets will be generated dynamically -->
       </div>
-    </div><script>
+    </div>
+    <script>
       // Assets data - default values
       let assets = [
       ];
+
+      // Initialize date picker with today's date
+      function initializeDatePicker() {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        document.getElementById('portfolioDate').value = formattedDate;
+      }
 
       function generateAssetGroup(asset) {
         const currency = asset.currency || "CNY";
@@ -388,6 +442,8 @@
         }
       });      // Generate all assets on page load
       document.addEventListener("DOMContentLoaded", function () {
+        // Initialize date picker with today's date
+        initializeDatePicker();
         // Generate all assets (they will be expanded by default)
         generateAllAssets();
       });
