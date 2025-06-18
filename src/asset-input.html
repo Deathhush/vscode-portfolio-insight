@@ -963,7 +963,7 @@
                             </button>
                             ${asset.type === 'simple' ? `
                             <button type="button" class="income-expenses-toggle-btn" onclick="toggleIncomeExpenses('${asset.id || asset.name}', event)" title="Toggle Income & Expenses">
-                                <span>₊₋</span>
+                                <span>+/-</span>
                             </button>` : ''}
                             <input type="date" class="asset-date-picker" 
                                    onchange="handleAssetDateChange(this, event)" 
@@ -1004,7 +1004,7 @@
                                 <!-- Income/Expense items will be added dynamically -->
                             </div>
                             <button type="button" class="add-income-expense-btn" onclick="addIncomeExpense('${asset.id || asset.name}')">
-                                <span>+</span> Add Income/Expense
+                              <span>+</span> Add Income/Expense
                             </button>
                             <div class="income-expense-summary">
                                 <span class="income-expense-summary-text"></span>
