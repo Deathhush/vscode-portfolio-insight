@@ -445,6 +445,176 @@
         display: block;
       }
       
+      .income-expenses-section {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e1e5e9;
+        display: none;
+      }
+
+      .income-expenses-section.visible {
+        display: block;
+      }
+      
+      .income-expenses-header {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }      
+        .income-expenses-toggle-btn {
+        background: #b2c8f2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 0.7em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 8px;
+      }
+
+      .income-expenses-toggle-btn:hover {
+        background: #80abf4;
+      }
+
+      .income-expenses-toggle-btn.active {
+        background: #667eea;
+      }
+
+      .income-expenses-toggle-btn.active:hover {
+        background: #5a67d8;
+      }
+      
+      .income-expenses-help {
+        font-size: 0.75em;
+        color: #666;
+        font-weight: normal;
+        font-style: italic;
+        margin-left: auto;
+      }      
+      
+      .income-expenses-icon {
+        color: #28a745;
+        font-size: 1em;
+      }
+
+      .income-expense-item {
+        background: #f8f9fa;
+        border: 1px solid #e1e5e9;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 8px;
+        position: relative;
+      }
+
+      .income-expense-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .income-expense-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .income-expense-type-select {
+        flex: 0 0 80px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: white;
+      }      .income-expense-date-input {
+        flex: 0 0 100px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+      }      
+      
+      .income-expense-amount-input {        
+        width: 120px;
+        padding: 4px 4px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        text-align: right;
+      }
+
+      .income-expense-description-input {
+        flex: 1;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;        
+      }
+
+      .income-expense-description-input::placeholder {
+        color: #999;
+      }
+
+      .remove-income-expense-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.3s ease;
+      }
+
+      .remove-income-expense-btn:hover {
+        background: #c82333;
+      }
+
+      .add-income-expense-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .add-income-expense-btn:hover {
+        background: #218838;
+      }
+
+      .income-expense-summary {
+        margin-top: 8px;
+        padding: 8px;
+        background: #e8f5e8;
+        border-radius: 4px;
+        font-size: 0.8em;
+        color: #2e7d32;
+        display: none;
+      }
+
+      .income-expense-summary.has-items {
+        display: block;
+      }
+      
       @media (max-width: 768px) {
         .container {
           margin: 0;
@@ -669,6 +839,10 @@
                             <button type="button" class="transfer-toggle-btn" onclick="toggleTransfers('${asset.id || asset.name}', event)" title="Toggle Transfers">
                                 <span>⇄</span>
                             </button>
+                            ${asset.type === 'simple' ? `
+                            <button type="button" class="income-expenses-toggle-btn" onclick="toggleIncomeExpenses('${asset.id || asset.name}', event)" title="Toggle Income & Expenses">
+                                <span>₊₋</span>
+                            </button>` : ''}
                             <input type="date" class="asset-date-picker" 
                                    onchange="handleAssetDateChange(this, event)" 
                                    onclick="event.stopPropagation()" />
@@ -681,8 +855,7 @@
                         <div class="value-summary">
                             <div class="summary-text">${summaryText}</div>
                             <div class="summary-value">${summaryValue}</div>
-                        </div>` : ''}
-                          <div class="transfers-section">
+                        </div>` : ''}                          <div class="transfers-section">
                             <div class="transfers-header">
                                 <span class="transfers-icon">⇄</span>
                                 Transfers
@@ -698,6 +871,23 @@
                                 <span class="transfer-summary-text"></span>
                             </div>
                         </div>
+                        ${asset.type === 'simple' ? `
+                          <div class="income-expenses-section">
+                            <div class="income-expenses-header">
+                                <span class="income-expenses-icon">₊₋</span>
+                                Income & Expenses
+                                <span class="income-expenses-help">Track cash flows</span>
+                            </div>
+                            <div class="income-expenses-container" data-asset-id="${asset.id || asset.name}">
+                                <!-- Income/Expense items will be added dynamically -->
+                            </div>
+                            <button type="button" class="add-income-expense-btn" onclick="addIncomeExpense('${asset.id || asset.name}')">
+                                <span>+</span> Add Income/Expense
+                            </button>
+                            <div class="income-expense-summary">
+                                <span class="income-expense-summary-text"></span>
+                            </div>
+                        </div>` : ''}
                     </div>
                 </div>
             `;
@@ -1046,7 +1236,135 @@
         } else {
           summaryDiv.classList.remove('has-transfers');
         }
-      }      // Listen for postMessage from parent window (host.html)
+      }      
+      
+      // Income/Expenses management functions
+      let incomeExpenseIdCounter = 0;
+
+      function toggleIncomeExpenses(assetId, event) {
+        event.stopPropagation(); // Prevent triggering asset toggle
+        
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const incomeExpensesSection = assetGroup.querySelector('.income-expenses-section');
+        const toggleBtn = assetGroup.querySelector('.income-expenses-toggle-btn');
+        
+        if (incomeExpensesSection.classList.contains('visible')) {
+          incomeExpensesSection.classList.remove('visible');
+          toggleBtn.classList.remove('active');
+        } else {
+          incomeExpensesSection.classList.add('visible');
+          toggleBtn.classList.add('active');
+        }
+      }
+
+      function addIncomeExpense(assetId) {
+        const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
+        if (!incomeExpensesContainer) return;
+
+        const incomeExpenseId = `income_expense_${incomeExpenseIdCounter++}`;
+        const incomeExpenseItem = createIncomeExpenseItem(incomeExpenseId, assetId);
+        incomeExpensesContainer.appendChild(incomeExpenseItem);
+        
+        updateIncomeExpenseSummary(assetId);
+      }
+
+      function createIncomeExpenseItem(incomeExpenseId, currentAssetId) {
+        const incomeExpenseDiv = document.createElement('div');
+        incomeExpenseDiv.className = 'income-expense-item';
+        incomeExpenseDiv.dataset.incomeExpenseId = incomeExpenseId;
+          incomeExpenseDiv.innerHTML = `
+          <button type="button" class="remove-income-expense-btn" onclick="removeIncomeExpense('${incomeExpenseId}', '${currentAssetId}')" title="Remove income/expense">×</button>
+          <div class="income-expense-row">
+            <select class="income-expense-type-select" onchange="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')">
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+            <input type="date" class="income-expense-date-input" 
+                   onchange="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')" />
+            <input type="number" class="income-expense-amount-input" placeholder="Amount" step="0.01" min="0" 
+                   oninput="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')" />
+            <input type="text" class="income-expense-description-input" placeholder="Description (optional)" />
+          </div>
+        `;
+
+        return incomeExpenseDiv;
+      }
+
+      function removeIncomeExpense(incomeExpenseId, assetId) {
+        const incomeExpenseItem = document.querySelector(`[data-income-expense-id="${incomeExpenseId}"]`);
+        if (incomeExpenseItem) {
+          incomeExpenseItem.remove();
+          updateIncomeExpenseSummary(assetId);
+        }
+      }
+
+      function handleIncomeExpenseChange(incomeExpenseId, currentAssetId) {
+        updateIncomeExpenseSummary(currentAssetId);
+      }
+
+      function updateIncomeExpenseSummary(assetId) {
+        const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
+        const assetGroup = incomeExpensesContainer.closest('.asset-group');
+        const summaryDiv = assetGroup.querySelector('.income-expense-summary');
+        const summaryText = summaryDiv.querySelector('.income-expense-summary-text');
+
+        if (!incomeExpensesContainer || !summaryDiv || !summaryText) return;
+
+        const incomeExpenseItems = incomeExpensesContainer.querySelectorAll('.income-expense-item');
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        let itemCount = 0;
+
+        incomeExpenseItems.forEach(item => {
+          const type = item.querySelector('.income-expense-type-select').value;
+          const category = item.querySelector('.income-expense-category-input').value;
+          const amount = parseFloat(item.querySelector('.income-expense-amount-input').value) || 0;
+
+          if (category && amount > 0) {
+            itemCount++;
+            if (type === 'income') {
+              totalIncome += amount;
+            } else if (type === 'expense') {
+              totalExpenses += amount;
+            }
+          }
+        });
+
+        if (itemCount > 0) {
+          summaryDiv.classList.add('has-items');
+          const netFlow = totalIncome - totalExpenses;
+          const assetName = assetGroup.querySelector('.asset-name').textContent;
+          
+          // Determine currency symbol
+          let currencySymbol = '¥';
+          if (assetName === 'StockAward') {
+            currencySymbol = '$';
+          }
+
+          let summaryContent = '';
+          if (totalIncome > 0) {
+            summaryContent += `Income: ${currencySymbol}${totalIncome.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (totalExpenses > 0) {
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `Expenses: ${currencySymbol}${totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (netFlow !== 0) {
+            const netLabel = netFlow > 0 ? 'Net Income' : 'Net Expense';
+            const netAmount = Math.abs(netFlow);
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `${netLabel}: ${currencySymbol}${netAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+
+          summaryText.textContent = summaryContent;
+        } else {
+          summaryDiv.classList.remove('has-items');
+        }
+      }
+
+      // Listen for postMessage from parent window (host.html)
       window.addEventListener('message', function(event) {
         console.log('Message received in asset-input:', event.data);
         
