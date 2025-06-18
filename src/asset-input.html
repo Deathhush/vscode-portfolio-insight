@@ -363,14 +363,25 @@
         background: white;
         min-width: 140px;
       }
-         
-      .transfer-date-input {
+           .transfer-date-input {
         flex: 0 0 100px;
         padding: 4px 6px;
         border: 1px solid #ccc;
         border-radius: 3px;
         font-size: 0.8em;
-      }      
+      }
+      
+      .transfer-date-input.overridden {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        box-shadow: 0 0 0 1px #ffeaa7;
+      }
+
+      .transfer-date-input.overridden:focus {
+        background-color: #fff3cd;
+        border-color: #fd79a8;
+        box-shadow: 0 0 0 2px rgba(253, 121, 168, 0.2);
+      }
       
       .transfer-amount-input {        
         width: 120px;
@@ -538,7 +549,19 @@
         border: 1px solid #ccc;
         border-radius: 3px;
         font-size: 0.8em;
-      }      
+      }
+      
+      .income-expense-date-input.overridden {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        box-shadow: 0 0 0 1px #ffeaa7;
+      }
+
+      .income-expense-date-input.overridden:focus {
+        background-color: #fff3cd;
+        border-color: #fd79a8;
+        box-shadow: 0 0 0 2px rgba(253, 121, 168, 0.2);
+      }
       
       .income-expense-amount-input {        
         width: 120px;
@@ -678,9 +701,7 @@
 
         .transfer-item {
           padding: 10px;
-        }
-
-        .transfers-help {
+        }        .transfers-help {
           display: none;
         }
       }
@@ -702,10 +723,12 @@
     </div>
     <script>      // Assets data - default values
       let assets = [
-      ];
-
-      // Track which asset groups have overridden dates
-      let overriddenDates = new Set();      // Initialize date picker with today's date
+      ];      // Track which asset groups have overridden dates
+      let overriddenDates = new Set();
+      
+      // Track which transfer/income-expense items have overridden dates
+      let overriddenTransferDates = new Set();
+      let overriddenIncomeExpenseDates = new Set();// Initialize date picker with today's date
       function initializeDatePicker() {
         const today = new Date();
         const formattedDate = today.toISOString().split('T')[0];
@@ -742,9 +765,7 @@
             picker.classList.remove('overridden');
           }
         });
-      }
-
-      // Handle individual asset date picker changes
+      }      // Handle individual asset date picker changes
       function handleAssetDateChange(picker, event) {
         event.stopPropagation();
         const assetId = getAssetId(picker);
@@ -759,12 +780,113 @@
           overriddenDates.delete(assetId);
           picker.classList.remove('overridden');
         }
-      }
-
-      // Get asset ID from a date picker element
+        
+        // Update transfer and income-expense dates for this asset
+        updateTransferDatesForAsset(assetId);
+        updateIncomeExpenseDatesForAsset(assetId);
+      }      // Get asset ID from a date picker element
       function getAssetId(picker) {
         const assetGroup = picker.closest('.asset-group');
         return assetGroup.getAttribute('data-asset-id');
+      }
+
+      // Update transfer dates for an asset when asset date changes
+      function updateTransferDatesForAsset(assetId) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const transferItems = assetGroup.querySelectorAll('.transfer-item');
+        
+        transferItems.forEach(item => {
+          const transferId = item.dataset.transferId;
+          const dateInput = item.querySelector('.transfer-date-input');
+          
+          // Only update if this transfer date hasn't been overridden
+          if (!overriddenTransferDates.has(transferId)) {
+            dateInput.value = assetDate;
+            dateInput.classList.remove('overridden');
+          }
+        });
+      }
+      
+      // Update income-expense dates for an asset when asset date changes
+      function updateIncomeExpenseDatesForAsset(assetId) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const incomeExpenseItems = assetGroup.querySelectorAll('.income-expense-item');
+        
+        incomeExpenseItems.forEach(item => {
+          const incomeExpenseId = item.dataset.incomeExpenseId;
+          const dateInput = item.querySelector('.income-expense-date-input');
+          
+          // Only update if this income-expense date hasn't been overridden
+          if (!overriddenIncomeExpenseDates.has(incomeExpenseId)) {
+            dateInput.value = assetDate;
+            dateInput.classList.remove('overridden');
+          }
+        });
+      }
+      
+      // Handle transfer date changes
+      function handleTransferDateChange(transferId, assetId, dateInput) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        
+        if (dateInput.value !== assetDate) {
+          // Mark this transfer as having an overridden date
+          overriddenTransferDates.add(transferId);
+          dateInput.classList.add('overridden');
+        } else {
+          // If user sets it back to asset date, remove override
+          overriddenTransferDates.delete(transferId);
+          dateInput.classList.remove('overridden');
+        }
+        
+        // Update the paired transfer date as well
+        const pairedTransferId = transferPairs.get(transferId);
+        if (pairedTransferId) {
+          const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+          if (pairedTransferItem) {
+            const pairedDateInput = pairedTransferItem.querySelector('.transfer-date-input');
+            pairedDateInput.value = dateInput.value;
+            
+            // Sync the override status for paired transfer
+            if (overriddenTransferDates.has(transferId)) {
+              overriddenTransferDates.add(pairedTransferId);
+              pairedDateInput.classList.add('overridden');
+            } else {
+              overriddenTransferDates.delete(pairedTransferId);
+              pairedDateInput.classList.remove('overridden');
+            }
+          }
+        }
+        
+        handleTransferChange(transferId, assetId);
+      }
+      
+      // Handle income-expense date changes
+      function handleIncomeExpenseDateChange(incomeExpenseId, assetId, dateInput) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        
+        if (dateInput.value !== assetDate) {
+          // Mark this income-expense as having an overridden date
+          overriddenIncomeExpenseDates.add(incomeExpenseId);
+          dateInput.classList.add('overridden');
+        } else {
+          // If user sets it back to asset date, remove override
+          overriddenIncomeExpenseDates.delete(incomeExpenseId);
+          dateInput.classList.remove('overridden');
+        }
+        
+        handleIncomeExpenseChange(incomeExpenseId, assetId);
       }
 
       function generateAssetGroup(asset) {
@@ -1011,18 +1133,19 @@
           let currency = "¥";
           if (assetName === "StockAward") {
             currency = "$";
-          }
-
-          summaryValue.textContent = `${currency}${totalValue.toLocaleString(
+          }          summaryValue.textContent = `${currency}${totalValue.toLocaleString(
             "en-US",
             {
               minimumFractionDigits: 2,
               maximumFractionDigits: 2,
             }
-          )}`;        } else {
+          )}`;
+        } else {
           summary.classList.remove("has-value");
         }
-      }      // Transfer management functions
+      }
+
+      // Transfer management functions
       let transferIdCounter = 0;
       let transferPairs = new Map(); // Maps transfer IDs to their corresponding pair IDs
 
@@ -1034,8 +1157,16 @@
         const transferItem = createTransferItem(transferId, assetId);
         transfersContainer.appendChild(transferItem);
         
+        // Initialize the date with the asset date
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const dateInput = transferItem.querySelector('.transfer-date-input');
+        dateInput.value = assetDate;
+        
         updateTransferSummary(assetId);
-      }      function createTransferItem(transferId, currentAssetId, isPaired = false) {
+      }
+
+      function createTransferItem(transferId, currentAssetId, isPaired = false) {
         const transferDiv = document.createElement('div');
         transferDiv.className = 'transfer-item';
         transferDiv.dataset.transferId = transferId;
@@ -1057,7 +1188,7 @@
               ${assetOptions}
             </select>
             <input type="date" class="transfer-date-input" 
-                   onchange="handleTransferChange('${transferId}', '${currentAssetId}')" />
+                   onchange="handleTransferDateChange('${transferId}', '${currentAssetId}', this)" />
             <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" 
                    oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
           </div>
@@ -1161,6 +1292,19 @@
         pairedTransferItem.querySelector('.transfer-amount-input').value = amount;
         pairedTransferItem.querySelector('.transfer-description-input').value = description;
 
+        // Sync override status for paired transfer date
+        const originalTransferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        const originalDateInput = originalTransferItem.querySelector('.transfer-date-input');
+        const pairedDateInput = pairedTransferItem.querySelector('.transfer-date-input');
+        
+        if (originalDateInput.classList.contains('overridden')) {
+          overriddenTransferDates.add(pairedTransferId);
+          pairedDateInput.classList.add('overridden');
+        } else {
+          overriddenTransferDates.delete(pairedTransferId);
+          pairedDateInput.classList.remove('overridden');
+        }
+
         // Update target asset summary
         updateTransferSummary(targetAssetId);
       }
@@ -1257,15 +1401,19 @@
           incomeExpensesSection.classList.add('visible');
           toggleBtn.classList.add('active');
         }
-      }
-
-      function addIncomeExpense(assetId) {
+      }      function addIncomeExpense(assetId) {
         const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
         if (!incomeExpensesContainer) return;
 
         const incomeExpenseId = `income_expense_${incomeExpenseIdCounter++}`;
         const incomeExpenseItem = createIncomeExpenseItem(incomeExpenseId, assetId);
         incomeExpensesContainer.appendChild(incomeExpenseItem);
+        
+        // Initialize the date with the asset date
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const dateInput = incomeExpenseItem.querySelector('.income-expense-date-input');
+        dateInput.value = assetDate;
         
         updateIncomeExpenseSummary(assetId);
       }
@@ -1282,7 +1430,7 @@
               <option value="expense">Expense</option>
             </select>
             <input type="date" class="income-expense-date-input" 
-                   onchange="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')" />
+                   onchange="handleIncomeExpenseDateChange('${incomeExpenseId}', '${currentAssetId}', this)" />
             <input type="number" class="income-expense-amount-input" placeholder="Amount" step="0.01" min="0" 
                    oninput="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')" />
             <input type="text" class="income-expense-description-input" placeholder="Description (optional)" />
@@ -1318,11 +1466,10 @@
         let itemCount = 0;
 
         incomeExpenseItems.forEach(item => {
-          const type = item.querySelector('.income-expense-type-select').value;
-          const category = item.querySelector('.income-expense-category-input').value;
+          const type = item.querySelector('.income-expense-type-select').value;          
           const amount = parseFloat(item.querySelector('.income-expense-amount-input').value) || 0;
 
-          if (category && amount > 0) {
+          if (amount > 0) {
             itemCount++;
             if (type === 'income') {
               totalIncome += amount;
@@ -1367,20 +1514,21 @@
       // Listen for postMessage from parent window (host.html)
       window.addEventListener('message', function(event) {
         console.log('Message received in asset-input:', event.data);
-        
-        if (event.data.type === 'INITIALIZE_ASSETS' && event.data.assets) {
+          if (event.data.type === 'INITIALIZE_ASSETS' && event.data.assets) {
           console.log('Initializing assets with data:', event.data.assets);
           assets = event.data.assets;
           // Clear overridden dates and transfer pairs when new assets are loaded
           overriddenDates.clear();
+          overriddenTransferDates.clear();
+          overriddenIncomeExpenseDates.clear();
           transferPairs.clear();
           transferIdCounter = 0;
+          incomeExpenseIdCounter = 0;
           generateAllAssets();
           // Removed: sending confirmation back to parent
         }
       });// Generate all assets on page load
-      document.addEventListener("DOMContentLoaded", function () {
-        // Initialize date picker with today's date
+      document.addEventListener("DOMContentLoaded", function () {        // Initialize date picker with today's date
         initializeDatePicker();
         // Generate all assets (they will be expanded by default)
         generateAllAssets();
