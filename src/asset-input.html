@@ -737,22 +737,23 @@
         
         // Add event listener for header date picker changes
         headerDatePicker.addEventListener('change', handleHeaderDateChange);
-      }
-
-      // Initialize asset date pickers with header date value
+      }      // Initialize asset date pickers with header date value
       function initializeAssetDatePickers() {
         const headerDate = document.getElementById('portfolioDate').value;
         const assetDatePickers = document.querySelectorAll('.asset-date-picker');
         
         assetDatePickers.forEach(picker => {
-          if (!overriddenDates.has(getAssetId(picker))) {
+          const assetId = getAssetId(picker);
+          if (!overriddenDates.has(assetId)) {
             picker.value = headerDate;
             picker.classList.remove('overridden');
+            
+            // Update transfer and income-expense dates for this asset
+            updateTransferDatesForAsset(assetId);
+            updateIncomeExpenseDatesForAsset(assetId);
           }
         });
-      }
-
-      // Handle header date picker changes
+      }// Handle header date picker changes
       function handleHeaderDateChange() {
         const headerDate = document.getElementById('portfolioDate').value;
         const assetDatePickers = document.querySelectorAll('.asset-date-picker');
@@ -763,9 +764,13 @@
           if (!overriddenDates.has(assetId)) {
             picker.value = headerDate;
             picker.classList.remove('overridden');
+            
+            // Update transfer and income-expense dates for this asset
+            updateTransferDatesForAsset(assetId);
+            updateIncomeExpenseDatesForAsset(assetId);
           }
         });
-      }      // Handle individual asset date picker changes
+      }// Handle individual asset date picker changes
       function handleAssetDateChange(picker, event) {
         event.stopPropagation();
         const assetId = getAssetId(picker);
