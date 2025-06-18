@@ -1048,9 +1048,7 @@
             select.value = selectedValue;
           }
         });
-      }
-
-      function toggleTransfers(assetId, event) {
+      }      function toggleTransfers(assetId, event) {
         event.stopPropagation(); // Prevent triggering asset toggle
         
         const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
@@ -1065,6 +1063,12 @@
         } else {
           transfersSection.classList.add('visible');
           toggleBtn.classList.add('active');
+          
+          // Add an empty transfer when section is toggled on
+          const transfersContainer = transfersSection.querySelector('.transfers-container');
+          if (transfersContainer && transfersContainer.children.length === 0) {
+            addTransfer(assetId);
+          }
         }
       }
 
@@ -1383,9 +1387,7 @@
       }      
       
       // Income/Expenses management functions
-      let incomeExpenseIdCounter = 0;
-
-      function toggleIncomeExpenses(assetId, event) {
+      let incomeExpenseIdCounter = 0;      function toggleIncomeExpenses(assetId, event) {
         event.stopPropagation(); // Prevent triggering asset toggle
         
         const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
@@ -1400,8 +1402,14 @@
         } else {
           incomeExpensesSection.classList.add('visible');
           toggleBtn.classList.add('active');
+          
+          // Add an empty income/expense when section is toggled on
+          const incomeExpensesContainer = incomeExpensesSection.querySelector('.income-expenses-container');
+          if (incomeExpensesContainer && incomeExpensesContainer.children.length === 0) {
+            addIncomeExpense(assetId);
+          }
         }
-      }      function addIncomeExpense(assetId) {
+      }function addIncomeExpense(assetId) {
         const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
         if (!incomeExpensesContainer) return;
 
