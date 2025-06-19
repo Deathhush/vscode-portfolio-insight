@@ -1292,11 +1292,17 @@
             pairedDescriptionInput.value = description;
           }
         }
-      }
-
-      function createOrUpdatePairedTransfer(transferId, sourceAssetId, targetAssetId, sourceType, amount, description, date) {
+      }      function createOrUpdatePairedTransfer(transferId, sourceAssetId, targetAssetId, sourceType, amount, description, date) {
         const targetAssetGroup = document.querySelector(`[data-asset-id="${targetAssetId}"]`);
         if (!targetAssetGroup) return;
+
+        // Auto-toggle transfers section if not visible
+        const targetTransfersSection = targetAssetGroup.querySelector('.transfers-section');
+        const targetToggleBtn = targetAssetGroup.querySelector('.transfer-toggle-btn');
+        if (targetTransfersSection && !targetTransfersSection.classList.contains('visible')) {
+          targetTransfersSection.classList.add('visible');
+          targetToggleBtn.classList.add('active');
+        }
 
         const targetTransfersContainer = targetAssetGroup.querySelector('.transfers-container');
         if (!targetTransfersContainer) return;
