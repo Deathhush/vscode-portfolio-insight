@@ -75,12 +75,37 @@
       .date-picker:focus {
         background-color: rgba(255, 255, 255, 0.2);
         border-color: rgba(255, 255, 255, 0.5);
-      }
-
-      .date-picker::-webkit-calendar-picker-indicator {
+      }      .date-picker::-webkit-calendar-picker-indicator {
         filter: invert(1);
         cursor: pointer;
-      }      .assets-container {
+      }
+
+      .send-update-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        margin-top: 10px;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .send-update-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+      }
+
+      .send-update-btn:active {
+        transform: translateY(0);
+      }
+
+      .assets-container {
         padding: 15px;
       }
 
@@ -708,15 +733,17 @@
     </style>
   </head>
   <body>
-    <div class="container">
-      <div class="header">
+    <div class="container">      <div class="header">
         <h1>Asset Portfolio</h1>
         <p>Update current values for your assets</p>        
         <div class="date-picker-container">
           <label for="portfolioDate">As of:</label>
           <input type="date" id="portfolioDate" class="date-picker" />
         </div>
-      </div>     
+        <button class="send-update-btn" onclick="sendAssetUpdate()">
+          📤 Send Update to Host
+        </button>
+      </div>
       <div class="assets-container" id="assetsContainer">
         <!-- Assets will be generated dynamically -->
       </div>
@@ -1540,8 +1567,204 @@
           generateAllAssets();
           // Removed: sending confirmation back to parent
         }
-      });// Generate all assets on page load
-      document.addEventListener("DOMContentLoaded", function () {        // Initialize date picker with today's date
+      });
+
+      // Extracted postMessage function for communication with host
+      function sendMessageToHost(messageType, data) {
+        const message = {
+          type: messageType,
+          data: data
+        };
+        
+        // For now, use parent.postMessage to communicate with host.html
+        // In future, this may be extended to post message to a VSCode webview extension
+        if (window.parent && window.parent !== window) {
+          window.parent.postMessage(message, '*');
+          console.log('Message sent to host:', message);
+        } else {
+          console.log('No parent window found, message would be:', message);
+        }
+      }      // Collect current asset update data in the format matching assetUpdate.json
+      function collectAssetUpdateData() {
+        const headerDate = document.getElementById('portfolioDate').value;
+        const assetUpdateData = {
+          date: headerDate,
+          assets: [],
+          transfers: []
+        };
+
+        // Collect asset data
+        assets.forEach(asset => {
+          const assetData = {
+            name: asset.name
+          };
+
+          // Get asset-specific date if overridden
+          const assetGroup = document.querySelector(`[data-asset-id="${asset.name}"]`);
+          if (assetGroup) {
+            const assetDatePicker = assetGroup.querySelector('.asset-date-picker');
+            if (assetDatePicker && overriddenDates.has(asset.name)) {
+              assetData.date = assetDatePicker.value;
+            }
+          }
+
+          const events = [];
+
+          // Find the asset group and collect snapshot data based on asset type
+          if (assetGroup) {
+            const inputFields = assetGroup.querySelectorAll('.input-field');
+            
+            if (asset.type === 'simple') {
+              // Simple assets have one input field for current value
+              const currentValueInput = inputFields[0];
+              if (currentValueInput && currentValueInput.value) {
+                events.push({
+                  type: "snapshot",
+                  currentValue: parseFloat(currentValueInput.value)
+                });
+              }
+            } else if (asset.type === 'investment') {
+              // Investment assets have one input field for current value
+              const currentValueInput = inputFields[0];
+              if (currentValueInput && currentValueInput.value) {
+                events.push({
+                  type: "snapshot",
+                  currentValue: parseFloat(currentValueInput.value)
+                });
+              }
+            } else if (asset.type === 'composite') {
+              // Composite assets have two input fields: current value and market value
+              const currentValueInput = inputFields[0];
+              const marketValueInput = inputFields[1];
+              
+              if (currentValueInput && currentValueInput.value) {
+                const snapshotEvent = {
+                  type: "snapshot",
+                  currentValue: parseFloat(currentValueInput.value)
+                };
+                if (marketValueInput && marketValueInput.value) {
+                  snapshotEvent.marketValue = parseFloat(marketValueInput.value);
+                }
+                events.push(snapshotEvent);
+              }
+            } else if (asset.type === 'stock') {
+              // Stock assets have two input fields: shares and price
+              const sharesInput = inputFields[0]; // First field is shares
+              const priceInput = inputFields[1];  // Second field is price
+              
+              if (sharesInput && sharesInput.value && priceInput && priceInput.value) {
+                events.push({
+                  type: "snapshot",
+                  shares: parseFloat(sharesInput.value),
+                  price: parseFloat(priceInput.value)
+                });
+              }
+            }          }
+
+          // Collect income/expense events for this asset
+          if (assetGroup) {
+            const incomeExpenseSection = assetGroup.querySelector('.income-expenses-container');
+            if (incomeExpenseSection) {
+              const incomeExpenseItems = incomeExpenseSection.querySelectorAll('.income-expense-item');
+              incomeExpenseItems.forEach(item => {
+                const typeSelect = item.querySelector('.income-expense-type-select');
+                const amountInput = item.querySelector('.income-expense-amount-input');
+                const dateInput = item.querySelector('.income-expense-date-input');
+                const descriptionInput = item.querySelector('.income-expense-description-input');
+
+                if (typeSelect && typeSelect.value && amountInput && amountInput.value) {
+                  const event = {
+                    type: typeSelect.value,
+                    amount: parseFloat(amountInput.value)
+                  };
+                  
+                  if (dateInput && dateInput.value) {
+                    event.date = dateInput.value;
+                  }
+                  
+                  if (descriptionInput && descriptionInput.value) {
+                    event.description = descriptionInput.value;
+                  }
+                  
+                  events.push(event);
+                }
+              });
+            }
+          }
+
+          if (events.length > 0) {
+            assetData.events = events;
+            assetUpdateData.assets.push(assetData);
+          }
+        });        // Collect transfer data
+        const allAssetGroups = document.querySelectorAll('[data-asset-id]');
+        const processedTransfers = new Set();
+
+        allAssetGroups.forEach(assetGroup => {
+          const transfersContainer = assetGroup.querySelector('.transfers-container');
+          if (transfersContainer) {
+            const transferItems = transfersContainer.querySelectorAll('.transfer-item');
+            transferItems.forEach(item => {
+              const transferId = item.dataset.transferId;
+              
+              // Skip if already processed (paired transfers)
+              if (processedTransfers.has(transferId)) {
+                return;
+              }
+
+              const typeSelect = item.querySelector('.transfer-type-select');
+              const assetSelect = item.querySelector('.transfer-asset-select');
+              const amountInput = item.querySelector('.transfer-amount-input');
+              const dateInput = item.querySelector('.transfer-date-input');
+              const descriptionInput = item.querySelector('.transfer-description-input');
+
+              if (typeSelect && typeSelect.value && assetSelect && assetSelect.value && amountInput && amountInput.value) {
+                const currentAssetName = assetGroup.dataset.assetId;
+                
+                const transfer = {
+                  amount: parseFloat(amountInput.value)
+                };
+
+                if (typeSelect.value === 'from') {
+                  transfer.from = currentAssetName;
+                  transfer.to = assetSelect.value;
+                } else {
+                  transfer.from = assetSelect.value;
+                  transfer.to = currentAssetName;
+                }
+
+                if (dateInput && dateInput.value) {
+                  transfer.date = dateInput.value;
+                }
+
+                if (descriptionInput && descriptionInput.value) {
+                  transfer.description = descriptionInput.value;
+                }
+
+                assetUpdateData.transfers.push(transfer);
+                processedTransfers.add(transferId);
+                
+                // Also mark paired transfer as processed
+                const pairedId = transferPairs.get(transferId);
+                if (pairedId) {
+                  processedTransfers.add(pairedId);
+                }
+              }
+            });
+          }
+        });
+
+        return assetUpdateData;
+      }      // Send asset update message to host
+      function sendAssetUpdate() {
+        const assetUpdateData = collectAssetUpdateData();
+        console.log('Collected asset update data:', assetUpdateData);
+        sendMessageToHost('ASSET_UPDATE', assetUpdateData);
+      }
+
+      // Generate all assets on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize date picker with today's date
         initializeDatePicker();
         // Generate all assets (they will be expanded by default)
         generateAllAssets();

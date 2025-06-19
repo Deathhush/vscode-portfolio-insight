@@ -1,0 +1,59 @@
+{
+    "date": "2025/06/19",
+    "assets": [
+        {
+            "name": "招行.活期",
+            "date": "2025/06/09",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "currentValue": 10000                    
+                },
+                {
+                    "type": "income",
+                    "amount": 1000,
+                    "date": "2025/06/01"
+                },
+                {
+                    "type": "expense",
+                    "amount": 500,
+                    "date": "2025/06/08"
+                }
+            ]
+        },    
+        {
+            "name": "国金",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "currentValue": 5000,
+                    "marketValue": 4900
+                }
+            ]
+        },
+        {
+            "name": "StockAward",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "shares": 100,
+                    "price": 800
+                }
+            ]
+        }
+
+    ],    
+    "transfers": [
+        {
+            "from": "招行.活期",
+            "to": "国金",
+            "amount": 2000,
+            "date": "2025/06/10"
+        },
+        {
+            "from": "国金",
+            "to": "StockAward",
+            "amount": 1000            
+        }
+    ]
+}

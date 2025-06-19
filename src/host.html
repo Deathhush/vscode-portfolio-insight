@@ -236,7 +236,18 @@
                 statusDot.classList.remove('connected');
                 statusText.textContent = 'Disconnected';
             }
-        }        // Message handling removed - no longer listening for iframe messages        // Initialize when the page loads
+        }
+
+        // Listen for messages from the iframe
+        window.addEventListener('message', function(event) {
+            console.log('Message received in host:', event.data);
+            
+            if (event.data.type === 'ASSET_UPDATE') {
+                console.log('Asset Update received:', JSON.stringify(event.data.data, null, 2));
+            }
+        });
+
+        // Initialize when the page loads
         document.addEventListener('DOMContentLoaded', function() {
             iframe = document.getElementById('assetIframe');
             
