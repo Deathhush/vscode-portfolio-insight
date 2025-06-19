@@ -78,9 +78,7 @@
       }      .date-picker::-webkit-calendar-picker-indicator {
         filter: invert(1);
         cursor: pointer;
-      }
-
-      .send-update-btn {
+      }      .send-update-btn {
         background: rgba(255, 255, 255, 0.2);
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.3);
@@ -89,7 +87,6 @@
         font-size: 0.9em;
         cursor: pointer;
         transition: all 0.3s ease;
-        margin-top: 10px;
         display: inline-flex;
         align-items: center;
         gap: 6px;
@@ -735,14 +732,13 @@
   <body>
     <div class="container">      <div class="header">
         <h1>Asset Portfolio</h1>
-        <p>Update current values for your assets</p>        
-        <div class="date-picker-container">
+        <p>Update current values for your assets</p>          <div class="date-picker-container">
           <label for="portfolioDate">As of:</label>
           <input type="date" id="portfolioDate" class="date-picker" />
+          <button class="send-update-btn" onclick="sendAssetUpdate()">
+            Save Asset Update
+          </button>
         </div>
-        <button class="send-update-btn" onclick="sendAssetUpdate()">
-          📤 Send Update to Host
-        </button>
       </div>
       <div class="assets-container" id="assetsContainer">
         <!-- Assets will be generated dynamically -->
