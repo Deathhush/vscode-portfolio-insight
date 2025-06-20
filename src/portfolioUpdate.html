@@ -1761,7 +1761,7 @@
       function sendAssetUpdate() {
         const assetUpdateData = collectAssetUpdateData();
         console.log('Collected asset update data:', assetUpdateData);
-        sendMessageToHost('ASSET_UPDATE', assetUpdateData);
+        sendMessageToHost('PORTFOLIO_UPDATE', assetUpdateData);
       }
 
       // Generate all assets on page load

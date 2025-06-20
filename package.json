@@ -10,7 +10,7 @@
     "Other"
   ],
   "activationEvents": [],
-  "main": "./out/extension.js",
+  "main": "./out/src/extension.js",
   "contributes": {
     "viewsContainers": {
       "activitybar": [
@@ -44,28 +44,30 @@
         "title": "Hello World"
       },
       {
-        "command": "assetExplorer.refresh",
+        "command": "vscode-asset-insight.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "assetExplorer.openAsset",
-        "title": "Open Asset"
+        "command": "vscode-asset-insight.updateAssets",
+        "title": "Update Portfolio",
+        "icon": "$(edit)"
       }
     ],
     "menus": {
       "view/title": [
         {
-          "command": "assetExplorer.refresh",
+          "command": "vscode-asset-insight.updateAssets",
           "when": "view == assetExplorer",
           "group": "navigation"
-        }
+        },
+        {
+          "command": "vscode-asset-insight.refresh",
+          "when": "view == assetExplorer",
+          "group": "navigation"
+        }        
       ],
       "view/item/context": [
-        {
-          "command": "assetExplorer.openAsset",
-          "when": "view == assetExplorer && viewItem == assetItem"
-        }
       ]
     }
   },

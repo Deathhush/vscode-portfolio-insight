@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Asset Insight Host</title>
+    <title>Portfolio Insight Host</title>
     <style>
         * {
             margin: 0;
@@ -147,9 +147,8 @@
         }
     </style>
 </head>
-<body>
-    <div class="host-header">
-        <h1>Asset Insight Manager</h1>
+<body>    <div class="host-header">
+        <h1>Portfolio Insight Manager</h1>
         <p>Manage and track your asset portfolio</p>
     </div>
 
@@ -164,18 +163,15 @@
         </div>
     </div>
 
-    <div class="iframe-container">
-        <div class="loading-overlay" id="loadingOverlay">
-            Loading asset input interface...
+    <div class="iframe-container">        <div class="loading-overlay" id="loadingOverlay">
+            Loading portfolio input interface...
         </div>        
         <iframe 
-            id="assetIframe" 
+            id="portfolioIframe" 
             class="asset-iframe" 
-            src="asset-update.html">
+            src="portfolioUpdate.html">
         </iframe>
-    </div>
-
-    <script>        
+    </div>    <script>        
         let iframe;
 
         // Removed isIframeReady tracking since we no longer wait for ready messages
@@ -242,14 +238,14 @@
         window.addEventListener('message', function(event) {
             console.log('Message received in host:', event.data);
             
-            if (event.data.type === 'ASSET_UPDATE') {
-                console.log('Asset Update received:', JSON.stringify(event.data.data, null, 2));
+            if (event.data.type === 'PORTFOLIO_UPDATE') {
+                console.log('Portfolio Update received:', JSON.stringify(event.data.data, null, 2));
             }
         });
 
         // Initialize when the page loads
         document.addEventListener('DOMContentLoaded', function() {
-            iframe = document.getElementById('assetIframe');
+            iframe = document.getElementById('portfolioIframe');
             
             iframe.addEventListener('load', function() {
                 console.log('Iframe loaded');
@@ -262,7 +258,7 @@
 
             iframe.addEventListener('error', function() {
                 console.error('Error loading iframe');
-                document.getElementById('loadingOverlay').innerHTML = 'Error loading asset input interface';
+                document.getElementById('loadingOverlay').innerHTML = 'Error loading portfolio input interface';
                 updateStatus(false);
             });
         });
