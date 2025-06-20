@@ -12,12 +12,61 @@
   "activationEvents": [],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "assetInsightContainer",
+          "title": "Asset Insight",
+          "icon": "$(file-directory)"
+        }
+      ]
+    },
+    "views": {
+      "assetInsightContainer": [
+        {
+          "id": "assetExplorer",
+          "name": "AssetExplorer",
+          "when": "true"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "assetExplorer",
+        "contents": "No folder opened.\n\nTo use Asset Insight, you need to open a folder first.\n\n[Open Folder](command:vscode.openFolder)\n\nYou can also open a workspace:\n\n[Open Workspace](command:workbench.action.openWorkspace)",
+        "when": "workbenchState == empty"
+      }
+    ],
     "commands": [
       {
         "command": "vscode-asset-insight.helloWorld",
         "title": "Hello World"
+      },
+      {
+        "command": "assetExplorer.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "assetExplorer.openAsset",
+        "title": "Open Asset"
       }
-    ]
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "assetExplorer.refresh",
+          "when": "view == assetExplorer",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "assetExplorer.openAsset",
+          "when": "view == assetExplorer && viewItem == assetItem"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
