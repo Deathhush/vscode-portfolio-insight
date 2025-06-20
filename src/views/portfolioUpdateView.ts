@@ -3,20 +3,23 @@ import * as path from 'path';
 import * as fs from 'fs';
 
 export class PortfolioUpdateView {
-    public static currentPanel: PortfolioUpdateView | undefined;
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
-    private _disposables: vscode.Disposable[] = [];    public static createOrShow(extensionUri: vscode.Uri): PortfolioUpdateView {
+    private _disposables: vscode.Disposable[] = [];
+    private _onPortfolioUpdateEmitter = new vscode.EventEmitter<any>();
+    
+    // Event that fires when portfolio update is received
+    public readonly onPortfolioUpdate: vscode.Event<any> = this._onPortfolioUpdateEmitter.event;
+
+    public constructor(extensionUri: vscode.Uri) {
+        this._extensionUri = extensionUri;
+        
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
-            : undefined;        // If we already have a panel, show it
-        if (PortfolioUpdateView.currentPanel) {
-            PortfolioUpdateView.currentPanel._panel.reveal(column);
-            return PortfolioUpdateView.currentPanel;
-        }
+            : undefined;
 
-        // Otherwise, create a new panel
-        const panel = vscode.window.createWebviewPanel(
+        // Create a new panel
+        this._panel = vscode.window.createWebviewPanel(
             'portfolioUpdateView',
             'Portfolio Update',
             column || vscode.ViewColumn.One,
@@ -28,14 +31,6 @@ export class PortfolioUpdateView {
             }
         );
 
-        PortfolioUpdateView.currentPanel = new PortfolioUpdateView(panel, extensionUri);
-        return PortfolioUpdateView.currentPanel;
-    }
-
-    private constructor(panel: vscode.WebviewPanel, extensionUri: vscode.Uri) {
-        this._panel = panel;
-        this._extensionUri = extensionUri;
-
         // Set the webview's initial html content
         this._update();
 
@@ -45,8 +40,9 @@ export class PortfolioUpdateView {
 
         // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
-            message => {                switch (message.type) {
-                    case 'portfolioUpdate':
+            message => {
+                switch (message.type) {
+                    case 'PORTFOLIO_UPDATE':
                         this._handlePortfolioUpdate(message.data);
                         return;
                     case 'error':
@@ -60,18 +56,14 @@ export class PortfolioUpdateView {
     }
 
     private _handlePortfolioUpdate(data: any) {
-        // Handle portfolio update data
-        vscode.window.showInformationMessage(`Portfolio update received: ${JSON.stringify(data, null, 2)}`);
-        
-        // Here you could save the data to a file, send it to an API, etc.
-        // For now, we'll just show it in an information message
-    }
-
+        // Fire the event to notify listeners
+        this._onPortfolioUpdateEmitter.fire(data);
+    }    
+    
     public dispose() {
-        PortfolioUpdateView.currentPanel = undefined;
-
         // Clean up our resources
         this._panel.dispose();
+        this._onPortfolioUpdateEmitter.dispose();
 
         while (this._disposables.length) {
             const x = this._disposables.pop();
@@ -79,7 +71,9 @@ export class PortfolioUpdateView {
                 x.dispose();
             }
         }
-    }    private _update() {
+    }
+
+    private _update() {
         const webview = this._panel.webview;
         this._panel.title = 'Portfolio Update';
         this._panel.webview.html = this._getHtmlForWebview(webview);
@@ -116,14 +110,14 @@ export class PortfolioUpdateView {
         }
     }
 
-    public static sendInitializeAssets(assets: any[]) {
-        if (PortfolioUpdateView.currentPanel && PortfolioUpdateView.currentPanel._panel.webview) {
+    public sendInitializeAssets(assets: any[]) {
+        if (this._panel && this._panel.webview) {
             const message = {
                 type: 'INITIALIZE_ASSETS',
                 assets: assets
             };
             
-            PortfolioUpdateView.currentPanel._panel.webview.postMessage(message);
+            this._panel.webview.postMessage(message);
             console.log('INITIALIZE_ASSETS message sent to webview:', message);
         } else {
             console.warn('Cannot send INITIALIZE_ASSETS: No active Portfolio Update panel');

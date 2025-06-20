@@ -1231,7 +1231,9 @@
         `;
 
         return transferDiv;
-      }      function removeTransfer(transferId, assetId) {
+      }      
+      
+      function removeTransfer(transferId, assetId) {
         const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
         if (transferItem) {
           // Remove paired transfer if it exists
@@ -1443,7 +1445,9 @@
             addIncomeExpense(assetId);
           }
         }
-      }function addIncomeExpense(assetId) {
+      }
+      
+      function addIncomeExpense(assetId) {
         const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
         if (!incomeExpensesContainer) return;
 
@@ -1578,15 +1582,21 @@
           data: data
         };
         
-        // For now, use parent.postMessage to communicate with host.html
-        // In future, this may be extended to post message to a VSCode webview extension
-        if (window.parent && window.parent !== window) {
+        // Send message to VSCode webview if available
+        if (typeof acquireVsCodeApi !== 'undefined') {
+          const vscode = acquireVsCodeApi();
+          vscode.postMessage(message);
+          console.log('Message sent to VSCode webview:', message);
+        } else if (window.parent && window.parent !== window) {
+          // Fallback to parent.postMessage for host.html compatibility
           window.parent.postMessage(message, '*');
           console.log('Message sent to host:', message);
         } else {
-          console.log('No parent window found, message would be:', message);
+          console.log('No VSCode API or parent window found, message would be:', message);
         }
-      }      // Collect current asset update data in the format matching assetUpdate.json
+      }
+      
+      // Collect current asset update data in the format matching assetUpdate.json
       function collectAssetUpdateData() {
         const headerDate = document.getElementById('portfolioDate').value;
         const assetUpdateData = {
