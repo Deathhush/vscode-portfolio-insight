@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Insight Host</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .host-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .host-header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            font-weight: 300;
+        }
+
+        .host-header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+
+        .host-controls {
+            background: white;
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border-bottom: 1px solid #e1e5e9;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+        }
+
+        .btn-secondary:hover {
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            padding: 8px 16px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #dc3545;
+        }
+
+        .status-dot.connected {
+            background: #28a745;
+        }
+
+        .iframe-container {
+            flex: 1;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            position: relative;
+        }
+
+        .asset-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: block;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255, 255, 255, 0.9);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2em;
+            color: #666;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+
+            .host-controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .status-indicator {
+                margin-left: 0;
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>    <div class="host-header">
+        <h1>Portfolio Insight Manager</h1>
+        <p>Manage and track your asset portfolio</p>
+    </div>
+
+    <div class="host-controls">
+        <button class="btn" onclick="initializeAssets()">Initialize Assets</button>
+        <button class="btn btn-secondary" onclick="loadSampleData()">Load Sample Data</button>
+        <button class="btn" onclick="refreshIframe()">Refresh</button>
+        
+        <div class="status-indicator">
+            <span class="status-dot" id="statusDot"></span>
+            <span id="statusText">Disconnected</span>
+        </div>
+    </div>
+
+    <div class="iframe-container">        <div class="loading-overlay" id="loadingOverlay">
+            Loading portfolio input interface...
+        </div>        
+        <iframe 
+            id="portfolioIframe" 
+            class="asset-iframe" 
+            src="portfolioUpdate.html">
+        </iframe>
+    </div>    <script>        
+        let iframe;
+
+        // Removed isIframeReady tracking since we no longer wait for ready messages
+
+        // Sample asset data
+        const sampleAssets = [
+            { name: "招行.活期", type: "simple", currency: "CNY" },
+            { name: "招行.沪深300ETF", type: "investment", currency: "CNY" },
+            { name: "国金", type: "composite", currency: "CNY" },
+            { name: "StockAward", type: "stock", currency: "USD" }
+        ];
+
+        // Additional asset data for variety
+        const additionalAssets = [
+            { name: "Bitcoin Holdings", type: "investment", currency: "USD" },
+            { name: "Real Estate Fund", type: "composite", currency: "CNY" },
+            { name: "Emergency Fund", type: "simple", currency: "CNY" },
+            { name: "Gold ETF", type: "investment", currency: "USD" }
+        ];        function initializeAssets() {
+            console.log('Initializing assets...');
+            
+            // Send the default assets to the iframe
+            const message = {
+                type: 'INITIALIZE_ASSETS',
+                assets: sampleAssets
+            };
+
+            iframe.contentWindow.postMessage(message, '*');
+            console.log('Assets initialization message sent:', message);
+        }        function loadSampleData() {
+            console.log('Loading sample data...');
+            
+            // Combine sample assets with additional ones
+            const allAssets = [...sampleAssets, ...additionalAssets];
+            
+            const message = {
+                type: 'INITIALIZE_ASSETS',
+                assets: allAssets
+            };
+
+            iframe.contentWindow.postMessage(message, '*');
+            console.log('Sample data loading message sent:', message);
+        }function refreshIframe() {
+            console.log('Refreshing iframe...');
+            updateStatus(false);
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            iframe.src = iframe.src;
+        }
+
+        function updateStatus(connected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connected';
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        // Listen for messages from the iframe
+        window.addEventListener('message', function(event) {
+            console.log('Message received in host:', event.data);
+            
+            if (event.data.type === 'PORTFOLIO_UPDATE') {
+                console.log('Portfolio Update received:', JSON.stringify(event.data.data, null, 2));
+            }
+        });
+
+        // Initialize when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            iframe = document.getElementById('portfolioIframe');
+            
+            iframe.addEventListener('load', function() {
+                console.log('Iframe loaded');
+                // Auto-update status since we no longer wait for ready messages
+                setTimeout(() => {
+                    updateStatus(true);
+                    document.getElementById('loadingOverlay').classList.add('hidden');
+                }, 1000);
+            });
+
+            iframe.addEventListener('error', function() {
+                console.error('Error loading iframe');
+                document.getElementById('loadingOverlay').innerHTML = 'Error loading portfolio input interface';
+                updateStatus(false);
+            });
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // The iframe will automatically resize due to CSS
+        });
+    </script>
+</body>
+</html>

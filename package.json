@@ -1,0 +1,93 @@
+{
+  "name": "vscode-portfolio-insight",
+  "displayName": "vscode-portfolio-insight",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.101.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/src/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "assetInsightContainer",
+          "title": "Asset Insight",
+          "icon": "$(file-directory)"
+        }
+      ]
+    },
+    "views": {
+      "assetInsightContainer": [
+        {
+          "id": "assetExplorer",
+          "name": "AssetExplorer",
+          "when": "true",
+          "icon": "$(file-directory)"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "assetExplorer",
+        "contents": "No folder opened.\n\nTo use Asset Insight, you need to open a folder first.\n\n[Open Folder](command:vscode.openFolder)\n\nYou can also open a workspace:\n\n[Open Workspace](command:workbench.action.openWorkspace)",
+        "when": "workbenchState == empty"
+      }
+    ],
+    "commands": [
+      {
+        "command": "vscode-portfolio-insight.helloWorld",
+        "title": "Hello World"
+      },
+      {
+        "command": "vscode-portfolio-insight.refresh",
+        "title": "Refresh",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "vscode-portfolio-insight.updateAssets",
+        "title": "Update Portfolio",
+        "icon": "$(edit)"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "vscode-portfolio-insight.updateAssets",
+          "when": "view == assetExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-portfolio-insight.refresh",
+          "when": "view == assetExplorer",
+          "group": "navigation"
+        }        
+      ],
+      "view/item/context": [
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src",
+    "test": "vscode-test"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.101.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "20.x",
+    "@typescript-eslint/eslint-plugin": "^8.17.0",
+    "@typescript-eslint/parser": "^8.17.0",
+    "eslint": "^9.16.0",
+    "typescript": "^5.7.2",
+    "@vscode/test-cli": "^0.0.10",
+    "@vscode/test-electron": "^2.4.1"
+  }
+}

@@ -1,0 +1,1786 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Asset Value Input</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background-color: #f5f5f5;
+        padding: 10px;
+        line-height: 1.3;
+        font-size: 15px;
+      }
+
+      .container {
+        max-width: 600px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+      }
+
+      .header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        padding: 15px;
+        text-align: center;
+      }
+
+      .header h1 {
+        font-size: 1.6em;
+        margin-bottom: 5px;
+        font-weight: 300;
+      }
+
+      .header p {
+        opacity: 0.9;
+        font-size: 0.9em;
+      }
+
+      .date-picker-container {
+        margin-top: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+
+      .date-picker-container label {
+        font-size: 0.9em;
+        opacity: 0.9;
+        font-weight: 500;
+      }
+
+      .date-picker {
+        padding: 6px 10px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 4px;
+        background-color: rgba(255, 255, 255, 0.1);
+        color: white;
+        font-size: 0.9em;
+        outline: none;
+        transition: all 0.3s ease;
+      }
+
+      .date-picker:focus {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+      }      .date-picker::-webkit-calendar-picker-indicator {
+        filter: invert(1);
+        cursor: pointer;
+      }      .send-update-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 6px;
+        padding: 8px 16px;
+        font-size: 0.9em;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .send-update-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+      }
+
+      .send-update-btn:active {
+        transform: translateY(0);
+      }
+
+      .assets-container {
+        padding: 15px;
+      }
+
+      .asset-group {
+        margin-bottom: 12px;
+        border: 1px solid #e1e5e9;
+        border-radius: 6px;
+        overflow: hidden;
+        transition: box-shadow 0.3s ease;
+      }
+
+      .asset-group:hover {
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }      .asset-header {
+        background: #f8f9fa;
+        padding: 12px;
+        cursor: pointer;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        transition: background-color 0.3s ease;
+      }
+
+      .asset-header:hover {
+        background: #e9ecef;
+      }
+
+      .asset-header.active {
+        background: #e3f2fd;
+      }
+
+      .asset-header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .asset-date-picker {
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+        background-color: white;
+        color: #333;
+        font-size: 0.8em;
+        outline: none;
+        transition: all 0.3s ease;
+        min-width: 130px;
+      }
+
+      .asset-date-picker:focus {
+        border-color: #667eea;
+        box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+      }
+
+      .asset-date-picker.overridden {
+        border-color: #f57c00;
+        background-color: #fff8e1;
+      }.asset-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .asset-type-badge {
+        padding: 3px 8px;
+        border-radius: 15px;
+        font-size: 0.7em;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .type-simple {
+        background: #e8f5e8;
+        color: #2e7d32;
+      }
+
+      .type-investment {
+        background: #fff3e0;
+        color: #f57c00;
+      }
+
+      .type-composite {
+        background: #f3e5f5;
+        color: #7b1fa2;
+      }
+
+      .type-stock {
+        background: #e3f2fd;
+        color: #1976d2;
+      }      .asset-name {
+        font-size: 1em;
+        font-weight: 600;
+        color: #333;
+      }
+
+      .currency-label {
+        background: #212529;
+        color: white;
+        padding: 1px 6px;
+        border-radius: 3px;
+        font-size: 0.7em;
+        margin-left: 8px;
+      }
+
+      .collapse-icon {
+        font-size: 1.2em;
+        transition: transform 0.3s ease;
+        color: #666;
+      }
+
+      .collapse-icon.rotated {
+        transform: rotate(180deg);
+      }
+
+      .asset-content {
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+        background: white;
+      }      .asset-content.expanded {
+        max-height: 600px;
+        padding: 15px;
+        overflow-y: auto;
+      }
+
+      .input-group {
+        margin-bottom: 12px;
+      }
+
+      .input-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+      }
+
+      .input-field {
+        width: 100%;
+        padding: 8px 12px;
+        border: 2px solid #e1e5e9;
+        border-radius: 4px;
+        font-size: 0.9em;
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+      }
+
+      .input-field:focus {
+        outline: none;
+        border-color: #667eea;
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      }      .value-summary {
+        background: #f8f9fa;
+        padding: 10px;
+        border-radius: 4px;
+        margin-top: 10px;
+        display: none;
+      }
+
+      .value-summary.has-value {
+        display: block;
+      }
+
+      .summary-text {
+        color: #666;
+        font-size: 0.8em;
+      }      .summary-value {
+        font-size: 1.1em;
+        font-weight: 600;
+        color: #333;
+        margin-top: 3px;
+      }      
+      
+      .transfers-section {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e1e5e9;
+        display: none;
+      }
+
+      .transfers-section.visible {
+        display: block;
+      }
+      
+      .transfers-header {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }      
+      
+      .transfer-toggle-btn {
+        background: #b2c8f2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 0.7em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 8px;
+      }
+
+      .transfer-toggle-btn:hover {
+        background: #80abf4;
+      }
+
+      .transfer-toggle-btn.active {
+        background: #667eea;
+      }
+
+      .transfer-toggle-btn.active:hover {
+        background: #5a67d8;
+      }      
+      
+      .transfers-help {
+        font-size: 0.75em;
+        color: #666;
+        font-weight: normal;
+        font-style: italic;
+        margin-left: auto;
+      }      
+      
+      .transfers-icon {
+        color: #667eea;
+        font-size: 1em;
+      }
+
+      .transfer-item {
+        background: #f8f9fa;
+        border: 1px solid #e1e5e9;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 8px;
+        position: relative;
+      }
+
+      .transfer-item[data-is-paired="true"] {
+        background: #f0f8ff;
+        border-color: #cce7ff;
+      }
+
+      .transfer-item[data-is-paired="true"]::before {
+        content: "↔";
+        position: absolute;
+        top: 4px;
+        left: 4px;
+        color: #667eea;
+        font-size: 0.8em;
+        font-weight: bold;
+      }
+
+      .transfer-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .transfer-row:last-child {
+        margin-bottom: 0;
+      }      .transfer-type-select {
+        flex: 0 0 70px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: white;
+      }      .transfer-asset-select {
+        flex: 1;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: white;
+        min-width: 140px;
+      }
+           .transfer-date-input {
+        flex: 0 0 100px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+      }
+      
+      .transfer-date-input.overridden {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        box-shadow: 0 0 0 1px #ffeaa7;
+      }
+
+      .transfer-date-input.overridden:focus {
+        background-color: #fff3cd;
+        border-color: #fd79a8;
+        box-shadow: 0 0 0 2px rgba(253, 121, 168, 0.2);
+      }
+      
+      .transfer-amount-input {        
+        width: 120px;
+        padding: 4px 4px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        text-align: right;
+      }.transfer-description-input {
+        width: 100%;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+      }
+
+      .transfer-description-input::placeholder {
+        color: #999;
+      }
+
+      .remove-transfer-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.3s ease;
+      }
+
+      .remove-transfer-btn:hover {
+        background: #c82333;
+      }
+
+      .add-transfer-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .add-transfer-btn:hover {
+        background: #218838;
+      }
+
+      .transfer-summary {
+        margin-top: 8px;
+        padding: 8px;
+        background: #e8f5e8;
+        border-radius: 4px;
+        font-size: 0.8em;
+        color: #2e7d32;
+        display: none;
+      }
+
+      .transfer-summary.has-transfers {
+        display: block;
+      }
+      
+      .income-expenses-section {
+        margin-top: 15px;
+        padding-top: 15px;
+        border-top: 1px solid #e1e5e9;
+        display: none;
+      }
+
+      .income-expenses-section.visible {
+        display: block;
+      }
+      
+      .income-expenses-header {
+        font-weight: 600;
+        color: #333;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }      
+        .income-expenses-toggle-btn {
+        background: #b2c8f2;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 0.7em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        margin-right: 8px;
+      }
+
+      .income-expenses-toggle-btn:hover {
+        background: #80abf4;
+      }
+
+      .income-expenses-toggle-btn.active {
+        background: #667eea;
+      }
+
+      .income-expenses-toggle-btn.active:hover {
+        background: #5a67d8;
+      }
+      
+      .income-expenses-help {
+        font-size: 0.75em;
+        color: #666;
+        font-weight: normal;
+        font-style: italic;
+        margin-left: auto;
+      }      
+      
+      .income-expenses-icon {
+        color: #28a745;
+        font-size: 1em;
+      }
+
+      .income-expense-item {
+        background: #f8f9fa;
+        border: 1px solid #e1e5e9;
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 8px;
+        position: relative;
+      }
+
+      .income-expense-row {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+
+      .income-expense-row:last-child {
+        margin-bottom: 0;
+      }
+
+      .income-expense-type-select {
+        flex: 0 0 80px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: white;
+      }      .income-expense-date-input {
+        flex: 0 0 100px;
+        padding: 4px 6px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+      }
+      
+      .income-expense-date-input.overridden {
+        background-color: #fff3cd;
+        border-color: #ffeaa7;
+        box-shadow: 0 0 0 1px #ffeaa7;
+      }
+
+      .income-expense-date-input.overridden:focus {
+        background-color: #fff3cd;
+        border-color: #fd79a8;
+        box-shadow: 0 0 0 2px rgba(253, 121, 168, 0.2);
+      }
+      
+      .income-expense-amount-input {        
+        width: 120px;
+        padding: 4px 4px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;
+        text-align: right;
+      }
+
+      .income-expense-description-input {
+        flex: 1;
+        padding: 4px 8px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.8em;        
+      }
+
+      .income-expense-description-input::placeholder {
+        color: #999;
+      }
+
+      .remove-income-expense-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: #dc3545;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        font-size: 0.7em;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background-color 0.3s ease;
+      }
+
+      .remove-income-expense-btn:hover {
+        background: #c82333;
+      }
+
+      .add-income-expense-btn {
+        background: #28a745;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-size: 0.8em;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .add-income-expense-btn:hover {
+        background: #218838;
+      }
+
+      .income-expense-summary {
+        margin-top: 8px;
+        padding: 8px;
+        background: #e8f5e8;
+        border-radius: 4px;
+        font-size: 0.8em;
+        color: #2e7d32;
+        display: none;
+      }
+
+      .income-expense-summary.has-items {
+        display: block;
+      }
+      
+      @media (max-width: 768px) {
+        .container {
+          margin: 0;
+          border-radius: 0;
+        }
+
+        .header {
+          padding: 12px;
+        }
+
+        .header h1 {
+          font-size: 1.4em;
+        }
+
+        .assets-container {
+          padding: 12px;
+        }
+
+        .asset-header {
+          padding: 10px;
+        }
+
+        .asset-content.expanded {
+          padding: 12px;
+        }        
+        
+        .asset-header-right {
+          gap: 5px;
+        }
+
+        .transfer-toggle-btn {
+          font-size: 0.6em;
+          padding: 3px 6px;
+          margin-right: 4px;
+        }
+
+        .asset-date-picker {
+          font-size: 0.7em;
+          padding: 3px 6px;
+          min-width: 110px;
+        }
+
+        .date-picker-container {
+          flex-direction: column;
+          gap: 5px;
+        }
+
+        .transfer-row {
+          flex-direction: column;
+          gap: 6px;
+        }        .transfer-type-select,
+        .transfer-asset-select,
+        .transfer-date-input,
+        .transfer-amount-input {
+          flex: none;
+          width: 100%;
+        }.transfers-section {
+          margin-top: 12px;
+          padding-top: 12px;
+        }
+
+        .transfer-item {
+          padding: 10px;
+        }        .transfers-help {
+          display: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">      <div class="header">
+        <h1>Asset Portfolio</h1>
+        <p>Update current values for your assets</p>          <div class="date-picker-container">
+          <label for="portfolioDate">As of:</label>
+          <input type="date" id="portfolioDate" class="date-picker" />
+          <button class="send-update-btn" onclick="sendAssetUpdate()">
+            Save Asset Update
+          </button>
+        </div>
+      </div>
+      <div class="assets-container" id="assetsContainer">
+        <!-- Assets will be generated dynamically -->
+      </div>
+    </div>
+    <script>      // Assets data - default values
+      let assets = [
+      ];      // Track which asset groups have overridden dates
+      let overriddenDates = new Set();
+      
+      // Track which transfer/income-expense items have overridden dates
+      let overriddenTransferDates = new Set();
+      let overriddenIncomeExpenseDates = new Set();// Initialize date picker with today's date
+      function initializeDatePicker() {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        const headerDatePicker = document.getElementById('portfolioDate');
+        headerDatePicker.value = formattedDate;
+        
+        // Add event listener for header date picker changes
+        headerDatePicker.addEventListener('change', handleHeaderDateChange);
+      }      // Initialize asset date pickers with header date value
+      function initializeAssetDatePickers() {
+        const headerDate = document.getElementById('portfolioDate').value;
+        const assetDatePickers = document.querySelectorAll('.asset-date-picker');
+        
+        assetDatePickers.forEach(picker => {
+          const assetId = getAssetId(picker);
+          if (!overriddenDates.has(assetId)) {
+            picker.value = headerDate;
+            picker.classList.remove('overridden');
+            
+            // Update transfer and income-expense dates for this asset
+            updateTransferDatesForAsset(assetId);
+            updateIncomeExpenseDatesForAsset(assetId);
+          }
+        });
+      }// Handle header date picker changes
+      function handleHeaderDateChange() {
+        const headerDate = document.getElementById('portfolioDate').value;
+        const assetDatePickers = document.querySelectorAll('.asset-date-picker');
+        
+        assetDatePickers.forEach(picker => {
+          const assetId = getAssetId(picker);
+          // Only update if this asset date hasn't been overridden
+          if (!overriddenDates.has(assetId)) {
+            picker.value = headerDate;
+            picker.classList.remove('overridden');
+            
+            // Update transfer and income-expense dates for this asset
+            updateTransferDatesForAsset(assetId);
+            updateIncomeExpenseDatesForAsset(assetId);
+          }
+        });
+      }// Handle individual asset date picker changes
+      function handleAssetDateChange(picker, event) {
+        event.stopPropagation();
+        const assetId = getAssetId(picker);
+        const headerDate = document.getElementById('portfolioDate').value;
+        
+        if (picker.value !== headerDate) {
+          // Mark this asset as having an overridden date
+          overriddenDates.add(assetId);
+          picker.classList.add('overridden');
+        } else {
+          // If user sets it back to header date, remove override
+          overriddenDates.delete(assetId);
+          picker.classList.remove('overridden');
+        }
+        
+        // Update transfer and income-expense dates for this asset
+        updateTransferDatesForAsset(assetId);
+        updateIncomeExpenseDatesForAsset(assetId);
+      }      // Get asset ID from a date picker element
+      function getAssetId(picker) {
+        const assetGroup = picker.closest('.asset-group');
+        return assetGroup.getAttribute('data-asset-id');
+      }
+
+      // Update transfer dates for an asset when asset date changes
+      function updateTransferDatesForAsset(assetId) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const transferItems = assetGroup.querySelectorAll('.transfer-item');
+        
+        transferItems.forEach(item => {
+          const transferId = item.dataset.transferId;
+          const dateInput = item.querySelector('.transfer-date-input');
+          
+          // Only update if this transfer date hasn't been overridden
+          if (!overriddenTransferDates.has(transferId)) {
+            dateInput.value = assetDate;
+            dateInput.classList.remove('overridden');
+          }
+        });
+      }
+      
+      // Update income-expense dates for an asset when asset date changes
+      function updateIncomeExpenseDatesForAsset(assetId) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const incomeExpenseItems = assetGroup.querySelectorAll('.income-expense-item');
+        
+        incomeExpenseItems.forEach(item => {
+          const incomeExpenseId = item.dataset.incomeExpenseId;
+          const dateInput = item.querySelector('.income-expense-date-input');
+          
+          // Only update if this income-expense date hasn't been overridden
+          if (!overriddenIncomeExpenseDates.has(incomeExpenseId)) {
+            dateInput.value = assetDate;
+            dateInput.classList.remove('overridden');
+          }
+        });
+      }
+      
+      // Handle transfer date changes
+      function handleTransferDateChange(transferId, assetId, dateInput) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        
+        if (dateInput.value !== assetDate) {
+          // Mark this transfer as having an overridden date
+          overriddenTransferDates.add(transferId);
+          dateInput.classList.add('overridden');
+        } else {
+          // If user sets it back to asset date, remove override
+          overriddenTransferDates.delete(transferId);
+          dateInput.classList.remove('overridden');
+        }
+        
+        // Update the paired transfer date as well
+        const pairedTransferId = transferPairs.get(transferId);
+        if (pairedTransferId) {
+          const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+          if (pairedTransferItem) {
+            const pairedDateInput = pairedTransferItem.querySelector('.transfer-date-input');
+            pairedDateInput.value = dateInput.value;
+            
+            // Sync the override status for paired transfer
+            if (overriddenTransferDates.has(transferId)) {
+              overriddenTransferDates.add(pairedTransferId);
+              pairedDateInput.classList.add('overridden');
+            } else {
+              overriddenTransferDates.delete(pairedTransferId);
+              pairedDateInput.classList.remove('overridden');
+            }
+          }
+        }
+        
+        handleTransferChange(transferId, assetId);
+      }
+      
+      // Handle income-expense date changes
+      function handleIncomeExpenseDateChange(incomeExpenseId, assetId, dateInput) {
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        
+        if (dateInput.value !== assetDate) {
+          // Mark this income-expense as having an overridden date
+          overriddenIncomeExpenseDates.add(incomeExpenseId);
+          dateInput.classList.add('overridden');
+        } else {
+          // If user sets it back to asset date, remove override
+          overriddenIncomeExpenseDates.delete(incomeExpenseId);
+          dateInput.classList.remove('overridden');
+        }
+        
+        handleIncomeExpenseChange(incomeExpenseId, assetId);
+      }
+
+      function generateAssetGroup(asset) {
+        const currency = asset.currency || "CNY";
+        const currencySymbol = currency === "USD" ? "$" : "¥";
+        const currencyLabel =
+          currency === "USD"
+            ? `<span class="currency-label">${currency}</span>`
+            : "";
+
+        let inputFields = "";
+        let summaryText = "";
+        let summaryValue = "";        // Generate input fields based on asset type
+        switch (asset.type) {
+          case "simple":
+            inputFields = `
+                        <div class="input-group">
+                            <label class="input-label">Current Value</label>
+                            <input type="number" class="input-field" placeholder="Enter current value" 
+                                   step="0.01" min="0">
+                        </div>`;
+            break;
+
+          case "investment":
+            inputFields = `
+                        <div class="input-group">
+                            <label class="input-label">Current Value</label>
+                            <input type="number" class="input-field" placeholder="Enter current value" 
+                                   step="0.01" min="0">
+                        </div>`;
+            break;
+
+          case "composite":
+            inputFields = `
+                        <div class="input-group">
+                            <label class="input-label">Current Value</label>
+                            <input type="number" class="input-field" placeholder="Enter current value" 
+                                   step="0.01" min="0">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Current Market Value</label>
+                            <input type="number" class="input-field" placeholder="Enter current market value" 
+                                   step="0.01" min="0">
+                        </div>`;
+            break;
+
+          case "stock":
+            inputFields = `
+                        <div class="input-group">
+                            <label class="input-label">Units/Shares</label>
+                            <input type="number" class="input-field" placeholder="Number of shares" 
+                                   oninput="updateStockSummary(this)" step="1" min="0" data-field="shares">
+                        </div>
+                        <div class="input-group">
+                            <label class="input-label">Stock Price</label>
+                            <input type="number" class="input-field" placeholder="Price per share" 
+                                   oninput="updateStockSummary(this)" step="0.01" min="0" data-field="price">
+                        </div>`;
+            summaryText = "Total Value";
+            summaryValue = `${currencySymbol}0.00`;
+            break;
+        }        return `
+                <div class="asset-group" data-asset-id="${asset.id || asset.name}">
+                    <div class="asset-header active" onclick="toggleAsset(this)">
+                        <div class="asset-info">
+                            <span class="asset-type-badge type-${asset.type}">${
+          asset.type.charAt(0).toUpperCase() + asset.type.slice(1)
+        }</span>
+                            <span class="asset-name">${asset.name}</span>
+                            ${currencyLabel}
+                        </div>                        <div class="asset-header-right">
+                            <button type="button" class="transfer-toggle-btn" onclick="toggleTransfers('${asset.id || asset.name}', event)" title="Toggle Transfers">
+                                <span>⇄</span>
+                            </button>
+                            ${asset.type === 'simple' ? `
+                            <button type="button" class="income-expenses-toggle-btn" onclick="toggleIncomeExpenses('${asset.id || asset.name}', event)" title="Toggle Income & Expenses">
+                                <span>+/-</span>
+                            </button>` : ''}
+                            <input type="date" class="asset-date-picker" 
+                                   onchange="handleAssetDateChange(this, event)" 
+                                   onclick="event.stopPropagation()" />
+                            <span class="collapse-icon rotated">▼</span>
+                        </div>
+                    </div>
+                    <div class="asset-content expanded">
+                        ${inputFields}
+                        ${asset.type === 'stock' ? `
+                        <div class="value-summary">
+                            <div class="summary-text">${summaryText}</div>
+                            <div class="summary-value">${summaryValue}</div>
+                        </div>` : ''}                          <div class="transfers-section">
+                            <div class="transfers-header">
+                                <span class="transfers-icon">⇄</span>
+                                Transfers
+                                <span class="transfers-help">Auto-paired with destination</span>
+                            </div>
+                            <div class="transfers-container" data-asset-id="${asset.id || asset.name}">
+                                <!-- Transfer items will be added dynamically -->
+                            </div>
+                            <button type="button" class="add-transfer-btn" onclick="addTransfer('${asset.id || asset.name}')">
+                                <span>+</span> Add Transfer
+                            </button>
+                            <div class="transfer-summary">
+                                <span class="transfer-summary-text"></span>
+                            </div>
+                        </div>
+                        ${asset.type === 'simple' ? `
+                          <div class="income-expenses-section">
+                            <div class="income-expenses-header">
+                                <span class="income-expenses-icon">₊₋</span>
+                                Income & Expenses
+                                <span class="income-expenses-help">Track cash flows</span>
+                            </div>
+                            <div class="income-expenses-container" data-asset-id="${asset.id || asset.name}">
+                                <!-- Income/Expense items will be added dynamically -->
+                            </div>
+                            <button type="button" class="add-income-expense-btn" onclick="addIncomeExpense('${asset.id || asset.name}')">
+                              <span>+</span> Add Income/Expense
+                            </button>
+                            <div class="income-expense-summary">
+                                <span class="income-expense-summary-text"></span>
+                            </div>
+                        </div>` : ''}
+                    </div>
+                </div>
+            `;
+      }      function generateAllAssets() {
+        const container = document.getElementById("assetsContainer");
+        container.innerHTML = assets
+          .map((asset) => generateAssetGroup(asset))
+          .join("");
+        
+        // Initialize asset date pickers with the header date value
+        initializeAssetDatePickers();
+        
+        // Update all transfer asset dropdowns
+        updateAllTransferAssetDropdowns();
+      }
+
+      function updateAllTransferAssetDropdowns() {
+        // Update dropdowns in existing transfer items when assets change
+        const transferSelects = document.querySelectorAll('.transfer-asset-select');
+        transferSelects.forEach(select => {
+          const transferItem = select.closest('.transfer-item');
+          const assetGroup = transferItem.closest('.asset-group');
+          const currentAssetId = assetGroup.dataset.assetId;
+          const selectedValue = select.value;
+          
+          // Get list of other assets for the dropdown
+          const otherAssets = assets.filter(asset => (asset.id || asset.name) !== currentAssetId);
+          const assetOptions = '<option value="">Select asset...</option>' + 
+            otherAssets.map(asset => 
+              `<option value="${asset.id || asset.name}">${asset.name}</option>`
+            ).join('');
+          
+          select.innerHTML = assetOptions;
+          // Restore selected value if it still exists
+          if (selectedValue && otherAssets.some(asset => (asset.id || asset.name) === selectedValue)) {
+            select.value = selectedValue;
+          }
+        });
+      }      function toggleTransfers(assetId, event) {
+        event.stopPropagation(); // Prevent triggering asset toggle
+        
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const transfersSection = assetGroup.querySelector('.transfers-section');
+        const toggleBtn = assetGroup.querySelector('.transfer-toggle-btn');
+        
+        if (transfersSection.classList.contains('visible')) {
+          transfersSection.classList.remove('visible');
+          toggleBtn.classList.remove('active');
+        } else {
+          transfersSection.classList.add('visible');
+          toggleBtn.classList.add('active');
+          
+          // Add an empty transfer when section is toggled on
+          const transfersContainer = transfersSection.querySelector('.transfers-container');
+          if (transfersContainer && transfersContainer.children.length === 0) {
+            addTransfer(assetId);
+          }
+        }
+      }
+
+      function toggleAsset(header) {
+        const content = header.nextElementSibling;
+        const icon = header.querySelector(".collapse-icon");
+
+        // Toggle active state
+        header.classList.toggle("active");
+
+        // Toggle content visibility
+        if (content.classList.contains("expanded")) {
+          content.classList.remove("expanded");
+          icon.classList.remove("rotated");
+        } else {
+          content.classList.add("expanded");
+          icon.classList.add("rotated");
+        }
+      }
+
+      function updateSummary(input) {
+        const assetGroup = input.closest(".asset-group");
+        const summary = assetGroup.querySelector(".value-summary");
+        const summaryValue = assetGroup.querySelector(".summary-value");
+        const assetName = assetGroup.querySelector(".asset-name").textContent;
+
+        const value = parseFloat(input.value) || 0;
+
+        if (value > 0) {
+          summary.classList.add("has-value");
+
+          // Determine currency based on asset
+          let currency = "¥";
+          if (assetName === "StockAward") {
+            currency = "$";
+          }
+
+          summaryValue.textContent = `${currency}${value.toLocaleString(
+            "en-US",
+            {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }
+          )}`;
+        } else {
+          summary.classList.remove("has-value");
+        }
+      }      function updateStockSummary(input) {
+        const assetGroup = input.closest(".asset-group");
+        const summary = assetGroup.querySelector(".value-summary");
+        const summaryValue = assetGroup.querySelector(".summary-value");
+        const assetName = assetGroup.querySelector(".asset-name").textContent;
+
+        // Get both shares and price inputs
+        const sharesInput = assetGroup.querySelector('input[data-field="shares"]');
+        const priceInput = assetGroup.querySelector('input[data-field="price"]');
+        
+        const shares = parseInt(sharesInput.value) || 0;
+        const price = parseFloat(priceInput.value) || 0;
+        const totalValue = shares * price;
+
+        if (shares > 0 && price > 0) {
+          summary.classList.add("has-value");
+
+          // Determine currency based on asset
+          let currency = "¥";
+          if (assetName === "StockAward") {
+            currency = "$";
+          }          summaryValue.textContent = `${currency}${totalValue.toLocaleString(
+            "en-US",
+            {
+              minimumFractionDigits: 2,
+              maximumFractionDigits: 2,
+            }
+          )}`;
+        } else {
+          summary.classList.remove("has-value");
+        }
+      }
+
+      // Transfer management functions
+      let transferIdCounter = 0;
+      let transferPairs = new Map(); // Maps transfer IDs to their corresponding pair IDs
+
+      function addTransfer(assetId) {
+        const transfersContainer = document.querySelector(`.transfers-container[data-asset-id="${assetId}"]`);
+        if (!transfersContainer) return;
+
+        const transferId = `transfer_${transferIdCounter++}`;
+        const transferItem = createTransferItem(transferId, assetId);
+        transfersContainer.appendChild(transferItem);
+        
+        // Initialize the date with the asset date
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const dateInput = transferItem.querySelector('.transfer-date-input');
+        dateInput.value = assetDate;
+        
+        updateTransferSummary(assetId);
+      }
+
+      function createTransferItem(transferId, currentAssetId, isPaired = false) {
+        const transferDiv = document.createElement('div');
+        transferDiv.className = 'transfer-item';
+        transferDiv.dataset.transferId = transferId;
+        transferDiv.dataset.isPaired = isPaired;
+        
+        // Get list of other assets for the dropdown
+        const otherAssets = assets.filter(asset => (asset.id || asset.name) !== currentAssetId);
+        const assetOptions = otherAssets.map(asset => 
+          `<option value="${asset.id || asset.name}">${asset.name}</option>`
+        ).join('');        transferDiv.innerHTML = `
+          <button type="button" class="remove-transfer-btn" onclick="removeTransfer('${transferId}', '${currentAssetId}')" title="Remove transfer">×</button>
+          <div class="transfer-row">
+            <select class="transfer-type-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
+              <option value="to">To</option>
+              <option value="from">From</option>
+            </select>
+            <select class="transfer-asset-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
+              <option value="">Select asset...</option>
+              ${assetOptions}
+            </select>
+            <input type="date" class="transfer-date-input" 
+                   onchange="handleTransferDateChange('${transferId}', '${currentAssetId}', this)" />
+            <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" 
+                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+          </div>
+          <div class="transfer-row">
+            <input type="text" class="transfer-description-input" placeholder="Description (optional)" 
+                   oninput="handleDescriptionChange('${transferId}', '${currentAssetId}')" />
+          </div>
+        `;
+
+        return transferDiv;
+      }      
+      
+      function removeTransfer(transferId, assetId) {
+        const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        if (transferItem) {
+          // Remove paired transfer if it exists
+          const pairedTransferId = transferPairs.get(transferId);
+          if (pairedTransferId) {
+            const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+            if (pairedTransferItem) {
+              const pairedAssetGroup = pairedTransferItem.closest('.asset-group');
+              const pairedAssetId = pairedAssetGroup.dataset.assetId;
+              pairedTransferItem.remove();
+              updateTransferSummary(pairedAssetId);
+            }
+            transferPairs.delete(transferId);
+            transferPairs.delete(pairedTransferId);
+          }
+          
+          transferItem.remove();
+          updateTransferSummary(assetId);
+        }
+      }      
+      
+      function handleTransferChange(transferId, currentAssetId) {
+        const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        if (!transferItem) return;
+
+        const type = transferItem.querySelector('.transfer-type-select').value;
+        const targetAssetId = transferItem.querySelector('.transfer-asset-select').value;
+        const date = transferItem.querySelector('.transfer-date-input').value;
+        const amount = transferItem.querySelector('.transfer-amount-input').value;
+        const description = transferItem.querySelector('.transfer-description-input').value;
+
+        // Update current asset summary
+        updateTransferSummary(currentAssetId);
+
+        // Handle paired transfer
+        if (targetAssetId && amount && parseFloat(amount) > 0) {
+          createOrUpdatePairedTransfer(transferId, currentAssetId, targetAssetId, type, amount, description, date);
+        } else {
+          // Remove paired transfer if target asset or amount is cleared
+          removePairedTransfer(transferId);
+        }
+      }      function handleDescriptionChange(transferId, currentAssetId) {
+        const transferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        if (!transferItem) return;
+
+        const description = transferItem.querySelector('.transfer-description-input').value;
+        
+        // Update paired transfer description
+        const pairedTransferId = transferPairs.get(transferId);
+        if (pairedTransferId) {
+          const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+          if (pairedTransferItem) {
+            const pairedDescriptionInput = pairedTransferItem.querySelector('.transfer-description-input');
+            pairedDescriptionInput.value = description;
+          }
+        }
+      }      function createOrUpdatePairedTransfer(transferId, sourceAssetId, targetAssetId, sourceType, amount, description, date) {
+        const targetAssetGroup = document.querySelector(`[data-asset-id="${targetAssetId}"]`);
+        if (!targetAssetGroup) return;
+
+        // Auto-toggle transfers section if not visible
+        const targetTransfersSection = targetAssetGroup.querySelector('.transfers-section');
+        const targetToggleBtn = targetAssetGroup.querySelector('.transfer-toggle-btn');
+        if (targetTransfersSection && !targetTransfersSection.classList.contains('visible')) {
+          targetTransfersSection.classList.add('visible');
+          targetToggleBtn.classList.add('active');
+        }
+
+        const targetTransfersContainer = targetAssetGroup.querySelector('.transfers-container');
+        if (!targetTransfersContainer) return;
+
+        // Check if paired transfer already exists
+        let pairedTransferId = transferPairs.get(transferId);
+        let pairedTransferItem = pairedTransferId ? document.querySelector(`[data-transfer-id="${pairedTransferId}"]`) : null;
+
+        // If paired transfer doesn't exist or is in wrong container, create new one
+        if (!pairedTransferItem || !targetTransfersContainer.contains(pairedTransferItem)) {
+          // Remove old paired transfer if it exists
+          if (pairedTransferItem) {
+            pairedTransferItem.remove();
+          }
+
+          // Create new paired transfer
+          pairedTransferId = `transfer_${transferIdCounter++}`;
+          pairedTransferItem = createTransferItem(pairedTransferId, targetAssetId, true);
+          targetTransfersContainer.appendChild(pairedTransferItem);
+
+          // Link the transfers
+          transferPairs.set(transferId, pairedTransferId);
+          transferPairs.set(pairedTransferId, transferId);
+        }        // Update paired transfer values
+        const pairedType = sourceType === 'to' ? 'from' : 'to';
+        pairedTransferItem.querySelector('.transfer-type-select').value = pairedType;
+        pairedTransferItem.querySelector('.transfer-asset-select').value = sourceAssetId;
+        pairedTransferItem.querySelector('.transfer-date-input').value = date;
+        pairedTransferItem.querySelector('.transfer-amount-input').value = amount;
+        pairedTransferItem.querySelector('.transfer-description-input').value = description;
+
+        // Sync override status for paired transfer date
+        const originalTransferItem = document.querySelector(`[data-transfer-id="${transferId}"]`);
+        const originalDateInput = originalTransferItem.querySelector('.transfer-date-input');
+        const pairedDateInput = pairedTransferItem.querySelector('.transfer-date-input');
+        
+        if (originalDateInput.classList.contains('overridden')) {
+          overriddenTransferDates.add(pairedTransferId);
+          pairedDateInput.classList.add('overridden');
+        } else {
+          overriddenTransferDates.delete(pairedTransferId);
+          pairedDateInput.classList.remove('overridden');
+        }
+
+        // Update target asset summary
+        updateTransferSummary(targetAssetId);
+      }
+
+      function removePairedTransfer(transferId) {
+        const pairedTransferId = transferPairs.get(transferId);
+        if (pairedTransferId) {
+          const pairedTransferItem = document.querySelector(`[data-transfer-id="${pairedTransferId}"]`);
+          if (pairedTransferItem) {
+            const pairedAssetGroup = pairedTransferItem.closest('.asset-group');
+            const pairedAssetId = pairedAssetGroup.dataset.assetId;
+            pairedTransferItem.remove();
+            updateTransferSummary(pairedAssetId);
+          }
+          transferPairs.delete(transferId);
+          transferPairs.delete(pairedTransferId);
+        }
+      }      function updateTransferSummary(assetId) {
+        const transfersContainer = document.querySelector(`.transfers-container[data-asset-id="${assetId}"]`);
+        const assetGroup = transfersContainer.closest('.asset-group');
+        const summaryDiv = assetGroup.querySelector('.transfer-summary');
+        const summaryText = summaryDiv.querySelector('.transfer-summary-text');
+
+        if (!transfersContainer || !summaryDiv || !summaryText) return;
+
+        const transferItems = transfersContainer.querySelectorAll('.transfer-item');
+        let totalIn = 0;
+        let totalOut = 0;
+        let transferCount = 0;
+
+        transferItems.forEach(item => {
+          const type = item.querySelector('.transfer-type-select').value;
+          const asset = item.querySelector('.transfer-asset-select').value;
+          const amount = parseFloat(item.querySelector('.transfer-amount-input').value) || 0;
+
+          if (asset && amount > 0) {
+            transferCount++;
+            if (type === 'from') {
+              totalIn += amount;
+            } else if (type === 'to') {
+              totalOut += amount;
+            }
+          }
+        });
+
+        if (transferCount > 0) {
+          summaryDiv.classList.add('has-transfers');
+          const netTransfer = totalIn - totalOut;
+          const assetName = assetGroup.querySelector('.asset-name').textContent;
+          
+          // Determine currency symbol
+          let currencySymbol = '¥';
+          if (assetName === 'StockAward') {
+            currencySymbol = '$';
+          }
+
+          let summaryContent = '';
+          if (totalIn > 0) {
+            summaryContent += `In: ${currencySymbol}${totalIn.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (totalOut > 0) {
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `Out: ${currencySymbol}${totalOut.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (netTransfer !== 0) {
+            const netLabel = netTransfer > 0 ? 'Net In' : 'Net Out';
+            const netAmount = Math.abs(netTransfer);
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `${netLabel}: ${currencySymbol}${netAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+
+          summaryText.textContent = summaryContent;
+        } else {
+          summaryDiv.classList.remove('has-transfers');
+        }
+      }      
+      
+      // Income/Expenses management functions
+      let incomeExpenseIdCounter = 0;      function toggleIncomeExpenses(assetId, event) {
+        event.stopPropagation(); // Prevent triggering asset toggle
+        
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        if (!assetGroup) return;
+        
+        const incomeExpensesSection = assetGroup.querySelector('.income-expenses-section');
+        const toggleBtn = assetGroup.querySelector('.income-expenses-toggle-btn');
+        
+        if (incomeExpensesSection.classList.contains('visible')) {
+          incomeExpensesSection.classList.remove('visible');
+          toggleBtn.classList.remove('active');
+        } else {
+          incomeExpensesSection.classList.add('visible');
+          toggleBtn.classList.add('active');
+          
+          // Add an empty income/expense when section is toggled on
+          const incomeExpensesContainer = incomeExpensesSection.querySelector('.income-expenses-container');
+          if (incomeExpensesContainer && incomeExpensesContainer.children.length === 0) {
+            addIncomeExpense(assetId);
+          }
+        }
+      }
+      
+      function addIncomeExpense(assetId) {
+        const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
+        if (!incomeExpensesContainer) return;
+
+        const incomeExpenseId = `income_expense_${incomeExpenseIdCounter++}`;
+        const incomeExpenseItem = createIncomeExpenseItem(incomeExpenseId, assetId);
+        incomeExpensesContainer.appendChild(incomeExpenseItem);
+        
+        // Initialize the date with the asset date
+        const assetGroup = document.querySelector(`[data-asset-id="${assetId}"]`);
+        const assetDate = assetGroup.querySelector('.asset-date-picker').value;
+        const dateInput = incomeExpenseItem.querySelector('.income-expense-date-input');
+        dateInput.value = assetDate;
+        
+        updateIncomeExpenseSummary(assetId);
+      }
+
+      function createIncomeExpenseItem(incomeExpenseId, currentAssetId) {
+        const incomeExpenseDiv = document.createElement('div');
+        incomeExpenseDiv.className = 'income-expense-item';
+        incomeExpenseDiv.dataset.incomeExpenseId = incomeExpenseId;
+          incomeExpenseDiv.innerHTML = `
+          <button type="button" class="remove-income-expense-btn" onclick="removeIncomeExpense('${incomeExpenseId}', '${currentAssetId}')" title="Remove income/expense">×</button>
+          <div class="income-expense-row">
+            <select class="income-expense-type-select" onchange="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')">
+              <option value="income">Income</option>
+              <option value="expense">Expense</option>
+            </select>
+            <input type="date" class="income-expense-date-input" 
+                   onchange="handleIncomeExpenseDateChange('${incomeExpenseId}', '${currentAssetId}', this)" />
+            <input type="number" class="income-expense-amount-input" placeholder="Amount" step="0.01" min="0" 
+                   oninput="handleIncomeExpenseChange('${incomeExpenseId}', '${currentAssetId}')" />
+            <input type="text" class="income-expense-description-input" placeholder="Description (optional)" />
+          </div>
+        `;
+
+        return incomeExpenseDiv;
+      }
+
+      function removeIncomeExpense(incomeExpenseId, assetId) {
+        const incomeExpenseItem = document.querySelector(`[data-income-expense-id="${incomeExpenseId}"]`);
+        if (incomeExpenseItem) {
+          incomeExpenseItem.remove();
+          updateIncomeExpenseSummary(assetId);
+        }
+      }
+
+      function handleIncomeExpenseChange(incomeExpenseId, currentAssetId) {
+        updateIncomeExpenseSummary(currentAssetId);
+      }
+
+      function updateIncomeExpenseSummary(assetId) {
+        const incomeExpensesContainer = document.querySelector(`.income-expenses-container[data-asset-id="${assetId}"]`);
+        const assetGroup = incomeExpensesContainer.closest('.asset-group');
+        const summaryDiv = assetGroup.querySelector('.income-expense-summary');
+        const summaryText = summaryDiv.querySelector('.income-expense-summary-text');
+
+        if (!incomeExpensesContainer || !summaryDiv || !summaryText) return;
+
+        const incomeExpenseItems = incomeExpensesContainer.querySelectorAll('.income-expense-item');
+        let totalIncome = 0;
+        let totalExpenses = 0;
+        let itemCount = 0;
+
+        incomeExpenseItems.forEach(item => {
+          const type = item.querySelector('.income-expense-type-select').value;          
+          const amount = parseFloat(item.querySelector('.income-expense-amount-input').value) || 0;
+
+          if (amount > 0) {
+            itemCount++;
+            if (type === 'income') {
+              totalIncome += amount;
+            } else if (type === 'expense') {
+              totalExpenses += amount;
+            }
+          }
+        });
+
+        if (itemCount > 0) {
+          summaryDiv.classList.add('has-items');
+          const netFlow = totalIncome - totalExpenses;
+          const assetName = assetGroup.querySelector('.asset-name').textContent;
+          
+          // Determine currency symbol
+          let currencySymbol = '¥';
+          if (assetName === 'StockAward') {
+            currencySymbol = '$';
+          }
+
+          let summaryContent = '';
+          if (totalIncome > 0) {
+            summaryContent += `Income: ${currencySymbol}${totalIncome.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (totalExpenses > 0) {
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `Expenses: ${currencySymbol}${totalExpenses.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+          if (netFlow !== 0) {
+            const netLabel = netFlow > 0 ? 'Net Income' : 'Net Expense';
+            const netAmount = Math.abs(netFlow);
+            if (summaryContent) summaryContent += ' | ';
+            summaryContent += `${netLabel}: ${currencySymbol}${netAmount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`;
+          }
+
+          summaryText.textContent = summaryContent;
+        } else {
+          summaryDiv.classList.remove('has-items');
+        }
+      }
+
+      // Listen for postMessage from parent window (host.html)
+      window.addEventListener('message', function(event) {
+        console.log('Message received in asset-input:', event.data);
+          if (event.data.type === 'INITIALIZE_ASSETS' && event.data.assets) {
+          console.log('Initializing assets with data:', event.data.assets);
+          assets = event.data.assets;
+          // Clear overridden dates and transfer pairs when new assets are loaded
+          overriddenDates.clear();
+          overriddenTransferDates.clear();
+          overriddenIncomeExpenseDates.clear();
+          transferPairs.clear();
+          transferIdCounter = 0;
+          incomeExpenseIdCounter = 0;
+          generateAllAssets();
+          // Removed: sending confirmation back to parent
+        }
+      });
+
+      // Extracted postMessage function for communication with host
+      function sendMessageToHost(messageType, data) {
+        const message = {
+          type: messageType,
+          data: data
+        };
+        
+        // Send message to VSCode webview if available
+        if (typeof acquireVsCodeApi !== 'undefined') {
+          const vscode = acquireVsCodeApi();
+          vscode.postMessage(message);
+          console.log('Message sent to VSCode webview:', message);
+        } else if (window.parent && window.parent !== window) {
+          // Fallback to parent.postMessage for host.html compatibility
+          window.parent.postMessage(message, '*');
+          console.log('Message sent to host:', message);
+        } else {
+          console.log('No VSCode API or parent window found, message would be:', message);
+        }
+      }
+      
+      // Collect current asset update data in the format matching assetUpdate.json
+      function collectAssetUpdateData() {
+        const headerDate = document.getElementById('portfolioDate').value;
+        const assetUpdateData = {
+          date: headerDate,
+          assets: [],
+          transfers: []
+        };
+
+        // Collect asset data
+        assets.forEach(asset => {
+          const assetData = {
+            name: asset.name
+          };
+
+          // Get asset-specific date if overridden
+          const assetGroup = document.querySelector(`[data-asset-id="${asset.name}"]`);
+          if (assetGroup) {
+            const assetDatePicker = assetGroup.querySelector('.asset-date-picker');
+            if (assetDatePicker && overriddenDates.has(asset.name)) {
+              assetData.date = assetDatePicker.value;
+            }
+          }
+
+          const events = [];
+
+          // Find the asset group and collect snapshot data based on asset type
+          if (assetGroup) {
+            const inputFields = assetGroup.querySelectorAll('.input-field');
+            
+            if (asset.type === 'simple') {
+              // Simple assets have one input field for current value
+              const currentValueInput = inputFields[0];
+              if (currentValueInput && currentValueInput.value) {
+                events.push({
+                  type: "snapshot",
+                  currentValue: parseFloat(currentValueInput.value)
+                });
+              }
+            } else if (asset.type === 'investment') {
+              // Investment assets have one input field for current value
+              const currentValueInput = inputFields[0];
+              if (currentValueInput && currentValueInput.value) {
+                events.push({
+                  type: "snapshot",
+                  currentValue: parseFloat(currentValueInput.value)
+                });
+              }
+            } else if (asset.type === 'composite') {
+              // Composite assets have two input fields: current value and market value
+              const currentValueInput = inputFields[0];
+              const marketValueInput = inputFields[1];
+              
+              if (currentValueInput && currentValueInput.value) {
+                const snapshotEvent = {
+                  type: "snapshot",
+                  currentValue: parseFloat(currentValueInput.value)
+                };
+                if (marketValueInput && marketValueInput.value) {
+                  snapshotEvent.marketValue = parseFloat(marketValueInput.value);
+                }
+                events.push(snapshotEvent);
+              }
+            } else if (asset.type === 'stock') {
+              // Stock assets have two input fields: shares and price
+              const sharesInput = inputFields[0]; // First field is shares
+              const priceInput = inputFields[1];  // Second field is price
+              
+              if (sharesInput && sharesInput.value && priceInput && priceInput.value) {
+                events.push({
+                  type: "snapshot",
+                  shares: parseFloat(sharesInput.value),
+                  price: parseFloat(priceInput.value)
+                });
+              }
+            }          }
+
+          // Collect income/expense events for this asset
+          if (assetGroup) {
+            const incomeExpenseSection = assetGroup.querySelector('.income-expenses-container');
+            if (incomeExpenseSection) {
+              const incomeExpenseItems = incomeExpenseSection.querySelectorAll('.income-expense-item');
+              incomeExpenseItems.forEach(item => {
+                const typeSelect = item.querySelector('.income-expense-type-select');
+                const amountInput = item.querySelector('.income-expense-amount-input');
+                const dateInput = item.querySelector('.income-expense-date-input');
+                const descriptionInput = item.querySelector('.income-expense-description-input');
+
+                if (typeSelect && typeSelect.value && amountInput && amountInput.value) {
+                  const event = {
+                    type: typeSelect.value,
+                    amount: parseFloat(amountInput.value)
+                  };
+                  
+                  if (dateInput && dateInput.value) {
+                    event.date = dateInput.value;
+                  }
+                  
+                  if (descriptionInput && descriptionInput.value) {
+                    event.description = descriptionInput.value;
+                  }
+                  
+                  events.push(event);
+                }
+              });
+            }
+          }
+
+          if (events.length > 0) {
+            assetData.events = events;
+            assetUpdateData.assets.push(assetData);
+          }
+        });        // Collect transfer data
+        const allAssetGroups = document.querySelectorAll('[data-asset-id]');
+        const processedTransfers = new Set();
+
+        allAssetGroups.forEach(assetGroup => {
+          const transfersContainer = assetGroup.querySelector('.transfers-container');
+          if (transfersContainer) {
+            const transferItems = transfersContainer.querySelectorAll('.transfer-item');
+            transferItems.forEach(item => {
+              const transferId = item.dataset.transferId;
+              
+              // Skip if already processed (paired transfers)
+              if (processedTransfers.has(transferId)) {
+                return;
+              }
+
+              const typeSelect = item.querySelector('.transfer-type-select');
+              const assetSelect = item.querySelector('.transfer-asset-select');
+              const amountInput = item.querySelector('.transfer-amount-input');
+              const dateInput = item.querySelector('.transfer-date-input');
+              const descriptionInput = item.querySelector('.transfer-description-input');
+
+              if (typeSelect && typeSelect.value && assetSelect && assetSelect.value && amountInput && amountInput.value) {
+                const currentAssetName = assetGroup.dataset.assetId;
+                
+                const transfer = {
+                  amount: parseFloat(amountInput.value)
+                };
+
+                if (typeSelect.value === 'from') {
+                  transfer.from = currentAssetName;
+                  transfer.to = assetSelect.value;
+                } else {
+                  transfer.from = assetSelect.value;
+                  transfer.to = currentAssetName;
+                }
+
+                if (dateInput && dateInput.value) {
+                  transfer.date = dateInput.value;
+                }
+
+                if (descriptionInput && descriptionInput.value) {
+                  transfer.description = descriptionInput.value;
+                }
+
+                assetUpdateData.transfers.push(transfer);
+                processedTransfers.add(transferId);
+                
+                // Also mark paired transfer as processed
+                const pairedId = transferPairs.get(transferId);
+                if (pairedId) {
+                  processedTransfers.add(pairedId);
+                }
+              }
+            });
+          }
+        });
+
+        return assetUpdateData;
+      }      // Send asset update message to host
+      function sendAssetUpdate() {
+        const assetUpdateData = collectAssetUpdateData();
+        console.log('Collected asset update data:', assetUpdateData);
+        sendMessageToHost('PORTFOLIO_UPDATE', assetUpdateData);
+      }
+
+      // Generate all assets on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        // Initialize date picker with today's date
+        initializeDatePicker();
+        // Generate all assets (they will be expanded by default)
+        generateAllAssets();
+      });
+    </script>
+  </body>
+</html>
