@@ -1,6 +1,6 @@
 {
-  "name": "vscode-asset-insight",
-  "displayName": "vscode-asset-insight",
+  "name": "vscode-portfolio-insight",
+  "displayName": "vscode-portfolio-insight",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -40,16 +40,16 @@
     ],
     "commands": [
       {
-        "command": "vscode-asset-insight.helloWorld",
+        "command": "vscode-portfolio-insight.helloWorld",
         "title": "Hello World"
       },
       {
-        "command": "vscode-asset-insight.refresh",
+        "command": "vscode-portfolio-insight.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
       },
       {
-        "command": "vscode-asset-insight.updateAssets",
+        "command": "vscode-portfolio-insight.updateAssets",
         "title": "Update Portfolio",
         "icon": "$(edit)"
       }
@@ -57,12 +57,12 @@
     "menus": {
       "view/title": [
         {
-          "command": "vscode-asset-insight.updateAssets",
+          "command": "vscode-portfolio-insight.updateAssets",
           "when": "view == assetExplorer",
           "group": "navigation"
         },
         {
-          "command": "vscode-asset-insight.refresh",
+          "command": "vscode-portfolio-insight.refresh",
           "when": "view == assetExplorer",
           "group": "navigation"
         }        

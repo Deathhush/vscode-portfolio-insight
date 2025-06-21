@@ -1,1 +1,1 @@
-# vscode-asset-insight
+# vscode-portfolio-insight
