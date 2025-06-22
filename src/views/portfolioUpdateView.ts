@@ -36,9 +36,7 @@ export class PortfolioUpdateView {
 
         // Listen for when the panel is disposed
         // This happens when the user closes the panel or when the panel is closed programmatically
-        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
-
-        // Handle messages from the webview
+        this._panel.onDidDispose(() => this.dispose(), null, this._disposables);        // Handle messages from the webview
         this._panel.webview.onDidReceiveMessage(
             message => {
                 switch (message.type) {
@@ -53,6 +51,11 @@ export class PortfolioUpdateView {
             null,
             this._disposables
         );
+
+        // Listen for theme changes
+        vscode.window.onDidChangeActiveColorTheme(() => {
+            this._update(); // Refresh webview with new theme
+        }, null, this._disposables);
     }
 
     private _handlePortfolioUpdate(data: any) {
@@ -77,8 +80,8 @@ export class PortfolioUpdateView {
         const webview = this._panel.webview;
         this._panel.title = 'Portfolio Update';
         this._panel.webview.html = this._getHtmlForWebview(webview);
-    }
-
+    }    
+    
     private _getHtmlForWebview(webview: vscode.Webview) {
         try {
             // Get the path to the HTML file
@@ -86,6 +89,24 @@ export class PortfolioUpdateView {
             
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');
+            
+            // Detect current VS Code theme and inject appropriate class
+            const currentTheme = vscode.window.activeColorTheme;
+            let themeClass = 'vscode-light'; // default
+            
+            if (currentTheme.kind === vscode.ColorThemeKind.Dark) {
+                themeClass = 'vscode-dark';
+            } else if (currentTheme.kind === vscode.ColorThemeKind.HighContrast) {
+                themeClass = 'vscode-high-contrast';
+            } else if (currentTheme.kind === vscode.ColorThemeKind.HighContrastLight) {
+                themeClass = 'vscode-high-contrast';
+            }
+            
+            // Inject theme class into body element
+            htmlContent = htmlContent.replace(
+                '<body>',
+                `<body class="${themeClass}">`
+            );
             
             // Replace any relative paths with webview URIs if needed
             // For now, the HTML is self-contained so no additional resources needed
@@ -101,7 +122,7 @@ export class PortfolioUpdateView {
                     <meta name="viewport" content="width=device-width, initial-scale=1.0">
                     <title>Portfolio Update</title>
                 </head>
-                <body>
+                <body class="vscode-dark">
                     <h1>Error</h1>
                     <p>Failed to load the Portfolio Update view. Please check that portfolioUpdate.html exists.</p>
                 </body>
