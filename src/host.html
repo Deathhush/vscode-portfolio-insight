@@ -3,8 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio Insight Host</title>
-    <style>
+    <title>Portfolio Insight Host</title>    <style>        :root {
+            /* Gold/Black theme colors - host.html always uses dark mode */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --bg-card: #1a1a1a;
+            --text-primary: #e0d4b0;
+            --text-secondary: #c9b874;
+            --text-accent: #d4af37;
+            --border-primary: #404040;
+            --shadow-primary: rgba(0, 0, 0, 0.5);
+            --shadow-secondary: rgba(0, 0, 0, 0.3);
+            --gradient-primary: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%);
+            --gradient-secondary: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+            --btn-hover-shadow: rgba(212, 175, 55, 0.4);
+            --btn-secondary-hover-shadow: rgba(212, 175, 55, 0.4);
+            --status-connected: #2e7d32;
+            --status-disconnected: #d32f2f;
+            --overlay-bg: rgba(26, 26, 26, 0.95);
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -13,45 +32,64 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            background-color: #f0f2f5;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
             padding: 20px;
             height: 100vh;
             display: flex;
             flex-direction: column;
-        }
-
-        .host-header {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+        }        .host-header {
+            background: var(--gradient-primary);
+            color: var(--text-accent);
             padding: 20px;
             border-radius: 12px 12px 0 0;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .host-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(212, 175, 55, 0.1) 50%, transparent 70%);
+            pointer-events: none;
         }
 
         .host-header h1 {
             font-size: 2em;
             margin-bottom: 10px;
             font-weight: 300;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            position: relative;
+            z-index: 1;
         }
 
         .host-header p {
             opacity: 0.9;
             font-size: 1.1em;
+            color: #e0d4b0;
+            position: relative;
+            z-index: 1;
         }
 
         .host-controls {
-            background: white;
+            background: var(--bg-card);
+            color: var(--text-primary);
             padding: 20px;
             display: flex;
             gap: 15px;
             align-items: center;
-            border-bottom: 1px solid #e1e5e9;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+            border-bottom: 1px solid var(--border-primary);
+            box-shadow: 0 2px 4px var(--shadow-secondary);
         }
 
         .btn {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: var(--gradient-primary);
+            color: var(--text-accent);
             border: none;
             padding: 12px 24px;
             border-radius: 8px;
@@ -63,15 +101,24 @@
 
         .btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            box-shadow: 0 4px 12px var(--btn-hover-shadow);
         }
 
         .btn-secondary {
-            background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            background: var(--gradient-primary);
+            color: var(--text-accent);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
         }
 
         .btn-secondary:hover {
-            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--btn-hover-shadow);
         }
 
         .status-indicator {
@@ -80,28 +127,30 @@
             gap: 8px;
             margin-left: auto;
             padding: 8px 16px;
-            background: #f8f9fa;
+            background: var(--bg-tertiary);
             border-radius: 20px;
             font-size: 0.9em;
+            color: var(--text-secondary);
         }
 
         .status-dot {
             width: 8px;
             height: 8px;
             border-radius: 50%;
-            background: #dc3545;
+            background: var(--status-disconnected);
+            transition: background-color 0.3s ease;
         }
 
         .status-dot.connected {
-            background: #28a745;
+            background: var(--status-connected);
         }
 
         .iframe-container {
             flex: 1;
-            background: white;
+            background: var(--bg-card);
             border-radius: 0 0 12px 12px;
             overflow: hidden;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 6px var(--shadow-primary);
             position: relative;
         }
 
@@ -118,12 +167,13 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(255, 255, 255, 0.9);
+            background: var(--overlay-bg);
             display: flex;
             align-items: center;
             justify-content: center;
             font-size: 1.2em;
-            color: #666;
+            color: var(--text-secondary);
+            backdrop-filter: blur(2px);
         }
 
         .loading-overlay.hidden {
@@ -150,12 +200,11 @@
 <body>    <div class="host-header">
         <h1>Portfolio Insight Manager</h1>
         <p>Manage and track your asset portfolio</p>
-    </div>
-
-    <div class="host-controls">
+    </div>    <div class="host-controls">
         <button class="btn" onclick="initializeAssets()">Initialize Assets</button>
         <button class="btn btn-secondary" onclick="loadSampleData()">Load Sample Data</button>
         <button class="btn" onclick="refreshIframe()">Refresh</button>
+        <button class="btn btn-secondary" onclick="toggleIframeTheme()" id="themeToggleBtn">🌙 Dark Mode</button>
         
         <div class="status-indicator">
             <span class="status-dot" id="statusDot"></span>
@@ -163,7 +212,8 @@
         </div>
     </div>
 
-    <div class="iframe-container">        <div class="loading-overlay" id="loadingOverlay">
+    <div class="iframe-container">        
+        <div class="loading-overlay" id="loadingOverlay">
             Loading portfolio input interface...
         </div>        
         <iframe 
@@ -171,8 +221,31 @@
             class="asset-iframe" 
             src="portfolioUpdate.html">
         </iframe>
-    </div>    <script>        
-        let iframe;
+    </div>    
+    <script>          let iframe;
+        let iframeLoaded = false;
+        let pendingMessages = [];
+        let currentIframeTheme = 'vscode-dark'; // Track current iframe theme
+
+        // Function to send message to iframe (with queuing if not loaded)
+        function sendToIframe(message) {
+            if (iframeLoaded && iframe) {
+                iframe.contentWindow.postMessage(message, '*');
+                console.log('Message sent to iframe:', message);
+            } else {
+                pendingMessages.push(message);
+                console.log('Message queued (iframe not ready):', message);
+            }
+        }
+
+        // Function to send all pending messages
+        function sendPendingMessages() {
+            while (pendingMessages.length > 0) {
+                const message = pendingMessages.shift();
+                iframe.contentWindow.postMessage(message, '*');
+                console.log('Queued message sent:', message);
+            }
+        }
 
         // Removed isIframeReady tracking since we no longer wait for ready messages
 
@@ -193,32 +266,70 @@
         ];        function initializeAssets() {
             console.log('Initializing assets...');
             
-            // Send the default assets to the iframe
+            // Send theme information first
+            const themeMessage = {
+                type: 'SET_THEME',
+                theme: currentIframeTheme
+            };
+            sendToIframe(themeMessage);
+            
+            // Then send the default assets to the iframe
             const message = {
                 type: 'INITIALIZE_ASSETS',
                 assets: sampleAssets
             };
 
-            iframe.contentWindow.postMessage(message, '*');
-            console.log('Assets initialization message sent:', message);
-        }        function loadSampleData() {
+            sendToIframe(message);
+        }function loadSampleData() {
             console.log('Loading sample data...');
+              // Send theme information first
+            const themeMessage = {
+                type: 'SET_THEME',
+                theme: currentIframeTheme
+            };
+            sendToIframe(themeMessage);
             
             // Combine sample assets with additional ones
             const allAssets = [...sampleAssets, ...additionalAssets];
-            
-            const message = {
+              const message = {
                 type: 'INITIALIZE_ASSETS',
                 assets: allAssets
             };
 
-            iframe.contentWindow.postMessage(message, '*');
-            console.log('Sample data loading message sent:', message);
-        }function refreshIframe() {
+            sendToIframe(message);
+        }
+
+        function toggleIframeTheme() {
+            console.log('Toggling iframe theme from:', currentIframeTheme);
+            
+            // Switch between light and dark themes
+            currentIframeTheme = currentIframeTheme === 'vscode-dark' ? 'vscode-light' : 'vscode-dark';
+            
+            // Update button text and icon
+            const themeBtn = document.getElementById('themeToggleBtn');
+            if (currentIframeTheme === 'vscode-dark') {
+                themeBtn.innerHTML = '🌙 Dark Mode';
+            } else {
+                themeBtn.innerHTML = '☀️ Light Mode';
+            }
+            
+            // Send theme message to iframe
+            const themeMessage = {
+                type: 'SET_THEME',
+                theme: currentIframeTheme
+            };
+            sendToIframe(themeMessage);
+            
+            console.log('Iframe theme switched to:', currentIframeTheme);
+        }        function refreshIframe() {
             console.log('Refreshing iframe...');
+            iframeLoaded = false;
             updateStatus(false);
             document.getElementById('loadingOverlay').classList.remove('hidden');
             iframe.src = iframe.src;
+            
+            // After refresh, we need to resend theme and assets when iframe loads again
+            // This is handled in the load event listener
         }
 
         function updateStatus(connected) {
@@ -241,16 +352,24 @@
             if (event.data.type === 'PORTFOLIO_UPDATE') {
                 console.log('Portfolio Update received:', JSON.stringify(event.data.data, null, 2));
             }
-        });
-
-        // Initialize when the page loads
+        });        // Initialize when the page loads
         document.addEventListener('DOMContentLoaded', function() {
             iframe = document.getElementById('portfolioIframe');
-            
-            iframe.addEventListener('load', function() {
+              iframe.addEventListener('load', function() {
                 console.log('Iframe loaded');
-                // Auto-update status since we no longer wait for ready messages
+                iframeLoaded = true;
+                  // Send theme information to iframe after it loads
                 setTimeout(() => {
+                    // Send current iframe theme
+                    const themeMessage = {
+                        type: 'SET_THEME',
+                        theme: currentIframeTheme
+                    };
+                    sendToIframe(themeMessage);
+                    
+                    // Send any pending messages
+                    sendPendingMessages();
+                    
                     updateStatus(true);
                     document.getElementById('loadingOverlay').classList.add('hidden');
                 }, 1000);
