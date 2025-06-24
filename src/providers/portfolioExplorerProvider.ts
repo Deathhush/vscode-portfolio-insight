@@ -13,28 +13,26 @@ export interface PortfolioData {
     assets: AssetDefinitionData[];
 }
 
-export interface AssetExplorerNode extends vscode.TreeItem {
+export interface PortfolioExplorerNode extends vscode.TreeItem {
 }
 
-export class AssetExplorerProvider implements vscode.TreeDataProvider<AssetExplorerNode> {
-    private _onDidChangeTreeData: vscode.EventEmitter<AssetExplorerNode | undefined | null | void> = new vscode.EventEmitter<AssetExplorerNode | undefined | null | void>();
-    readonly onDidChangeTreeData: vscode.Event<AssetExplorerNode | undefined | null | void> = this._onDidChangeTreeData.event;
+export class PortfolioExplorerProvider implements vscode.TreeDataProvider<PortfolioExplorerNode> {
+    private _onDidChangeTreeData: vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void> = new vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void>();
+    readonly onDidChangeTreeData: vscode.Event<PortfolioExplorerNode | undefined | null | void> = this._onDidChangeTreeData.event;
     private _portfolioUpdateView?: PortfolioUpdateView;
 
     constructor(private context: vscode.ExtensionContext) {}
 
     refresh(): void {
         this._onDidChangeTreeData.fire();
-    }
-
-    getTreeItem(element: AssetExplorerNode): vscode.TreeItem {
+    }    getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
         return element;
     }
 
-    getChildren(element?: AssetExplorerNode): Thenable<AssetExplorerNode[]> {
+    getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         // Return empty array to show nothing in the tree view
         return Promise.resolve([]);
-    }    
+    }
     
     public async openPortfolioUpdate(): Promise<void> {
         try {
