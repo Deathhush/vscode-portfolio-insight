@@ -14,26 +14,80 @@ export interface PortfolioData {
 }
 
 export interface PortfolioExplorerNode extends vscode.TreeItem {
+    nodeType: 'portfolio' | 'asset';
+    getChildren(): Promise<PortfolioExplorerNode[]>;
+}
+
+export class PortfolioNode extends vscode.TreeItem implements PortfolioExplorerNode {
+    public nodeType: 'portfolio' = 'portfolio';
+    
+    constructor(private provider: PortfolioExplorerProvider) {
+        super('Portfolio', vscode.TreeItemCollapsibleState.Expanded);
+        this.iconPath = new vscode.ThemeIcon('folder');        this.contextValue = 'portfolio';
+    }
+    
+    async getChildren(): Promise<PortfolioExplorerNode[]> {
+        const portfolioData = await this.provider.getPortfolioData();
+        
+        if (!portfolioData || !portfolioData.assets) {
+            return [];
+        }
+        
+        // Create asset nodes
+        return portfolioData.assets.map(asset => new AssetNode(asset));
+    }
+}
+
+export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode {
+    public nodeType: 'asset' = 'asset';
+    public assetData: AssetDefinitionData;
+    
+    constructor(asset: AssetDefinitionData) {
+        super(asset.name, vscode.TreeItemCollapsibleState.None);        this.assetData = asset;
+        // Always use package icon for all assets
+        this.iconPath = new vscode.ThemeIcon('package');
+        
+        // Set description to show asset type
+        this.description = asset.type;
+        
+        this.tooltip = `${asset.name} (${asset.type}${asset.currency ? `, ${asset.currency}` : ''})`;
+        this.contextValue = 'asset';
+    }
+    
+    async getChildren(): Promise<PortfolioExplorerNode[]> {
+        // Asset nodes have no children
+        return [];
+    }
 }
 
 export class PortfolioExplorerProvider implements vscode.TreeDataProvider<PortfolioExplorerNode> {
     private _onDidChangeTreeData: vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void> = new vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<PortfolioExplorerNode | undefined | null | void> = this._onDidChangeTreeData.event;
     private _portfolioUpdateView?: PortfolioUpdateView;
+    private _portfolioData: PortfolioData | undefined = undefined;
 
     constructor(private context: vscode.ExtensionContext) {}
 
     refresh(): void {
+        // Clear cached data to force reload on next access
+        this.invalidatePortfolioCache();
         this._onDidChangeTreeData.fire();
-    }    getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
+    }
+    
+    getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
         return element;
     }
 
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
-        // Return empty array to show nothing in the tree view
-        return Promise.resolve([]);
+        if (!element) {
+            // Return the Portfolio root node
+            return Promise.resolve([new PortfolioNode(this)]);
+        }
+        
+        // Delegate to the node's getChildren method
+        return element.getChildren();
     }
-    
+
     public async openPortfolioUpdate(): Promise<void> {
         try {
             // Get the current workspace folder
@@ -43,54 +97,17 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 return;
             }
 
-            // Look for portfolio.json in the workspace root
+            // Look for portfolio.json in the workspace root            // Look for portfolio.json in the workspace root
             const portfolioJsonPath = path.join(workspaceFolder.uri.fsPath, 'portfolio.json');
             
-            let portfolioData: PortfolioData | null = null;
-            // Try to read portfolio.json
-            if (fs.existsSync(portfolioJsonPath)) {
-                try {
-                    const portfolioContent = fs.readFileSync(portfolioJsonPath, 'utf8');
-                    const rawPortfolioData = JSON.parse(portfolioContent) as PortfolioData;
-                    
-                    // Validate the structure
-                    if (!rawPortfolioData.assets || !Array.isArray(rawPortfolioData.assets)) {
-                        vscode.window.showErrorMessage('Invalid portfolio.json: "assets" array is required');
-                        return;
-                    }
-                    
-                    // Validate each asset
-                    for (const asset of rawPortfolioData.assets) {
-                        if (!asset.name || !asset.type) {
-                            vscode.window.showErrorMessage('Invalid portfolio.json: Each asset must have "name" and "type" fields');
-                            return;
-                        }
-                        
-                        if (!['simple', 'investment', 'composite', 'stock'].includes(asset.type)) {
-                            vscode.window.showErrorMessage(`Invalid asset type "${asset.type}". Must be one of: simple, investment, composite, stock`);
-                            return;
-                        }
-                    }
-                    
-                    portfolioData = rawPortfolioData;
-                    
-                } catch (parseError) {
-                    vscode.window.showErrorMessage(`Failed to parse portfolio.json: ${parseError}`);
+            // Try to load existing portfolio data
+            let portfolioData = await this.getPortfolioData();
+            
+            if (!portfolioData) {
+                // Check if file exists but failed validation
+                if (fs.existsSync(portfolioJsonPath)) {
+                    vscode.window.showErrorMessage('Invalid portfolio.json file. Please check the file format and content.');
                     return;
-                }
-            } else {
-                // If portfolio.json doesn't exist, show info and create default
-                const createDefault = await vscode.window.showInformationMessage(
-                    'portfolio.json not found in workspace. Would you like to create a default one?',
-                    'Create Default',
-                    'Continue Without'
-                );
-                
-                if (createDefault === 'Create Default') {
-                    const defaultPortfolio = this.createDefaultPortfolio();
-                    await this.savePortfolioToFile(portfolioJsonPath, defaultPortfolio);
-                    portfolioData = defaultPortfolio;
-                    vscode.window.showInformationMessage('Default portfolio.json created successfully!');
                 }
             }
 
@@ -120,27 +137,6 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         } catch (error) {
             console.error('Error in openPortfolioUpdate:', error);
             vscode.window.showErrorMessage(`Failed to open Portfolio Update: ${error}`);
-        }
-    }
-
-    private createDefaultPortfolio(): PortfolioData {
-        return {
-            assets: [
-                { name: "Cash Account", type: "simple", currency: "USD" },
-                { name: "Investment Portfolio", type: "investment", currency: "USD" },
-                { name: "Retirement Fund", type: "composite", currency: "USD" },
-                { name: "Stock Holdings", type: "stock", currency: "USD" }
-            ]
-        };
-    }
-
-    private async savePortfolioToFile(filePath: string, portfolioData: PortfolioData): Promise<void> {
-        try {
-            const jsonContent = JSON.stringify(portfolioData, null, 2);
-            fs.writeFileSync(filePath, jsonContent, 'utf8');
-        } catch (error) {
-            console.error('Error saving portfolio.json:', error);
-            throw new Error(`Failed to save portfolio.json: ${error}`);
         }
     }
 
@@ -187,8 +183,70 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             this.refresh();
 
         } catch (error) {
-            console.error('Error saving portfolio update:', error);
-            vscode.window.showErrorMessage(`Failed to save portfolio update: ${error}`);
+            console.error('Error saving portfolio update:', error);            vscode.window.showErrorMessage(`Failed to save portfolio update: ${error}`);
         }
+    }
+
+    public async getPortfolioData(): Promise<PortfolioData | undefined> {
+        // Return cached data if available
+        if (this._portfolioData !== undefined) {
+            return this._portfolioData;
+        }
+
+        // Load data from file and cache it
+        this._portfolioData = await this.loadPortfolioDataFromFile();
+        return this._portfolioData;
+    }    
+    
+    private async loadPortfolioDataFromFile(): Promise<PortfolioData | undefined> {
+        try {
+            // Get the current workspace folder
+            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+            if (!workspaceFolder) {
+                return undefined;
+            }
+
+            // Look for portfolio.json in the workspace root
+            const portfolioJsonPath = path.join(workspaceFolder.uri.fsPath, 'portfolio.json');
+            
+            if (!fs.existsSync(portfolioJsonPath)) {
+                return undefined;
+            }
+
+            // Read and parse portfolio.json
+            const portfolioContent = fs.readFileSync(portfolioJsonPath, 'utf8');
+            const rawPortfolioData = JSON.parse(portfolioContent) as PortfolioData;
+              // Validate the structure
+            if (!rawPortfolioData.assets || !Array.isArray(rawPortfolioData.assets)) {
+                console.error('Invalid portfolio.json: "assets" array is required');
+                return undefined;
+            }
+            
+            // Validate each asset
+            for (const asset of rawPortfolioData.assets) {
+                if (!asset.name || !asset.type) {
+                    console.error('Invalid portfolio.json: Each asset must have "name" and "type" fields');
+                    return undefined;
+                }
+                
+                if (!['simple', 'investment', 'composite', 'stock'].includes(asset.type)) {
+                    console.error(`Invalid asset type "${asset.type}". Must be one of: simple, investment, composite, stock`);
+                    return undefined;
+                }
+            }
+            
+            return rawPortfolioData;
+            
+        } catch (error) {
+            console.error('Error loading portfolio.json:', error);
+            return undefined;
+        }
+    }    
+    
+    /**
+     * Invalidates the cached portfolio data, forcing reload on next access
+     */
+    public invalidatePortfolioCache(): void {
+        this._portfolioData = undefined;
     }
 }
