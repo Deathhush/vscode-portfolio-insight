@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Asset Definition Host</title>
+    <style>
+        :root {
+            /* Gold/Black theme colors - host.html always uses dark mode */
+            --bg-primary: #0a0a0a;
+            --bg-secondary: #1a1a1a;
+            --bg-tertiary: #2a2a2a;
+            --bg-card: #1a1a1a;
+            --text-primary: #e0d4b0;
+            --text-secondary: #c9b874;
+            --text-accent: #d4af37;
+            --border-primary: #404040;
+            --shadow-primary: rgba(0, 0, 0, 0.5);
+            --shadow-secondary: rgba(0, 0, 0, 0.3);
+            --gradient-primary: linear-gradient(135deg, #2c2c2c 0%, #1a1a1a 50%, #000000 100%);
+            --gradient-secondary: linear-gradient(135deg, #d4af37 0%, #b8941f 100%);
+            --btn-hover-shadow: rgba(212, 175, 55, 0.4);
+            --btn-secondary-hover-shadow: rgba(212, 175, 55, 0.4);
+            --status-connected: #2e7d32;
+            --status-disconnected: #d32f2f;
+            --overlay-bg: rgba(26, 26, 26, 0.95);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .host-header {
+            background: var(--gradient-primary);
+            color: var(--text-accent);
+            padding: 20px;
+            border-radius: 12px 12px 0 0;
+            box-shadow: 0 4px 6px var(--shadow-primary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .host-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(45deg, transparent 30%, rgba(212, 175, 55, 0.1) 50%, transparent 70%);
+            pointer-events: none;
+        }
+
+        .host-header h1 {
+            font-size: 2em;
+            margin-bottom: 10px;
+            font-weight: 300;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+            position: relative;
+            z-index: 1;
+        }
+
+        .host-header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+            color: #e0d4b0;
+            position: relative;
+            z-index: 1;
+        }
+
+        .host-controls {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border-bottom: 1px solid var(--border-primary);
+            box-shadow: 0 2px 4px var(--shadow-secondary);
+        }
+
+        .btn {
+            background: var(--gradient-primary);
+            color: var(--text-accent);
+            border: 1px solid var(--text-accent);
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px var(--btn-hover-shadow);
+            background: var(--gradient-secondary);
+            color: var(--bg-primary);
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-primary);
+            color: var(--text-accent);
+            box-shadow: 0 4px 12px var(--btn-secondary-hover-shadow);
+        }
+
+        .status-indicator {
+            margin-left: auto;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background-color: var(--status-disconnected);
+            transition: background-color 0.3s ease;
+        }
+
+        .status-dot.connected {
+            background-color: var(--status-connected);
+        }
+
+        .iframe-container {
+            flex: 1;
+            position: relative;
+            background: var(--bg-card);
+            border-radius: 0 0 12px 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px var(--shadow-primary);
+        }
+
+        .asset-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: var(--overlay-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-accent);
+            font-size: 1.2em;
+            z-index: 10;
+        }
+
+        .loading-overlay.hidden {
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .host-controls {
+                flex-wrap: wrap;
+                gap: 10px;
+            }
+            
+            .btn {
+                padding: 8px 16px;
+                font-size: 0.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="host-header">        <h1>Edit Asset Definition - Development Host</h1>
+        <p>Test environment for the asset definition editor feature</p>
+    </div>
+
+    <div class="host-controls">        <button class="btn" onclick="initializeAssets()">Initialize with Sample Assets</button>
+        <button class="btn btn-secondary" onclick="loadEmptyAssets()">Start Empty</button>
+        <button class="btn" onclick="refreshIframe()">Refresh</button>
+        <button class="btn btn-secondary" onclick="toggleIframeTheme()" id="themeToggleBtn">🌙 Dark Mode</button>
+        
+        <div class="status-indicator">
+            <span>Connection:</span>
+            <div class="status-dot connected" id="statusDot"></div>
+            <span id="statusText">Connected</span>
+        </div>
+    </div>
+
+    <div class="iframe-container">
+        <div class="loading-overlay" id="loadingOverlay">
+            Loading Asset Definition Editor view...
+        </div>
+          <iframe 
+            id="assetIframe" 
+            class="asset-iframe" 
+            src="assetDefinitionEditor.html"
+            onload="handleIframeLoad()">
+        </iframe>
+    </div>
+
+    <script>
+        let iframe;
+        let iframeLoaded = false;
+        let pendingMessages = [];
+        let currentIframeTheme = 'vscode-dark'; // Track current iframe theme
+
+        // Function to send message to iframe (with queuing if not loaded)
+        function sendToIframe(message) {
+            if (iframeLoaded && iframe.contentWindow) {
+                try {
+                    iframe.contentWindow.postMessage(message, '*');
+                    console.log('Message sent to iframe:', message);
+                } catch (error) {
+                    console.error('Error sending message to iframe:', error);
+                }
+            } else {
+                console.log('Iframe not ready, queuing message:', message);
+                pendingMessages.push(message);
+            }
+        }
+
+        // Function to send all pending messages
+        function sendPendingMessages() {
+            if (pendingMessages.length > 0) {
+                console.log('Sending', pendingMessages.length, 'pending messages');
+                pendingMessages.forEach(message => {
+                    sendToIframe(message);
+                });
+                pendingMessages = [];
+            }
+        }        // Sample asset data for testing
+        const sampleAssets = [
+            { name: "Savings Account", type: "simple" }, // CNY default, no currency field
+            { name: "Investment Fund", type: "investment" }, // CNY default
+            { name: "US Stock ETF", type: "investment", currency: "USD" },
+            { name: "Diversified Portfolio", type: "composite" }, // CNY default
+            { name: "HK Stock", type: "stock", currency: "HKD" },
+            { name: "Bitcoin Holdings", type: "investment", currency: "USD" }
+        ];
+
+        function initializeAssets() {
+            const message = {
+                type: 'INITIALIZE_ASSETS',
+                assets: sampleAssets
+            };
+            sendToIframe(message);
+        }
+
+        function loadEmptyAssets() {
+            const message = {
+                type: 'INITIALIZE_ASSETS',
+                assets: []
+            };
+            sendToIframe(message);
+        }
+
+        function toggleIframeTheme() {
+            // Toggle between themes
+            currentIframeTheme = currentIframeTheme === 'vscode-dark' ? 'vscode-light' : 'vscode-dark';
+            
+            // Send theme change to iframe
+            if (iframe.contentWindow && iframe.contentWindow.setTheme) {
+                iframe.contentWindow.setTheme(currentIframeTheme);
+            }
+            
+            // Update button text
+            const btn = document.getElementById('themeToggleBtn');
+            btn.textContent = currentIframeTheme === 'vscode-dark' ? '☀️ Light Mode' : '🌙 Dark Mode';
+            
+            console.log('Iframe theme switched to:', currentIframeTheme);
+        }
+
+        function refreshIframe() {
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.classList.remove('hidden');
+            iframe.src = iframe.src;
+        }
+
+        function updateStatus(connected) {
+            const statusDot = document.getElementById('statusDot');
+            const statusText = document.getElementById('statusText');
+            
+            if (connected) {
+                statusDot.classList.add('connected');
+                statusText.textContent = 'Connected';
+            } else {
+                statusDot.classList.remove('connected');
+                statusText.textContent = 'Disconnected';
+            }
+        }
+
+        function handleIframeLoad() {
+            console.log('Iframe loaded');
+            iframe = document.getElementById('assetIframe');
+            iframeLoaded = true;
+            
+            // Hide loading overlay
+            const loadingOverlay = document.getElementById('loadingOverlay');
+            loadingOverlay.classList.add('hidden');
+            
+            // Update status
+            updateStatus(true);
+            
+            // Send any pending messages
+            sendPendingMessages();
+        }
+
+        // Listen for messages from the iframe
+        window.addEventListener('message', function(event) {
+            console.log('Message received from iframe:', event.data);
+            
+            const message = event.data;
+            switch (message.type) {                case 'ASSET_DEFINITION_SUBMIT':
+                    console.log('Asset definitions submitted:', message.data);
+                    alert(`Asset definitions submitted successfully!\n\nData:\n${JSON.stringify(message.data, null, 2)}`);
+                    break;
+                case 'CANCEL':
+                    console.log('Operation cancelled');
+                    alert('Operation cancelled by user');
+                    break;
+                default:
+                    console.log('Unknown message type:', message.type);
+            }
+        });
+
+        // Initialize when the page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            iframe = document.getElementById('assetIframe');
+            console.log('Host page loaded, iframe:', iframe);
+            
+            // Set initial status
+            updateStatus(false);
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            // The iframe will automatically resize due to CSS
+        });
+    </script>
+</body>
+</html>

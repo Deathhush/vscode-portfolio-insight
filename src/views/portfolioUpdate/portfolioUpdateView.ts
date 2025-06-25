@@ -27,7 +27,8 @@ export class PortfolioUpdateView {
                 // Enable javascript in the webview
                 enableScripts: true,
                 // Restrict the webview to only loading content from our extension's directory
-                localResourceRoots: [extensionUri]
+                localResourceRoots: [extensionUri],
+                retainContextWhenHidden: true
             }
         );
 
@@ -80,12 +81,12 @@ export class PortfolioUpdateView {
         const webview = this._panel.webview;
         this._panel.title = 'Portfolio Update';
         this._panel.webview.html = this._getHtmlForWebview(webview);
-    }    
+    }
     
     private _getHtmlForWebview(webview: vscode.Webview) {
         try {
             // Get the path to the HTML file
-            const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'portfolioUpdate.html');
+            const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'views', 'portfolioUpdate', 'portfolioUpdate.html');
             
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');

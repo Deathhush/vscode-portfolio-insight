@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Asset Definition</title>
+    <style>
+        /* VS Code theme detection classes */
+        .vscode-light {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f3f3f3;
+            --bg-tertiary: #e8e8e8;
+            --text-primary: #333333;
+            --text-secondary: #666666;
+            --text-accent: #0078d4;
+            --border-primary: #d1d1d1;
+            --border-secondary: #e5e5e5;
+            --input-bg: #ffffff;
+            --input-border: #cccccc;
+            --button-bg: #0078d4;
+            --button-text: #ffffff;
+            --button-hover-bg: #106ebe;
+            --error-color: #d32f2f;
+            --success-color: #388e3c;
+            --warning-color: #f57c00;
+        }
+
+        .vscode-dark {
+            --bg-primary: #1e1e1e;
+            --bg-secondary: #252526;
+            --bg-tertiary: #2d2d30;
+            --text-primary: #cccccc;
+            --text-secondary: #969696;
+            --text-accent: #4fc3f7;
+            --border-primary: #3c3c3c;
+            --border-secondary: #404040;
+            --input-bg: #3c3c3c;
+            --input-border: #5a5a5a;
+            --button-bg: #0e639c;
+            --button-text: #ffffff;
+            --button-hover-bg: #1177bb;
+            --error-color: #f44336;
+            --success-color: #4caf50;
+            --warning-color: #ff9800;
+        }
+
+        .vscode-high-contrast {
+            --bg-primary: #000000;
+            --bg-secondary: #000000;
+            --bg-tertiary: #000000;
+            --text-primary: #ffffff;
+            --text-secondary: #ffffff;
+            --text-accent: #ffffff;
+            --border-primary: #ffffff;
+            --border-secondary: #ffffff;
+            --input-bg: #000000;
+            --input-border: #ffffff;
+            --button-bg: #ffffff;
+            --button-text: #000000;
+            --button-hover-bg: #ffffff;
+            --error-color: #ff0000;
+            --success-color: #00ff00;
+            --warning-color: #ffff00;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }        
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            padding: 20px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-primary);
+        }        
+        
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            color: var(--text-accent);
+        }
+
+        .header p {
+            color: var(--text-secondary);
+            font-size: 1em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }        
+        
+        .btn {
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background-color 0.2s;
+        }
+
+        .btn:hover {
+            background: var(--button-hover-bg);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-primary);
+        }
+
+        .btn-secondary:hover {
+            background: var(--border-primary);
+        }
+
+        .btn-danger {
+            background: var(--error-color);
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c62828;
+        }
+
+        .table-container {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .assets-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .assets-table th,
+        .assets-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .assets-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-accent);
+            position: sticky;
+            top: 0;
+        }
+
+        .assets-table tr:hover {
+            background: var(--bg-tertiary);
+        }        
+        
+        .input-field {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+        }
+
+        .input-field.error {
+            border-color: var(--error-color);
+            box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
+        }        
+        
+        .select-field {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-size: 1em;
+        }
+
+        .select-field:focus {
+            outline: none;
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+        }        
+        
+        .error-message {
+            color: var(--error-color);
+            font-size: 0.85em;
+            margin-top: 4px;
+            display: none;
+        }
+
+        .error-message.visible {
+            display: block;
+        }        
+        
+        .remove-btn {
+            background: var(--error-color);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+        }
+
+        .remove-btn:hover {
+            background: #c62828;
+        }
+
+        .summary {
+            background: var(--bg-tertiary);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-primary);
+        }
+
+        .summary h3 {
+            margin-bottom: 10px;
+            color: var(--text-accent);
+        }
+
+        .submit-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .notification {
+            padding: 12px 16px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .notification.success {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid var(--success-color);
+            color: var(--success-color);
+        }
+
+        .notification.error {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid var(--error-color);
+            color: var(--error-color);
+        }
+
+        .notification.visible {
+            display: block;
+        }
+
+        .action-column {
+            width: 100px;
+            text-align: center;
+        }
+
+        .name-column {
+            width: 300px;
+        }
+
+        .type-column {
+            width: 150px;
+        }
+
+        .currency-column {
+            width: 120px;
+        }
+
+        .validation-summary {
+            background: rgba(244, 67, 54, 0.1);
+            border: 1px solid var(--error-color);
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .validation-summary.visible {
+            display: block;
+        }
+
+        .validation-summary h3 {
+            color: var(--error-color);
+            margin-bottom: 10px;
+        }
+
+        .validation-summary ul {
+            margin-left: 20px;
+            color: var(--error-color);
+        }
+
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+            }
+            
+            .submit-controls {
+                flex-direction: column;
+            }
+              .assets-table {
+                font-size: 0.9em;
+            }
+            
+            .assets-table th,
+            .assets-table td {
+                padding: 8px 4px;
+            }
+        }    
+    </style>
+</head>
+<body class="vscode-dark">
+    <div class="container">
+        <div class="header">            <h1>Edit Asset Definition</h1>
+            <p>Define and edit your portfolio assets. You can modify existing assets or add new ones.</p>
+        </div>
+
+        <div class="notification" id="notification">
+            <span id="notificationMessage"></span>
+        </div>        
+        <div class="validation-summary" id="validationSummary">
+            <h3>Please fix the following errors:</h3>
+            <ul id="validationList"></ul>
+        </div>
+
+        <div class="table-container">
+            <table class="assets-table">
+                <thead>
+                    <tr>
+                        <th class="name-column">Asset Name</th>
+                        <th class="type-column">Type</th>
+                        <th class="currency-column">Currency</th>
+                        <th class="action-column">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="assetsTableBody">
+                    <!-- Assets will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="addNewAsset()">+ Add Asset</button>
+        </div>
+
+        <div class="summary" id="summary">
+            <h3>Summary</h3>
+            <p>Asset Definitions: <span id="assetCount">0</span></p>
+            <p>Types: <span id="typeBreakdown">None</span></p>
+        </div>        
+        <div class="submit-controls">
+            <button class="btn" onclick="submitAssets()" id="submitBtn">Save Changes</button>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let assets = [];
+        let originalAssets = [];
+        let nextAssetId = 1;
+
+        // Asset types
+        const ASSET_TYPES = ['simple', 'investment', 'composite', 'stock'];
+        const CURRENCIES = ['CNY', 'USD', 'HKD'];
+
+        const vscode = acquireVsCodeApi();
+
+        // Initialize
+        function initialize() {            
+            // Add initial empty row if no assets
+            if (assets.length === 0) {
+                addNewAsset();
+            }
+            updateDisplay();
+        }
+
+        // Listen for messages from VS Code
+        window.addEventListener('message', event => {
+            const message = event.data;
+            switch (message.type) {
+                case 'INITIALIZE_ASSETS':
+                    initializeAssets(message.assets || []);
+                    break;
+            }
+        });        function initializeAssets(existingAssets) {
+            console.log('Initializing with assets:', existingAssets);
+            originalAssets = JSON.parse(JSON.stringify(existingAssets));
+            assets = JSON.parse(JSON.stringify(existingAssets));
+            
+            // Assign IDs to existing assets and set default currency if not specified
+            assets.forEach((asset, index) => {
+                asset.id = nextAssetId++;
+                asset.isExisting = true;
+                // Default to CNY if currency is not specified
+                if (!asset.currency) {
+                    asset.currency = 'CNY';
+                }
+            });
+            
+            updateDisplay();
+        }
+        
+        function addNewAsset() {
+            const newAsset = {
+                id: nextAssetId++,
+                name: '',
+                type: 'simple',
+                currency: 'CNY',
+                isExisting: false
+            };
+            assets.push(newAsset);
+            updateDisplay();
+            
+            // Focus on the new asset's name field
+            setTimeout(() => {
+                const nameInput = document.querySelector(`input[data-id="${newAsset.id}"][data-field="name"]`);
+                if (nameInput) {
+                    nameInput.focus();
+                }
+            }, 100);
+        }
+
+        function removeAsset(id) {
+            const index = assets.findIndex(asset => asset.id === id);
+            if (index !== -1) {
+                assets.splice(index, 1);
+                updateDisplay();
+            }
+        }
+
+        function updateAsset(id, field, value) {
+            const asset = assets.find(a => a.id === id);
+            if (asset) {
+                if (field === 'name') {
+                    value = value.trim(); // Trim whitespace
+                }
+                asset[field] = value;
+                updateDisplay();
+                validateAsset(id);
+            }
+        }
+
+        function validateAsset(id) {
+            const asset = assets.find(a => a.id === id);
+            if (!asset) return;
+
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            const nameInput = row.querySelector('input[data-field="name"]');
+            const errorDiv = row.querySelector('.error-message');
+
+            let hasError = false;
+            let errorMessage = '';
+
+            // Check if name is empty
+            if (!asset.name || asset.name.trim() === '') {
+                hasError = true;
+                errorMessage = 'Asset name is required';
+            } else {
+                // Check for duplicate names
+                const duplicates = assets.filter(a => a.id !== id && a.name.trim().toLowerCase() === asset.name.trim().toLowerCase());
+                if (duplicates.length > 0) {
+                    hasError = true;
+                    errorMessage = 'Asset name must be unique';
+                }
+            }
+
+            // Update UI
+            nameInput.classList.toggle('error', hasError);
+            errorDiv.textContent = errorMessage;
+            errorDiv.classList.toggle('visible', hasError);
+
+            return !hasError;
+        }
+
+        function validateAllAssets() {
+            const errors = [];
+            let allValid = true;
+
+            // Filter out empty assets
+            const nonEmptyAssets = assets.filter(asset => 
+                asset.name && asset.name.trim() !== ''
+            );
+
+            // Check for required fields and duplicates
+            nonEmptyAssets.forEach((asset, index) => {
+                if (!asset.name || asset.name.trim() === '') {
+                    errors.push(`Row ${index + 1}: Asset name is required`);
+                    allValid = false;
+                } else {
+                    // Check for duplicates
+                    const duplicates = nonEmptyAssets.filter(a => 
+                        a.id !== asset.id && 
+                        a.name.trim().toLowerCase() === asset.name.trim().toLowerCase()
+                    );
+                    if (duplicates.length > 0) {
+                        errors.push(`Row ${index + 1}: Asset name "${asset.name}" is duplicated`);
+                        allValid = false;
+                    }
+                }
+
+                if (!asset.type || !ASSET_TYPES.includes(asset.type)) {
+                    errors.push(`Row ${index + 1}: Invalid asset type`);
+                    allValid = false;
+                }
+            });
+
+            // Update validation summary
+            const validationSummary = document.getElementById('validationSummary');
+            const validationList = document.getElementById('validationList');
+            
+            if (errors.length > 0) {
+                validationList.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+                validationSummary.classList.add('visible');
+            } else {
+                validationSummary.classList.remove('visible');
+            }
+
+            // Update individual asset validations
+            assets.forEach(asset => validateAsset(asset.id));
+
+            return allValid;
+        }
+
+        function updateDisplay() {
+            updateTable();
+            updateSummary();
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('assetsTableBody');
+            tbody.innerHTML = '';
+
+            assets.forEach(asset => {
+                const row = document.createElement('tr');
+                row.setAttribute('data-id', asset.id);
+                
+                row.innerHTML = `
+                    <td class="name-column">
+                        <input 
+                            type="text" 
+                            class="input-field" 
+                            value="${asset.name || ''}" 
+                            placeholder="Enter asset name"
+                            data-id="${asset.id}"
+                            data-field="name"
+                            onchange="updateAsset(${asset.id}, 'name', this.value)"
+                            onblur="validateAsset(${asset.id})"
+                        />
+                        <div class="error-message"></div>
+                    </td>
+                    <td class="type-column">
+                        <select 
+                            class="select-field" 
+                            data-id="${asset.id}"
+                            data-field="type"
+                            onchange="updateAsset(${asset.id}, 'type', this.value)"
+                        >
+                            ${ASSET_TYPES.map(type => 
+                                `<option value="${type}" ${asset.type === type ? 'selected' : ''}>${type}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td class="currency-column">
+                        <select 
+                            class="select-field" 
+                            data-id="${asset.id}"
+                            data-field="currency"
+                            onchange="updateAsset(${asset.id}, 'currency', this.value)"
+                        >
+                            ${CURRENCIES.map(currency => 
+                                `<option value="${currency}" ${asset.currency === currency ? 'selected' : ''}>${currency}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td class="action-column">
+                        <button class="remove-btn" onclick="removeAsset(${asset.id})">Remove</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(row);
+            });
+        }
+
+        function updateSummary() {
+            const assetCount = assets.filter(a => a.name && a.name.trim() !== '').length;
+            const typeBreakdown = {};
+            
+            assets.forEach(asset => {
+                if (asset.name && asset.name.trim() !== '' && asset.type) {
+                    typeBreakdown[asset.type] = (typeBreakdown[asset.type] || 0) + 1;
+                }
+            });
+
+            document.getElementById('assetCount').textContent = assetCount;
+            
+            const typeText = Object.keys(typeBreakdown).length > 0 
+                ? Object.entries(typeBreakdown).map(([type, count]) => `${type}: ${count}`).join(', ')
+                : 'None';
+            document.getElementById('typeBreakdown').textContent = typeText;
+        }        
+        
+        function submitAssets() {
+            if (!validateAllAssets()) {
+                showNotification('Please fix validation errors before submitting', 'error');
+                return;
+            }            // Filter out empty assets and clean the data
+            const validAssets = assets
+                .filter(asset => asset.name && asset.name.trim() !== '')
+                .map(asset => {
+                    const cleanAsset = {
+                        name: asset.name.trim(),
+                        type: asset.type
+                    };
+                    // Only include currency if it's not CNY (the default)
+                    if (asset.currency && asset.currency !== 'CNY') {
+                        cleanAsset.currency = asset.currency;
+                    }
+                    return cleanAsset;
+                });            if (validAssets.length === 0) {
+                showNotification('Please add at least one asset definition', 'error');
+                return;
+            }
+
+            // Send message (either to VS Code or parent window)
+            sendMessage({
+                type: 'ASSET_DEFINITION_SUBMIT',
+                data: validAssets
+            });
+
+            showNotification(`Successfully submitted ${validAssets.length} asset definition(s)`, 'success');
+        }        function cancelChanges() {
+            sendMessage({
+                type: 'CANCEL'
+            });
+        }
+
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            const messageSpan = document.getElementById('notificationMessage');
+            
+            messageSpan.textContent = message;
+            notification.className = `notification ${type} visible`;
+            
+            setTimeout(() => {
+                notification.classList.remove('visible');
+            }, 5000);
+        }        // Function to manually set theme (used by host.html)
+        function setTheme(themeClass) {
+            document.body.className = themeClass;
+        }
+
+        // Communication helper function
+        function sendMessage(message) {
+            try {
+                // Try VS Code API first (when running in actual webview)
+                if (typeof acquireVsCodeApi !== 'undefined') {                    
+                    vscode.postMessage(message);
+                } else {
+                    // Fallback to parent window communication (when in iframe)
+                    if (window.parent && window.parent !== window) {
+                        window.parent.postMessage(message, '*');
+                    } else {
+                        console.log('Message would be sent:', message);
+                    }
+                }
+            } catch (error) {
+                console.error('Error sending message:', error);
+                // Fallback to parent window
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage(message, '*');
+                }
+            }
+        }        // Initialize when page loads
+        document.addEventListener('DOMContentLoaded', initialize);
+    </script>
+</body>
+</html>

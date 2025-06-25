@@ -13,7 +13,20 @@ export function activate(context: vscode.ExtensionContext) {
 	const portfolioExplorerProvider = new PortfolioExplorerProvider(context);
 	
 	// Register the tree data provider
-	vscode.window.registerTreeDataProvider('portfolioExplorer', portfolioExplorerProvider);
+	const treeView = vscode.window.createTreeView('portfolioExplorer', {
+		treeDataProvider: portfolioExplorerProvider		
+	});
+	
+	// Track the current selection
+	let currentSelection: any = null;
+	treeView.onDidChangeSelection(e => {
+		if (e.selection && e.selection.length > 0) {
+			currentSelection = e.selection[0];
+		} else {
+			currentSelection = null;
+		}
+	});
+	context.subscriptions.push(treeView);
 	// Register commands
 	const disposableHelloWorld = vscode.commands.registerCommand('vscode-portfolio-insight.helloWorld', () => {
 		// The code you place here will be executed every time your command is executed
@@ -26,9 +39,24 @@ export function activate(context: vscode.ExtensionContext) {
 	});	// Register command to open Portfolio Update View
 	const disposableUpdateAssets = vscode.commands.registerCommand('vscode-portfolio-insight.updateAssets', () => {
 		portfolioExplorerProvider.openPortfolioUpdate();
-	});
+	});	
 	
 	context.subscriptions.push(disposableHelloWorld, disposableRefresh, disposableUpdateAssets);
+	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.editAssetDefinition', 
+		() => {
+			portfolioExplorerProvider.openAssetDefinitionEditor();
+		}
+	));
+
+	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.editAssetDefinitionFromHeader', () => {
+		// Check if the current selection is an asset collection node
+		if (currentSelection && currentSelection.contextValue === 'assets') {
+			portfolioExplorerProvider.openAssetDefinitionEditor();
+		} else {
+			// Show a message that assets node should be selected
+			vscode.window.showInformationMessage('Please select the Assets node to edit asset definitions.');
+		}
+	}));
 }
 
 // This method is called when your extension is deactivated
