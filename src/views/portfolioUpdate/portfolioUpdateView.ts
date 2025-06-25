@@ -81,11 +81,10 @@ export class PortfolioUpdateView {
         this._panel.title = 'Portfolio Update';
         this._panel.webview.html = this._getHtmlForWebview(webview);
     }    
-    
-    private _getHtmlForWebview(webview: vscode.Webview) {
+      private _getHtmlForWebview(webview: vscode.Webview) {
         try {
             // Get the path to the HTML file
-            const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'portfolioUpdate.html');
+            const htmlPath = path.join(this._extensionUri.fsPath, 'src', 'views', 'portfolioUpdate', 'portfolioUpdate.html');
             
             // Read the HTML file
             let htmlContent = fs.readFileSync(htmlPath, 'utf8');

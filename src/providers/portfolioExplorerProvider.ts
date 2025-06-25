@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { PortfolioUpdateView } from '../views/portfolioUpdateView';
+import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateView';
 import { AssetCollectionNode } from './assetCollectionNode';
 import { AssetNode } from './assetNode';
 
