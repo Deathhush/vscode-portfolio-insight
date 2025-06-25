@@ -27,7 +27,8 @@ export class PortfolioUpdateView {
                 // Enable javascript in the webview
                 enableScripts: true,
                 // Restrict the webview to only loading content from our extension's directory
-                localResourceRoots: [extensionUri]
+                localResourceRoots: [extensionUri],
+                retainContextWhenHidden: true
             }
         );
 

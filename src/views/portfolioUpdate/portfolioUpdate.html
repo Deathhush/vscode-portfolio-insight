@@ -4,138 +4,184 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Asset Value Input</title>
-    <style>
-      /* VS Code theme detection classes */
+    <style>      /* VS Code theme detection classes */
       .vscode-light {
-        --bg-primary: #f8f6f0;
-        --bg-secondary: white;
-        --bg-tertiary: #faf9f5;
-        --bg-quaternary: #f0ece0;
-        --text-primary: #2c2c2c;
-        --text-secondary: #666;
-        --text-muted: #666;
-        --border-primary: #e6e0d0;
-        --border-secondary: #d4c5a0;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f3f3f3;
+        --bg-tertiary: #e8e8e8;
+        --bg-quaternary: #e8e8e8;
+        --text-primary: #333333;
+        --text-secondary: #666666;
+        --text-muted: #666666;
+        --text-accent: #0078d4;
+        --border-primary: #d1d1d1;
+        --border-secondary: #e5e5e5;
         --shadow-primary: rgba(0, 0, 0, 0.1);
         --shadow-secondary: rgba(0, 0, 0, 0.05);
-        --input-bg: white;
-        --input-border: #e6e0d0;
-        --input-focus: #d4af37;
+        --input-bg: #ffffff;
+        --input-border: #cccccc;
+        --input-focus: #0078d4;
         --input-placeholder: #999;
+        --button-bg: #0078d4;
+        --button-text: #ffffff;
+        --button-hover-bg: #106ebe;
         --badge-simple-bg: #e6f2ff;
         --badge-simple-text: #1e40af;
         --badge-investment-bg: #fff8e1;
-        --badge-investment-text: #d4af37;
+        --badge-investment-text: #f57c00;
         --badge-composite-bg: #f3e8ff;
         --badge-composite-text: #7c3aed;
         --badge-stock-bg: #e0f8f8;
         --badge-stock-text: #0891b2;
-        --currency-bg: #2c2c2c;
-        --currency-text: #d4af37;        --summary-bg: #faf9f5;
-        --summary-text: #666;
-        --summary-value: #2c2c2c;
-        --header-active-bg: linear-gradient(
-          135deg,
-          #fff8e1 0%,
-          #faf0c8 50%,
-          #f5e6a3 100%
-        );
+        --currency-bg: #333333;
+        --currency-text: #ffffff;
+        --summary-bg: #f3f3f3;
+        --summary-text: #666666;
+        --summary-value: #333333;
+        --header-active-bg: linear-gradient(135deg, #f3f3f3 0%, #e8e8e8 100%);
         --overridden-bg: #fff8e1;
-        --overridden-border: #d4af37;
-        --transfer-btn-bg: #d4af37;
-        --transfer-btn-hover: #b8941f;
-        --transfer-btn-active: #a67c00;
-        --transfer-btn-active-hover: #8b6914;
-        --add-btn-bg: #2e7d32;
-        --add-btn-hover: #1b5e20;
+        --overridden-border: #0078d4;
+        --transfer-btn-bg: #0078d4;
+        --transfer-btn-hover: #106ebe;
+        --transfer-btn-active: #106ebe;
+        --transfer-btn-active-hover: #005a9e;
+        --add-btn-bg: #388e3c;
+        --add-btn-hover: #2e7d32;
         --remove-btn-bg: #d32f2f;
         --remove-btn-hover: #c62828;
+        --error-color: #d32f2f;
+        --success-color: #388e3c;
+        --warning-color: #f57c00;
       }
 
       .vscode-dark {
         --bg-primary: #1e1e1e;
-        --bg-secondary: #1a1a1a;
-        --bg-tertiary: #2a2a2a;
-        --bg-quaternary: #3a3a3a;
-        --text-primary: #e0d4b0;
-        --text-secondary: #c9b874;
-        --text-muted: #a89660;
-        --border-primary: #404040;
-        --border-secondary: #5a5a5a;
+        --bg-secondary: #252526;
+        --bg-tertiary: #2d2d30;
+        --bg-quaternary: #2d2d30;
+        --text-primary: #cccccc;
+        --text-secondary: #969696;
+        --text-muted: #969696;
+        --text-accent: #4fc3f7;
+        --border-primary: #3c3c3c;
+        --border-secondary: #404040;
         --shadow-primary: rgba(0, 0, 0, 0.4);
         --shadow-secondary: rgba(0, 0, 0, 0.3);
-        --input-bg: #2a2a2a;
+        --input-bg: #3c3c3c;
         --input-border: #5a5a5a;
-        --input-focus: #d4af37;
+        --input-focus: #4fc3f7;
         --input-placeholder: #8a8a8a;
+        --button-bg: #0e639c;
+        --button-text: #ffffff;
+        --button-hover-bg: #1177bb;
         --badge-simple-bg: rgba(30, 64, 175, 0.2);
         --badge-simple-text: #60a5fa;
-        --badge-investment-bg: rgba(212, 175, 55, 0.2);
-        --badge-investment-text: #d4af37;
+        --badge-investment-bg: rgba(255, 152, 0, 0.2);
+        --badge-investment-text: #ff9800;
         --badge-composite-bg: rgba(124, 58, 237, 0.2);
         --badge-composite-text: #a78bfa;
         --badge-stock-bg: rgba(8, 145, 178, 0.2);
         --badge-stock-text: #22d3ee;
-        --currency-bg: #1a1a1a;
-        --currency-text: #d4af37;
-        --summary-bg: #1a1a1a;
-        --summary-text: #c9b874;
-        --summary-value: #e0d4b0;
-        --header-active-bg: linear-gradient(
-          135deg,
-          rgba(139, 105, 20, 0.15) 0%,
-          rgba(184, 148, 31, 0.2) 50%,
-          rgba(212, 175, 55, 0.25) 100%
-        );
-        --overridden-bg: rgba(212, 175, 55, 0.15);
-        --overridden-border: #d4af37;
-        --transfer-btn-bg: rgba(212, 175, 55, 0.3);
-        --transfer-btn-hover: rgba(212, 175, 55, 0.5);
-        --transfer-btn-active: #d4af37;
-        --transfer-btn-active-hover: #b8941f;
-        --add-btn-bg: #2e7d32;
-        --add-btn-hover: #1b5e20;
-        --remove-btn-bg: #d32f2f;
-        --remove-btn-hover: #c62828;
+        --currency-bg: #252526;
+        --currency-text: #cccccc;
+        --summary-bg: #252526;
+        --summary-text: #969696;
+        --summary-value: #cccccc;
+        --header-active-bg: linear-gradient(135deg, #252526 0%, #2d2d30 100%);
+        --overridden-bg: rgba(255, 152, 0, 0.15);
+        --overridden-border: #4fc3f7;
+        --transfer-btn-bg: #0e639c;
+        --transfer-btn-hover: #1177bb;
+        --transfer-btn-active: #1177bb;
+        --transfer-btn-active-hover: #0e639c;
+        --add-btn-bg: #4caf50;
+        --add-btn-hover: #388e3c;
+        --remove-btn-bg: #f44336;
+        --remove-btn-hover: #d32f2f;
+        --error-color: #f44336;
+        --success-color: #4caf50;
+        --warning-color: #ff9800;
+      }
+
+      .vscode-high-contrast {
+        --bg-primary: #000000;
+        --bg-secondary: #000000;
+        --bg-tertiary: #000000;
+        --bg-quaternary: #000000;
+        --text-primary: #ffffff;
+        --text-secondary: #ffffff;
+        --text-muted: #ffffff;
+        --text-accent: #ffffff;
+        --border-primary: #ffffff;
+        --border-secondary: #ffffff;
+        --shadow-primary: rgba(255, 255, 255, 0.1);
+        --shadow-secondary: rgba(255, 255, 255, 0.05);
+        --input-bg: #000000;
+        --input-border: #ffffff;
+        --input-focus: #ffffff;
+        --input-placeholder: #ffffff;
+        --button-bg: #ffffff;
+        --button-text: #000000;
+        --button-hover-bg: #ffffff;
+        --badge-simple-bg: #000000;
+        --badge-simple-text: #ffffff;
+        --badge-investment-bg: #000000;
+        --badge-investment-text: #ffffff;
+        --badge-composite-bg: #000000;
+        --badge-composite-text: #ffffff;
+        --badge-stock-bg: #000000;
+        --badge-stock-text: #ffffff;
+        --currency-bg: #000000;
+        --currency-text: #ffffff;
+        --summary-bg: #000000;
+        --summary-text: #ffffff;
+        --summary-value: #ffffff;
+        --header-active-bg: #000000;
+        --overridden-bg: #000000;
+        --overridden-border: #ffffff;
+        --transfer-btn-bg: #ffffff;
+        --transfer-btn-hover: #ffffff;
+        --transfer-btn-active: #ffffff;
+        --transfer-btn-active-hover: #ffffff;
+        --add-btn-bg: #ffffff;
+        --add-btn-hover: #ffffff;
+        --remove-btn-bg: #ffffff;
+        --remove-btn-hover: #ffffff;
+        --error-color: #ff0000;
+        --success-color: #00ff00;
+        --warning-color: #ffff00;
       }
 
       * {
         margin: 0;
         padding: 0;
         box-sizing: border-box;
-      }
-
-      body {
+      }      body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
           sans-serif;
         background-color: var(--bg-primary);
         color: var(--text-primary);
-        padding: 10px;
-        line-height: 1.3;
-        font-size: 15px;
+        padding: 20px;
+        line-height: 1.6;
+        font-size: 16px;
         transition: background-color 0.3s ease, color 0.3s ease;
-      }
-      .container {
-        max-width: 600px;
+      }.container {
+        max-width: 1200px;
         margin: 0 auto;
         background: var(--bg-secondary);
         border-radius: 8px;
         box-shadow: 0 2px 4px var(--shadow-primary);
         overflow: hidden;
         transition: background-color 0.3s ease, box-shadow 0.3s ease;
-      }
-      .header {
-        background: linear-gradient(
-          135deg,
-          #2c2c2c 0%,
-          #1a1a1a 50%,
-          #000000 100%
-        );
-        color: #d4af37;
+      }      .header {
+        background: linear-gradient(135deg, var(--bg-secondary) 0%, var(--bg-tertiary) 100%);
+        color: var(--text-accent);
         padding: 15px;
         text-align: center;
         position: relative;
         overflow: hidden;
+        border: 1px solid var(--border-primary);
+        border-radius: 8px 8px 0 0;
       }
 
       .header::before {
@@ -145,20 +191,15 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background: linear-gradient(
-          45deg,
-          transparent 30%,
-          rgba(212, 175, 55, 0.1) 50%,
-          transparent 70%
-        );
+        background: transparent;
         pointer-events: none;
       }
       .header h1 {
         font-size: 1.6em;
         margin-bottom: 5px;
         font-weight: 300;
-        color: #d4af37;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+        color: var(--text-accent);
+        text-shadow: none;
         position: relative;
         z-index: 1;
       }
@@ -166,7 +207,7 @@
       .header p {
         opacity: 0.9;
         font-size: 0.9em;
-        color: #e0d4b0;
+        color: var(--text-secondary);
         position: relative;
         z-index: 1;
       }
@@ -177,38 +218,36 @@
         align-items: center;
         justify-content: center;
         gap: 8px;
-      }
-      .date-picker-container label {
+      }      .date-picker-container label {
         font-size: 0.9em;
         opacity: 0.9;
         font-weight: 500;
-        color: #e0d4b0;
+        color: var(--text-secondary);
       }
 
       .date-picker {
         padding: 6px 10px;
-        border: 1px solid rgba(212, 175, 55, 0.3);
+        border: 1px solid var(--input-border);
         border-radius: 4px;
-        background-color: rgba(212, 175, 55, 0.1);
-        color: #e0d4b0;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
         font-size: 0.9em;
         outline: none;
         transition: all 0.3s ease;
       }
 
       .date-picker:focus {
-        background-color: rgba(212, 175, 55, 0.2);
-        border-color: rgba(212, 175, 55, 0.5);
-      }
-      .date-picker::-webkit-calendar-picker-indicator {
-        filter: invert(0.8) sepia(1) saturate(3) hue-rotate(15deg)
-          brightness(1.2);
+        background-color: var(--input-bg);
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+      }      .date-picker::-webkit-calendar-picker-indicator {
+        filter: brightness(0) saturate(100%) invert(51%) sepia(85%) saturate(2313%) hue-rotate(176deg) brightness(97%) contrast(98%);
         cursor: pointer;
       }
       .send-update-btn {
-        background: rgba(212, 175, 55, 0.2);
-        color: #d4af37;
-        border: 1px solid rgba(212, 175, 55, 0.3);
+        background: var(--button-bg);
+        color: var(--button-text);
+        border: 1px solid var(--button-bg);
         border-radius: 6px;
         padding: 8px 16px;
         font-size: 0.9em;
@@ -221,10 +260,10 @@
       }
 
       .send-update-btn:hover {
-        background: rgba(212, 175, 55, 0.3);
-        border-color: rgba(212, 175, 55, 0.5);
+        background: var(--button-hover-bg);
+        border-color: var(--button-hover-bg);
         transform: translateY(-1px);
-        box-shadow: 0 4px 8px rgba(212, 175, 55, 0.2);
+        box-shadow: 0 4px 8px var(--shadow-primary);
       }
 
       .send-update-btn:active {
@@ -468,9 +507,8 @@
         font-weight: normal;
         font-style: italic;
         margin-left: auto;
-      }
-      .transfers-icon {
-        color: #d4af37;
+      }      .transfers-icon {
+        color: var(--text-accent);
         font-size: 1em;
       }
       .transfer-item {
@@ -486,13 +524,12 @@
       .transfer-item[data-is-paired="true"] {
         background: var(--header-active-bg);
         border-color: var(--input-focus);
-      }
-      .transfer-item[data-is-paired="true"]::before {
+      }      .transfer-item[data-is-paired="true"]::before {
         content: "↔";
         position: absolute;
         top: 4px;
         left: 4px;
-        color: #d4af37;
+        color: var(--text-accent);
         font-size: 0.8em;
         font-weight: bold;
       }
@@ -506,58 +543,65 @@
 
       .transfer-row:last-child {
         margin-bottom: 0;
-      }
-      .transfer-type-select {
+      }      .transfer-type-select {
         flex: 0 0 70px;
         padding: 4px 6px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
-        background: white;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
       .transfer-asset-select {
         flex: 1;
         padding: 4px 8px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
-        background: white;
+        background: var(--input-bg);
+        color: var(--text-primary);
         min-width: 140px;
       }
       .transfer-date-input {
         flex: 0 0 100px;
         padding: 4px 6px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
 
       .transfer-date-input.overridden {
-        background-color: #fff3cd;
-        border-color: #ffeaa7;
-        box-shadow: 0 0 0 1px #ffeaa7;
+        background-color: var(--overridden-bg);
+        border-color: var(--overridden-border);
+        box-shadow: 0 0 0 1px var(--overridden-border);
       }
 
       .transfer-date-input.overridden:focus {
-        background-color: #fff3cd;
-        border-color: #fd79a8;
-        box-shadow: 0 0 0 2px rgba(253, 121, 168, 0.2);
+        background-color: var(--overridden-bg);
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
       }
 
       .transfer-amount-input {
         width: 120px;
         padding: 4px 4px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
         text-align: right;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
       .transfer-description-input {
         width: 100%;
         padding: 4px 8px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
       .transfer-description-input::placeholder {
         color: var(--input-placeholder);
@@ -670,20 +714,17 @@
         font-weight: normal;
         font-style: italic;
         margin-left: auto;
-      }
-
-      .income-expenses-icon {
-        color: #28a745;
+      }      .income-expenses-icon {
+        color: var(--success-color);
         font-size: 1em;
-      }
-
-      .income-expense-item {
-        background: #f8f9fa;
-        border: 1px solid #e1e5e9;
+      }.income-expense-item {
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-primary);
         border-radius: 4px;
         padding: 12px;
         margin-bottom: 8px;
         position: relative;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
       }
 
       .income-expense-row {
@@ -695,62 +736,65 @@
 
       .income-expense-row:last-child {
         margin-bottom: 0;
-      }
-
-      .income-expense-type-select {
+      }      .income-expense-type-select {
         flex: 0 0 80px;
         padding: 4px 6px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
-        background: white;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
       .income-expense-date-input {
         flex: 0 0 100px;
         padding: 4px 6px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
 
       .income-expense-date-input.overridden {
-        background-color: #fff3cd;
-        border-color: #ffeaa7;
-        box-shadow: 0 0 0 1px #ffeaa7;
+        background-color: var(--overridden-bg);
+        border-color: var(--overridden-border);
+        box-shadow: 0 0 0 1px var(--overridden-border);
       }
 
       .income-expense-date-input.overridden:focus {
-        background-color: #fff3cd;
-        border-color: #fd79a8;
-        box-shadow: 0 0 0 2px rgba(253, 121, 168, 0.2);
+        background-color: var(--overridden-bg);
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
       }
 
       .income-expense-amount-input {
         width: 120px;
         padding: 4px 4px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
         text-align: right;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
 
       .income-expense-description-input {
         flex: 1;
         padding: 4px 8px;
-        border: 1px solid #ccc;
+        border: 1px solid var(--input-border);
         border-radius: 3px;
         font-size: 0.8em;
+        background: var(--input-bg);
+        color: var(--text-primary);
       }
 
       .income-expense-description-input::placeholder {
-        color: #999;
-      }
-
-      .remove-income-expense-btn {
+        color: var(--input-placeholder);
+      }      .remove-income-expense-btn {
         position: absolute;
         top: 8px;
         right: 8px;
-        background: #dc3545;
+        background: var(--remove-btn-bg);
         color: white;
         border: none;
         border-radius: 50%;
@@ -765,11 +809,9 @@
       }
 
       .remove-income-expense-btn:hover {
-        background: #c82333;
-      }
-
-      .add-income-expense-btn {
-        background: #28a745;
+        background: var(--remove-btn-hover);
+      }      .add-income-expense-btn {
+        background: var(--add-btn-bg);
         color: white;
         border: none;
         border-radius: 4px;
@@ -783,7 +825,7 @@
       }
 
       .add-income-expense-btn:hover {
-        background: #218838;
+        background: var(--add-btn-hover);
       }
 
       .income-expense-summary {
@@ -890,7 +932,7 @@
       }
     </style>
   </head>
-  <body>
+  <body class="vscode-dark">
     <div class="container">
       <div class="header">
         <h1>Asset Portfolio</h1>
