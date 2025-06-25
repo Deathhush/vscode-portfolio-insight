@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PortfolioUpdateView } from '../views/portfolioUpdateView';
+import { AssetCollectionNode } from './assetCollectionNode';
+import { AssetNode } from './assetNode';
 
 export interface AssetDefinitionData {
     name: string;
@@ -16,49 +18,6 @@ export interface PortfolioData {
 export interface PortfolioExplorerNode extends vscode.TreeItem {
     nodeType: 'assets' | 'asset';
     getChildren(): Promise<PortfolioExplorerNode[]>;
-}
-
-export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExplorerNode {
-    public nodeType: 'assets' = 'assets';
-    
-    constructor(private provider: PortfolioExplorerProvider) {
-        super('Assets', vscode.TreeItemCollapsibleState.Expanded);
-        this.iconPath = new vscode.ThemeIcon('folder');
-        this.contextValue = 'assets';
-    }
-    
-    async getChildren(): Promise<PortfolioExplorerNode[]> {
-        const portfolioData = await this.provider.getPortfolioData();
-        
-        if (!portfolioData || !portfolioData.assets) {
-            return [];
-        }
-        
-        // Create asset nodes
-        return portfolioData.assets.map(asset => new AssetNode(asset));
-    }
-}
-
-export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode {
-    public nodeType: 'asset' = 'asset';
-    public assetData: AssetDefinitionData;
-    
-    constructor(asset: AssetDefinitionData) {
-        super(asset.name, vscode.TreeItemCollapsibleState.None);        this.assetData = asset;
-        // Always use package icon for all assets
-        this.iconPath = new vscode.ThemeIcon('package');
-        
-        // Set description to show asset type
-        this.description = asset.type;
-        
-        this.tooltip = `${asset.name} (${asset.type}${asset.currency ? `, ${asset.currency}` : ''})`;
-        this.contextValue = 'asset';
-    }
-    
-    async getChildren(): Promise<PortfolioExplorerNode[]> {
-        // Asset nodes have no children
-        return [];
-    }
 }
 
 export class PortfolioExplorerProvider implements vscode.TreeDataProvider<PortfolioExplorerNode> {
