@@ -47,17 +47,32 @@
         "command": "vscode-portfolio-insight.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
-      },
+      },      
       {
         "command": "vscode-portfolio-insight.updateAssets",
         "title": "Update Portfolio",
+        "icon": "$(file-add)"
+      },      
+      {
+        "command": "vscode-portfolio-insight.addAssets",
+        "title": "Add Assets",
+        "icon": "$(edit)"
+      },
+      {
+        "command": "vscode-portfolio-insight.addAssetsFromHeader",
+        "title": "Add Assets",
         "icon": "$(edit)"
       }
     ],
-    "menus": {      
+    "menus": {        
       "view/title": [
         {
           "command": "vscode-portfolio-insight.updateAssets",
+          "when": "view == portfolioExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "vscode-portfolio-insight.addAssetsFromHeader",
           "when": "view == portfolioExplorer",
           "group": "navigation"
         },
@@ -68,6 +83,11 @@
         }        
       ],
       "view/item/context": [
+        {
+          "command": "vscode-portfolio-insight.addAssets",
+          "when": "view == portfolioExplorer && viewItem == assets",
+          "group": "inline"
+        }
       ]
     }
   },
