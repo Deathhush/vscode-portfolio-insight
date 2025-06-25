@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Assets</title>
+    <title>Edit Asset Definition</title>
     <style>
         /* VS Code theme detection classes */
         .vscode-light {
@@ -346,9 +346,8 @@
 </head>
 <body>
     <div class="container">
-        <div class="header">
-            <h1>Add Assets to Portfolio</h1>
-            <p>Define multiple assets and add them to your portfolio. You can modify existing assets or add new ones.</p>
+        <div class="header">            <h1>Edit Asset Definition</h1>
+            <p>Define and edit your portfolio assets. You can modify existing assets or add new ones.</p>
         </div>
 
         <div class="notification" id="notification">
@@ -359,7 +358,7 @@
             <h3>Please fix the following errors:</h3>
             <ul id="validationList"></ul>
         </div>        <div class="controls">
-            <button class="btn" onclick="addNewAsset()">+ Add New Asset</button>
+            <button class="btn" onclick="addNewAsset()">+ Add Asset</button>
         </div>
 
         <div class="table-container">
@@ -380,11 +379,11 @@
 
         <div class="summary" id="summary">
             <h3>Summary</h3>
-            <p>Assets: <span id="assetCount">0</span></p>
+            <p>Asset Definitions: <span id="assetCount">0</span></p>
             <p>Types: <span id="typeBreakdown">None</span></p>
         </div>        
         <div class="submit-controls">
-            <button class="btn" onclick="submitAssets()" id="submitBtn">Save Assets</button>
+            <button class="btn" onclick="submitAssets()" id="submitBtn">Save Changes</button>
         </div>
     </div>
 
@@ -651,10 +650,8 @@
                         cleanAsset.currency = asset.currency;
                     }
                     return cleanAsset;
-                });
-
-            if (validAssets.length === 0) {
-                showNotification('Please add at least one asset', 'error');
+                });            if (validAssets.length === 0) {
+                showNotification('Please add at least one asset definition', 'error');
                 return;
             }
 
@@ -664,7 +661,7 @@
                 data: validAssets
             });
 
-            showNotification(`Successfully submitted ${validAssets.length} asset(s)`, 'success');
+            showNotification(`Successfully submitted ${validAssets.length} asset definition(s)`, 'success');
         }        function cancelChanges() {
             sendMessage({
                 type: 'CANCEL'

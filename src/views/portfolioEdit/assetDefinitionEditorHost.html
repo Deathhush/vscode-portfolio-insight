@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Add Assets Host</title>
+    <title>Edit Asset Definition Host</title>
     <style>
         :root {
             /* Gold/Black theme colors - host.html always uses dark mode */
@@ -197,13 +197,11 @@
     </style>
 </head>
 <body>
-    <div class="host-header">
-        <h1>Add Assets - Development Host</h1>
-        <p>Test environment for the bulk asset definition feature</p>
+    <div class="host-header">        <h1>Edit Asset Definition - Development Host</h1>
+        <p>Test environment for the asset definition editor feature</p>
     </div>
 
-    <div class="host-controls">
-        <button class="btn" onclick="initializeAssets()">Initialize with Sample Assets</button>
+    <div class="host-controls">        <button class="btn" onclick="initializeAssets()">Initialize with Sample Assets</button>
         <button class="btn btn-secondary" onclick="loadEmptyAssets()">Start Empty</button>
         <button class="btn" onclick="refreshIframe()">Refresh</button>
         <button class="btn btn-secondary" onclick="toggleIframeTheme()" id="themeToggleBtn">🌙 Dark Mode</button>
@@ -217,12 +215,12 @@
 
     <div class="iframe-container">
         <div class="loading-overlay" id="loadingOverlay">
-            Loading Add Assets view...
+            Loading Asset Definition Editor view...
         </div>
           <iframe 
             id="assetIframe" 
             class="asset-iframe" 
-            src="bulkAssetDefinition.html"
+            src="assetDefinitionEditor.html"
             onload="handleIframeLoad()">
         </iframe>
     </div>
@@ -339,10 +337,9 @@
             console.log('Message received from iframe:', event.data);
             
             const message = event.data;
-            switch (message.type) {
-                case 'ASSET_DEFINITION_SUBMIT':
-                    console.log('Assets submitted:', message.data);
-                    alert(`Assets submitted successfully!\n\nData:\n${JSON.stringify(message.data, null, 2)}`);
+            switch (message.type) {                case 'ASSET_DEFINITION_SUBMIT':
+                    console.log('Asset definitions submitted:', message.data);
+                    alert(`Asset definitions submitted successfully!\n\nData:\n${JSON.stringify(message.data, null, 2)}`);
                     break;
                 case 'CANCEL':
                     console.log('Operation cancelled');

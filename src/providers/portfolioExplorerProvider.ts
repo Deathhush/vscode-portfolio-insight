@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateView';
-import { BulkAssetDefinitionView } from '../views/portfolioEdit/bulkAssetDefinitionView';
+import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitionEditorView';
 import { AssetCollectionNode } from './assetCollectionNode';
 import { AssetNode } from './assetNode';
 
@@ -24,7 +24,7 @@ export interface PortfolioExplorerNode extends vscode.TreeItem {
 export class PortfolioExplorerProvider implements vscode.TreeDataProvider<PortfolioExplorerNode> {    private _onDidChangeTreeData: vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void> = new vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<PortfolioExplorerNode | undefined | null | void> = this._onDidChangeTreeData.event;
     private _portfolioUpdateView?: PortfolioUpdateView;
-    private _bulkAssetDefinitionView?: BulkAssetDefinitionView;
+    private _assetDefinitionEditorView?: AssetDefinitionEditorView;
     private _portfolioData: PortfolioData | undefined = undefined;
 
     constructor(private context: vscode.ExtensionContext) {}    refresh(): void {
@@ -208,14 +208,13 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
      */
     public invalidatePortfolioCache(): void {
         this._portfolioData = undefined;
-    }
-
-    public async openBulkAssetDefinition(): Promise<void> {
+    }    
+    public async openAssetDefinitionEditor(): Promise<void> {
         try {
             // Get the current workspace folder
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
-                vscode.window.showErrorMessage('No workspace folder is open. Please open a folder to use Add Assets.');
+                vscode.window.showErrorMessage('No workspace folder is open. Please open a folder to use Asset Definition Editor.');
                 return;
             }
 
@@ -223,15 +222,15 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             let portfolioData = await this.getPortfolioData();
             
             // Dispose existing view if any
-            if (this._bulkAssetDefinitionView) {
-                this._bulkAssetDefinitionView.dispose();
+            if (this._assetDefinitionEditorView) {
+                this._assetDefinitionEditorView.dispose();
             }
 
             // Create new view and hook to the event
-            this._bulkAssetDefinitionView = new BulkAssetDefinitionView(this.context.extensionUri);
+            this._assetDefinitionEditorView = new AssetDefinitionEditorView(this.context.extensionUri);
             
             // Subscribe to asset definition submit events
-            this._bulkAssetDefinitionView.onAssetDefinitionSubmit((data: any) => {
+            this._assetDefinitionEditorView.onAssetDefinitionSubmit((data: any) => {
                 this.handleAssetDefinitionSubmit(data);
             });
             
@@ -239,33 +238,33 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // to ensure the webview is loaded
             if (portfolioData && portfolioData.assets) {
                 setTimeout(() => {
-                    if (this._bulkAssetDefinitionView) {
-                        this._bulkAssetDefinitionView.sendInitializeAssets(portfolioData!.assets);
+                    if (this._assetDefinitionEditorView) {
+                        this._assetDefinitionEditorView.sendInitializeAssets(portfolioData!.assets);
                     }
                 }, 1000);
             } else {
                 // Send empty array if no portfolio data
                 setTimeout(() => {
-                    if (this._bulkAssetDefinitionView) {
-                        this._bulkAssetDefinitionView.sendInitializeAssets([]);
+                    if (this._assetDefinitionEditorView) {
+                        this._assetDefinitionEditorView.sendInitializeAssets([]);
                     }
                 }, 1000);
             }
             
         } catch (error) {
-            console.error('Error in openBulkAssetDefinition:', error);
-            vscode.window.showErrorMessage(`Failed to open Add Assets: ${error}`);
+            console.error('Error in openAssetDefinitionEditor:', error);
+            vscode.window.showErrorMessage(`Failed to open Asset Definition Editor: ${error}`);
         }
-    }    
+    }
     
     private async handleAssetDefinitionSubmit(newAssets: AssetDefinitionData[]): Promise<void> {
         try {
-            console.log(`Handling asset definition submit with ${newAssets.length} assets`);
+            console.log(`Handling asset definition submit with ${newAssets.length} asset definitions`);
             
             // Get the current workspace folder
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
-                vscode.window.showErrorMessage('No workspace folder is open. Cannot save assets.');
+                vscode.window.showErrorMessage('No workspace folder is open. Cannot save asset definitions.');
                 return;
             }
 
@@ -287,7 +286,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // Format and save the data
             const jsonContent = JSON.stringify(portfolioData, null, 2);
             fs.writeFileSync(portfolioJsonPath, jsonContent, 'utf8');
-            console.log(`Portfolio saved with ${newAssets.length} assets`);
+            console.log(`Portfolio saved with ${newAssets.length} asset definitions`);
 
             // Clear cached data to force reload and refresh the tree view
             this.invalidatePortfolioCache();
@@ -299,7 +298,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
 
             // Show success message
             const action = await vscode.window.showInformationMessage(
-                `Successfully saved ${newAssets.length} asset(s) to portfolio.json`,
+                `Successfully saved ${newAssets.length} asset definition(s) to portfolio.json`,
                 'Open Portfolio'
             );
 
@@ -308,9 +307,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 await vscode.window.showTextDocument(document);
             }
 
-        } catch (error) {
-            console.error('Error saving assets:', error);
-            vscode.window.showErrorMessage(`Failed to save assets: ${error}`);
+        } catch (error) {            console.error('Error saving asset definitions:', error);
+            vscode.window.showErrorMessage(`Failed to save asset definitions: ${error}`);
         }
     }
 }

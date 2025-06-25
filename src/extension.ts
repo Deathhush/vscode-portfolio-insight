@@ -42,22 +42,21 @@ export function activate(context: vscode.ExtensionContext) {
 	});	
 	
 	context.subscriptions.push(disposableHelloWorld, disposableRefresh, disposableUpdateAssets);
-
-	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.addAssets', 
+	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.editAssetDefinition', 
 		() => {
-			portfolioExplorerProvider.openBulkAssetDefinition();
+			portfolioExplorerProvider.openAssetDefinitionEditor();
 		}
 	));
 
-	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.addAssetsFromHeader', () => {
+	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.editAssetDefinitionFromHeader', () => {
 		// Check if the current selection is an asset collection node
 		if (currentSelection && currentSelection.contextValue === 'assets') {
-			portfolioExplorerProvider.openBulkAssetDefinition();
+			portfolioExplorerProvider.openAssetDefinitionEditor();
 		} else {
 			// Show a message that assets node should be selected
-			vscode.window.showInformationMessage('Please select the Assets node to add assets.');
+			vscode.window.showInformationMessage('Please select the Assets node to edit asset definitions.');
 		}
-	}));	
+	}));
 }
 
 // This method is called when your extension is deactivated

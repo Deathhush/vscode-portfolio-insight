@@ -1,7 +1,7 @@
-Implement a feature that allows the user to define multiple Asset and merge into the Portfolio.json in the current workspace.
+Implement a feature that allows the user to edit asset definitions and merge them into the Portfolio.json in the current workspace.
 
-- Add a "Add Assets" button in the "Assets" node in the PortfolioExplorer.
-- When click, display a WebView (Add Assets) to accept user's input.
+- Add an "Edit Asset Definition" button in the "Assets" node in the PortfolioExplorer.
+- When clicked, display a WebView (Asset Definition Editor) to accept user's input.
 - The WebView should include the following     
     - A table to allow user input the following:
         - The name of the asset
