@@ -836,10 +836,133 @@
         font-size: 0.8em;
         color: #2e7d32;
         display: none;
-      }
-
+      }      
+      
       .income-expense-summary.has-items {
         display: block;
+      }
+
+      .exchange-rates-section {
+        margin-top: 15px;
+        padding: 15px;
+        background: var(--bg-tertiary);
+        border: 1px solid var(--border-primary);
+        border-radius: 6px;
+        display: none;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+      }
+
+      .exchange-rates-section.visible {
+        display: block;
+      }
+
+      .exchange-rates-header {
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 1em;
+        margin-bottom: 15px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .exchange-rates-icon {
+        color: var(--text-accent);
+        font-size: 1.2em;
+      }
+
+      .exchange-rates-help {
+        font-size: 0.8em;
+        color: var(--text-muted);
+        font-weight: normal;
+        font-style: italic;
+        margin-left: auto;
+      }
+
+      .exchange-rate-item {
+        background: var(--bg-secondary);
+        border: 1px solid var(--border-secondary);
+        border-radius: 4px;
+        padding: 12px;
+        margin-bottom: 8px;
+        transition: background-color 0.3s ease, border-color 0.3s ease;
+      }
+
+      .exchange-rate-row {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+      }
+
+      .exchange-rate-currency {
+        flex: 0 0 80px;
+        font-weight: 600;
+        font-size: 0.9em;
+        color: var(--text-primary);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .exchange-rate-currency::before {
+        content: "";
+        display: inline-block;
+        width: 20px;
+        height: 14px;
+        background: var(--currency-bg);
+        border-radius: 2px;
+        font-size: 0.7em;
+        color: var(--currency-text);
+        text-align: center;
+        line-height: 14px;
+      }
+
+      .exchange-rate-currency.usd::before {
+        content: "$";
+      }
+
+      .exchange-rate-currency.eur::before {
+        content: "€";
+      }
+
+      .exchange-rate-currency.gbp::before {
+        content: "£";
+      }
+
+      .exchange-rate-currency.jpy::before {
+        content: "¥";
+      }
+
+      .exchange-rate-equals {
+        flex: 0 0 20px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-weight: 500;
+      }
+
+      .exchange-rate-input {
+        flex: 1;
+        padding: 8px 12px;
+        border: 1px solid var(--input-border);
+        border-radius: 4px;
+        font-size: 0.9em;
+        background-color: var(--input-bg);
+        color: var(--text-primary);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        text-align: right;
+      }
+
+      .exchange-rate-input:focus {
+        outline: none;
+        border-color: var(--input-focus);
+        box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
+      }
+
+      .exchange-rate-cny {
+        flex: 0 0 40px;
+        font-weight: 600;
+        color: var(--text-primary);
+        font-size: 0.9em;
       }
 
       @media (max-width: 768px) {
@@ -944,9 +1067,19 @@
             Save Asset Update
           </button>
         </div>
-      </div>
+      </div>     
       <div class="assets-container" id="assetsContainer">
         <!-- Assets will be generated dynamically -->
+      </div>
+      <div class="exchange-rates-section" id="exchangeRatesSection">
+        <div class="exchange-rates-header">
+          <span class="exchange-rates-icon">💱</span>
+          Exchange Rates
+          <span class="exchange-rates-help">Enter rates to convert non-CNY assets</span>
+        </div>
+        <div class="exchange-rates-container" id="exchangeRatesContainer">
+          <!-- Exchange rate items will be generated dynamically -->
+        </div>
       </div>
     </div>
     <script>
@@ -975,15 +1108,89 @@
           console.warn("Invalid theme class:", themeClass);
           body.classList.add("vscode-light"); // fallback
         }
-      }
-
+      }      
+      
       // Assets data - default values
       let assets = []; // Track which asset groups have overridden dates
       let overriddenDates = new Set();
 
       // Track which transfer/income-expense items have overridden dates
       let overriddenTransferDates = new Set();
-      let overriddenIncomeExpenseDates = new Set(); // Initialize date picker with today's date
+      let overriddenIncomeExpenseDates = new Set();
+
+      // Exchange rates data
+      let exchangeRates = new Map(); // currency -> rate
+
+      // Get unique non-default currencies from assets
+      function getNonDefaultCurrencies() {
+        const currencies = new Set();
+        assets.forEach(asset => {
+          if (asset.currency && asset.currency !== 'CNY') {
+            currencies.add(asset.currency);
+          }
+        });
+        return Array.from(currencies).sort();
+      }
+
+      // Generate exchange rate section
+      function generateExchangeRatesSection() {
+        const nonDefaultCurrencies = getNonDefaultCurrencies();
+        const exchangeRatesSection = document.getElementById('exchangeRatesSection');
+        const exchangeRatesContainer = document.getElementById('exchangeRatesContainer');
+
+        if (nonDefaultCurrencies.length === 0) {
+          exchangeRatesSection.classList.remove('visible');
+          return;
+        }
+
+        exchangeRatesSection.classList.add('visible');
+        
+        // Generate exchange rate items
+        exchangeRatesContainer.innerHTML = nonDefaultCurrencies.map(currency => 
+          createExchangeRateItem(currency)
+        ).join('');
+
+        // Set initial values from exchangeRates map
+        nonDefaultCurrencies.forEach(currency => {
+          const input = document.querySelector(`input[data-currency="${currency}"]`);
+          if (input && exchangeRates.has(currency)) {
+            input.value = exchangeRates.get(currency);
+          }
+        });
+      }
+
+      // Create individual exchange rate item HTML
+      function createExchangeRateItem(currency) {
+        const currencyClass = currency.toLowerCase();
+        return `
+          <div class="exchange-rate-item">
+            <div class="exchange-rate-row">
+              <div class="exchange-rate-currency ${currencyClass}">1 ${currency}</div>
+              <div class="exchange-rate-equals">=</div>
+              <input type="number" 
+                     class="exchange-rate-input" 
+                     data-currency="${currency}"
+                     placeholder="Enter rate" 
+                     step="0.0001" 
+                     min="0"
+                     oninput="handleExchangeRateChange('${currency}', this)" />
+              <div class="exchange-rate-cny">CNY</div>
+            </div>
+          </div>
+        `;
+      }
+
+      // Handle exchange rate input changes
+      function handleExchangeRateChange(currency, input) {
+        const rate = parseFloat(input.value);
+        if (rate && rate > 0) {
+          exchangeRates.set(currency, rate);
+        } else {
+          exchangeRates.delete(currency);
+        }
+      }
+      
+      // Initialize date picker with today's date
       function initializeDatePicker() {
         const today = new Date();
         const formattedDate = today.toISOString().split("T")[0];
@@ -1320,7 +1527,8 @@
                     </div>
                 </div>
             `;
-      }
+      }      
+      
       function generateAllAssets() {
         const container = document.getElementById("assetsContainer");
         container.innerHTML = assets
@@ -1332,6 +1540,9 @@
 
         // Update all transfer asset dropdowns
         updateAllTransferAssetDropdowns();
+
+        // Generate exchange rates section
+        generateExchangeRatesSection();
       }
 
       function updateAllTransferAssetDropdowns() {
@@ -2002,9 +2213,7 @@
         }
       } // Listen for postMessage from parent window (host.html)
       window.addEventListener("message", function (event) {
-        console.log("Message received in asset-input:", event.data);
-
-        if (event.data.type === "INITIALIZE_ASSETS" && event.data.assets) {
+        console.log("Message received in asset-input:", event.data);        if (event.data.type === "INITIALIZE_ASSETS" && event.data.assets) {
           console.log("Initializing assets with data:", event.data.assets);
           assets = event.data.assets;
           // Clear overridden dates and transfer pairs when new assets are loaded
@@ -2012,6 +2221,7 @@
           overriddenTransferDates.clear();
           overriddenIncomeExpenseDates.clear();
           transferPairs.clear();
+          exchangeRates.clear();
           transferIdCounter = 0;
           incomeExpenseIdCounter = 0;
           generateAllAssets();
@@ -2044,9 +2254,7 @@
             message
           );
         }
-      }
-
-      // Collect current asset update data in the format matching assetUpdate.json
+      }      // Collect current asset update data in the format matching assetUpdate.json
       function collectAssetUpdateData() {
         const headerDate = document.getElementById("portfolioDate").value;
         const assetUpdateData = {
@@ -2054,6 +2262,17 @@
           assets: [],
           transfers: [],
         };
+
+        // Add exchange rates if any exist
+        if (exchangeRates.size > 0) {
+          assetUpdateData.exchangeRates = [];
+          exchangeRates.forEach((rate, currency) => {
+            assetUpdateData.exchangeRates.push({
+              from: currency,
+              rate: rate
+            });
+          });
+        }
 
         // Collect asset data
         assets.forEach((asset) => {

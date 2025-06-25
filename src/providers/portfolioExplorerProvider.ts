@@ -37,7 +37,9 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     
     getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
         return element;
-    }    getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
+    }    
+    
+    getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
             // Return the Assets root node
             return Promise.resolve([new AssetCollectionNode(this)]);
@@ -56,16 +58,16 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 return;
             }
 
-            // Look for portfolio.json in the workspace root            // Look for portfolio.json in the workspace root
-            const portfolioJsonPath = path.join(workspaceFolder.uri.fsPath, 'portfolio.json');
+            // Look for portfolio.json in the Assets folder
+            const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
+            const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
             
             // Try to load existing portfolio data
             let portfolioData = await this.getPortfolioData();
-            
-            if (!portfolioData) {
+              if (!portfolioData) {
                 // Check if file exists but failed validation
                 if (fs.existsSync(portfolioJsonPath)) {
-                    vscode.window.showErrorMessage('Invalid portfolio.json file. Please check the file format and content.');
+                    vscode.window.showErrorMessage('Invalid Assets/portfolio.json file. Please check the file format and content.');
                     return;
                 }
             }
@@ -107,8 +109,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
 
     public getPortfolioUpdateView(): PortfolioUpdateView | undefined {
         return this._portfolioUpdateView;
-    }
-
+    }    
+    
     private async handlePortfolioUpdate(data: any): Promise<void> {
         try {
             // Get the current workspace folder
@@ -118,10 +120,16 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 return;
             }
 
+            // Create AssetUpdates folder if it doesn't exist
+            const assetUpdatesFolder = path.join(workspaceFolder.uri.fsPath, 'AssetUpdates');
+            if (!fs.existsSync(assetUpdatesFolder)) {
+                fs.mkdirSync(assetUpdatesFolder, { recursive: true });
+            }
+
             // Create filename with timestamp
             const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
             const filename = `portfolio-update-${timestamp}.json`;
-            const filePath = path.join(workspaceFolder.uri.fsPath, filename);
+            const filePath = path.join(assetUpdatesFolder, filename);
 
             // Format and save the data
             const jsonContent = JSON.stringify(data, null, 2);
@@ -129,7 +137,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
 
             // Show success message with option to open the file
             const action = await vscode.window.showInformationMessage(
-                `Portfolio update saved to ${filename}`,
+                `Portfolio update saved to AssetUpdates/${filename}`,
                 'Open File'
             );
 
@@ -144,7 +152,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         } catch (error) {
             console.error('Error saving portfolio update:', error);            vscode.window.showErrorMessage(`Failed to save portfolio update: ${error}`);
         }
-    }    
+    }
     public async getPortfolioData(): Promise<PortfolioData | undefined> {
         // Return cached data if available
         if (this._portfolioData !== undefined) {
@@ -166,8 +174,9 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 return undefined;
             }
 
-            // Look for portfolio.json in the workspace root
-            const portfolioJsonPath = path.join(workspaceFolder.uri.fsPath, 'portfolio.json');
+            // Look for portfolio.json in the Assets folder
+            const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
+            const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
             
             if (!fs.existsSync(portfolioJsonPath)) {
                 return undefined;
@@ -268,12 +277,17 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 return;
             }
 
-            const portfolioJsonPath = path.join(workspaceFolder.uri.fsPath, 'portfolio.json');
+            const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
+            const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
             
+            // Create Assets folder if it doesn't exist
+            if (!fs.existsSync(assetsFolder)) {
+                fs.mkdirSync(assetsFolder, { recursive: true });
+            }            
             // Create backup if file exists
             if (fs.existsSync(portfolioJsonPath)) {
                 const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                const backupPath = path.join(workspaceFolder.uri.fsPath, `portfolio-backup-${timestamp}.json`);
+                const backupPath = path.join(assetsFolder, `portfolio-backup-${timestamp}.json`);
                 fs.copyFileSync(portfolioJsonPath, backupPath);
                 console.log(`Backup created: ${backupPath}`);
             }
@@ -294,11 +308,9 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             
             
             this.refresh();
-            
-
-            // Show success message
+                // Show success message
             const action = await vscode.window.showInformationMessage(
-                `Successfully saved ${newAssets.length} asset definition(s) to portfolio.json`,
+                `Successfully saved ${newAssets.length} asset definition(s) to Assets/portfolio.json`,
                 'Open Portfolio'
             );
 
