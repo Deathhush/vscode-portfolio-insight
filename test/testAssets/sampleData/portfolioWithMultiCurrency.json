@@ -1,0 +1,32 @@
+{
+    "assets": [
+        {
+            "name": "招行.活期",
+            "type": "simple",
+            "currency": "CNY"
+        },
+        {
+            "name": "招行.沪深300ETF",
+            "type": "investment"
+        },
+        {
+            "name": "国金",
+            "type": "composite"
+        },
+        {
+            "name": "StockAward",
+            "type": "stock",
+            "currency": "USD"
+        },
+        {
+            "name": "EU.Stock",
+            "type": "stock", 
+            "currency": "EUR"
+        },
+        {
+            "name": "UK.Investment",
+            "type": "investment",
+            "currency": "GBP"
+        }
+    ]
+}

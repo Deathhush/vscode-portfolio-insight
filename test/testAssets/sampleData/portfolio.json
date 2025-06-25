@@ -19,16 +19,6 @@
       "name": "StockAward",
       "type": "stock",
       "currency": "USD"
-    },
-    {
-      "name": "Bitcoin Holdings",
-      "type": "investment",
-      "currency": "USD"
-    },
-    {
-      "name": "Emergency Fund",
-      "type": "simple",
-      "currency": "USD"
     }
   ]
 }
