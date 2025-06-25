@@ -67,14 +67,15 @@
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-        }
-
+        }        
+        
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             background-color: var(--bg-primary);
             color: var(--text-primary);
             padding: 20px;
             line-height: 1.6;
+            font-size: 14px;
         }
 
         .container {
@@ -88,17 +89,17 @@
             border-radius: 8px;
             margin-bottom: 20px;
             border: 1px solid var(--border-primary);
-        }
-
+        }        
+        
         .header h1 {
-            font-size: 1.8em;
+            font-size: 2em;
             margin-bottom: 8px;
             color: var(--text-accent);
         }
 
         .header p {
             color: var(--text-secondary);
-            font-size: 0.95em;
+            font-size: 1em;
         }
 
         .controls {
@@ -106,8 +107,8 @@
             gap: 10px;
             margin-bottom: 20px;
             flex-wrap: wrap;
-        }
-
+        }        
+        
         .btn {
             background: var(--button-bg);
             color: var(--button-text);
@@ -115,7 +116,7 @@
             padding: 8px 16px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 1em;
             transition: background-color 0.2s;
         }
 
@@ -178,8 +179,8 @@
 
         .assets-table tr:hover {
             background: var(--bg-tertiary);
-        }
-
+        }        
+        
         .input-field {
             width: 100%;
             padding: 8px;
@@ -187,7 +188,7 @@
             background: var(--input-bg);
             color: var(--text-primary);
             border-radius: 4px;
-            font-size: 0.9em;
+            font-size: 1em;
         }
 
         .input-field:focus {
@@ -199,8 +200,8 @@
         .input-field.error {
             border-color: var(--error-color);
             box-shadow: 0 0 0 2px rgba(244, 67, 54, 0.2);
-        }
-
+        }        
+        
         .select-field {
             width: 100%;
             padding: 8px;
@@ -208,26 +209,26 @@
             background: var(--input-bg);
             color: var(--text-primary);
             border-radius: 4px;
-            font-size: 0.9em;
+            font-size: 1em;
         }
 
         .select-field:focus {
             outline: none;
             border-color: var(--text-accent);
             box-shadow: 0 0 0 2px rgba(79, 195, 247, 0.2);
-        }
-
+        }        
+        
         .error-message {
             color: var(--error-color);
-            font-size: 0.8em;
+            font-size: 0.85em;
             margin-top: 4px;
             display: none;
         }
 
         .error-message.visible {
             display: block;
-        }
-
+        }        
+        
         .remove-btn {
             background: var(--error-color);
             color: white;
@@ -235,7 +236,7 @@
             padding: 6px 12px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 0.8em;
+            font-size: 0.9em;
         }
 
         .remove-btn:hover {
@@ -332,9 +333,8 @@
             .submit-controls {
                 flex-direction: column;
             }
-            
-            .assets-table {
-                font-size: 0.8em;
+              .assets-table {
+                font-size: 0.9em;
             }
             
             .assets-table th,
@@ -360,7 +360,6 @@
             <ul id="validationList"></ul>
         </div>        <div class="controls">
             <button class="btn" onclick="addNewAsset()">+ Add New Asset</button>
-            <button class="btn btn-secondary" onclick="clearAll()">Clear All</button>
         </div>
 
         <div class="table-container">
@@ -666,17 +665,10 @@
             });
 
             showNotification(`Successfully submitted ${validAssets.length} asset(s)`, 'success');
-        }
-
-        function cancelChanges() {
+        }        function cancelChanges() {
             sendMessage({
                 type: 'CANCEL'
             });
-        }        function clearAll() {
-            if (confirm('Are you sure you want to clear all assets?')) {
-                assets = [];
-                updateDisplay();
-            }
         }
 
         function showNotification(message, type) {
