@@ -14,16 +14,17 @@ export interface PortfolioData {
 }
 
 export interface PortfolioExplorerNode extends vscode.TreeItem {
-    nodeType: 'portfolio' | 'asset';
+    nodeType: 'assets' | 'asset';
     getChildren(): Promise<PortfolioExplorerNode[]>;
 }
 
-export class PortfolioNode extends vscode.TreeItem implements PortfolioExplorerNode {
-    public nodeType: 'portfolio' = 'portfolio';
+export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExplorerNode {
+    public nodeType: 'assets' = 'assets';
     
     constructor(private provider: PortfolioExplorerProvider) {
-        super('Portfolio', vscode.TreeItemCollapsibleState.Expanded);
-        this.iconPath = new vscode.ThemeIcon('folder');        this.contextValue = 'portfolio';
+        super('Assets', vscode.TreeItemCollapsibleState.Expanded);
+        this.iconPath = new vscode.ThemeIcon('folder');
+        this.contextValue = 'assets';
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
@@ -76,12 +77,10 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     
     getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
         return element;
-    }
-
-    getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
+    }    getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
-            // Return the Portfolio root node
-            return Promise.resolve([new PortfolioNode(this)]);
+            // Return the Assets root node
+            return Promise.resolve([new AssetCollectionNode(this)]);
         }
         
         // Delegate to the node's getChildren method
