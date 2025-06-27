@@ -2,6 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 import { PortfolioExplorerProvider } from './providers/portfolioExplorerProvider';
+import { AssetNode } from './providers/assetNode';
 
 // This method is called when your extension is activated
 // Your extension is activated the very first time the command is executed
@@ -16,12 +17,15 @@ export function activate(context: vscode.ExtensionContext) {
 	const treeView = vscode.window.createTreeView('portfolioExplorer', {
 		treeDataProvider: portfolioExplorerProvider		
 	});
-	
-	// Track the current selection
+		// Track the current selection
 	let currentSelection: any = null;
 	treeView.onDidChangeSelection(e => {
 		if (e.selection && e.selection.length > 0) {
 			currentSelection = e.selection[0];
+			// Auto-open asset page when asset is clicked
+			if (currentSelection.nodeType === 'asset') {
+				vscode.commands.executeCommand('vscode-portfolio-insight.openAssetPage', currentSelection);
+			}
 		} else {
 			currentSelection = null;
 		}
@@ -39,9 +43,18 @@ export function activate(context: vscode.ExtensionContext) {
 	});	// Register command to open Portfolio Update View
 	const disposableUpdateAssets = vscode.commands.registerCommand('vscode-portfolio-insight.updateAssets', () => {
 		portfolioExplorerProvider.openPortfolioUpdate();
-	});	
-	
-	context.subscriptions.push(disposableHelloWorld, disposableRefresh, disposableUpdateAssets);
+	});
+
+	// Register command to open Asset Page
+	const disposableOpenAssetPage = vscode.commands.registerCommand(
+		'vscode-portfolio-insight.openAssetPage',
+		async (assetNode: AssetNode) => {
+			if (assetNode && assetNode.nodeType === 'asset') {
+				await assetNode.openAssetPage(context);
+			}
+		}
+	);	
+	context.subscriptions.push(disposableHelloWorld, disposableRefresh, disposableUpdateAssets, disposableOpenAssetPage);
 	context.subscriptions.push(vscode.commands.registerCommand('vscode-portfolio-insight.editAssetDefinition', 
 		() => {
 			portfolioExplorerProvider.openAssetDefinitionEditor();

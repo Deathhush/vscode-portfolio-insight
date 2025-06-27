@@ -5,6 +5,9 @@ import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateVie
 import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitionEditorView';
 import { AssetCollectionNode } from './assetCollectionNode';
 import { AssetNode } from './assetNode';
+import { PortfolioDataStore } from '../data/portfolioDataStore';
+import { Asset } from '../data/asset';
+import { AssetPageView } from '../views/assetPage/assetPageView';
 
 export interface AssetDefinitionData {
     name: string;
@@ -26,10 +29,22 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     private _portfolioUpdateView?: PortfolioUpdateView;
     private _assetDefinitionEditorView?: AssetDefinitionEditorView;
     private _portfolioData: PortfolioData | undefined = undefined;
+    private dataStore: PortfolioDataStore;
+    private assetCache: Map<string, Asset> = new Map();
 
-    constructor(private context: vscode.ExtensionContext) {}    refresh(): void {
+    constructor(private context: vscode.ExtensionContext) {
+        // Initialize data store with the first workspace folder
+        const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+        if (!workspaceFolder) {
+            throw new Error('No workspace folder available');
+        }
+        this.dataStore = new PortfolioDataStore(workspaceFolder);
+    }    
+    
+    refresh(): void {
         // Clear cached data to force reload on next access
         this.invalidatePortfolioCache();
+        this.invalidateAssetCache();
         // Fire the tree data change event to refresh the view
         this._onDidChangeTreeData.fire();
         console.log('Portfolio Explorer tree view refreshed');
@@ -38,7 +53,6 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
         return element;
     }    
-    
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
             // Return the Assets root node with total value
@@ -152,7 +166,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         } catch (error) {
             console.error('Error saving portfolio update:', error);            vscode.window.showErrorMessage(`Failed to save portfolio update: ${error}`);
         }
-    }
+    }    
+    
     public async getPortfolioData(): Promise<PortfolioData | undefined> {
         // Return cached data if available
         if (this._portfolioData !== undefined) {
@@ -160,9 +175,9 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             return this._portfolioData;
         }
 
-        console.log('Loading portfolio data from file');
-        // Load data from file and cache it
-        this._portfolioData = await this.loadPortfolioDataFromFile();
+        console.log('Loading portfolio data via data store');
+        // Load data using the data store and cache it
+        this._portfolioData = await this.dataStore.loadPortfolioData();
         return this._portfolioData;
     }
     
@@ -211,13 +226,13 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             return undefined;
         }
     }    
-    
     /**
-     * Invalidates the cached portfolio data, forcing reload on next access
-     */
+    * Invalidates the cached portfolio data, forcing reload on next access
+    */
     public invalidatePortfolioCache(): void {
         this._portfolioData = undefined;
-    }    
+        this.dataStore.invalidatePortfolioCache();
+    }
     public async openAssetDefinitionEditor(): Promise<void> {
         try {
             // Get the current workspace folder
@@ -321,6 +336,57 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
 
         } catch (error) {            console.error('Error saving asset definitions:', error);
             vscode.window.showErrorMessage(`Failed to save asset definitions: ${error}`);
+        }
+    }    // Asset management
+    public async createAsset(definition: AssetDefinitionData): Promise<Asset> {
+        const cachedAsset = this.getCachedAsset(definition.name);
+        if (cachedAsset) {
+            return cachedAsset;
+        }
+
+        const asset = new Asset(definition, this.dataStore);
+        this.assetCache.set(definition.name, asset);
+        return asset;
+    }
+
+    private getCachedAsset(name: string): Asset | undefined {
+        return this.assetCache.get(name);
+    }
+
+    public invalidateAssetCache(): void {
+        // Invalidate all cached assets
+        for (const asset of this.assetCache.values()) {
+            asset.invalidateCache();
+        }
+        this.assetCache.clear();
+        
+        // Also invalidate the data store caches
+        this.dataStore.invalidatePortfolioCache();
+        this.dataStore.invalidateAssetUpdatesCache();
+    }
+
+    // Asset page handling
+    public async openAssetPage(assetName: string): Promise<void> {
+        try {
+            const portfolioData = await this.getPortfolioData();
+            if (!portfolioData) {
+                vscode.window.showErrorMessage('No portfolio data available. Please create assets first.');
+                return;
+            }
+
+            const assetDefinition = portfolioData.assets.find(a => a.name === assetName);
+            if (!assetDefinition) {
+                vscode.window.showErrorMessage(`Asset "${assetName}" not found in portfolio.`);
+                return;
+            }
+
+            const asset = await this.createAsset(assetDefinition);            // Create AssetPageView
+            new AssetPageView(this.context.extensionUri, asset);
+            
+            console.log(`Opened asset page for: ${assetName}`);
+        } catch (error) {
+            console.error('Error opening asset page:', error);
+            vscode.window.showErrorMessage(`Failed to open asset page: ${error}`);
         }
     }
 }

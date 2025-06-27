@@ -20,7 +20,7 @@
           "icon": "$(file-directory)"
         }
       ]
-    },    
+    },
     "views": {
       "assetInsightContainer": [
         {
@@ -30,7 +30,7 @@
           "icon": "$(file-directory)"
         }
       ]
-    },    
+    },
     "viewsWelcome": [
       {
         "view": "portfolioExplorer",
@@ -47,12 +47,12 @@
         "command": "vscode-portfolio-insight.refresh",
         "title": "Refresh",
         "icon": "$(refresh)"
-      },      
+      },
       {
         "command": "vscode-portfolio-insight.updateAssets",
         "title": "Update Portfolio",
         "icon": "$(file-add)"
-      },        
+      },
       {
         "command": "vscode-portfolio-insight.editAssetDefinition",
         "title": "Edit Asset Definition",
@@ -64,13 +64,13 @@
         "icon": "$(edit)"
       }
     ],
-    "menus": {        
+    "menus": {
       "view/title": [
         {
           "command": "vscode-portfolio-insight.updateAssets",
           "when": "view == portfolioExplorer",
           "group": "navigation"
-        },        
+        },
         {
           "command": "vscode-portfolio-insight.editAssetDefinitionFromHeader",
           "when": "view == portfolioExplorer",
@@ -80,9 +80,10 @@
           "command": "vscode-portfolio-insight.refresh",
           "when": "view == portfolioExplorer",
           "group": "navigation"
-        }        
+        }
       ],
-      "view/item/context": [        {
+      "view/item/context": [
+        {
           "command": "vscode-portfolio-insight.editAssetDefinition",
           "when": "view == portfolioExplorer && viewItem == assets",
           "group": "inline"
@@ -99,14 +100,17 @@
     "test": "vscode-test"
   },
   "devDependencies": {
-    "@types/vscode": "^1.101.0",
     "@types/mocha": "^10.0.10",
     "@types/node": "20.x",
+    "@types/vscode": "^1.101.0",
     "@typescript-eslint/eslint-plugin": "^8.17.0",
     "@typescript-eslint/parser": "^8.17.0",
-    "eslint": "^9.16.0",
-    "typescript": "^5.7.2",
     "@vscode/test-cli": "^0.0.10",
-    "@vscode/test-electron": "^2.4.1"
+    "@vscode/test-electron": "^2.4.1",
+    "eslint": "^9.16.0",
+    "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "compile": "^0.0.2"
   }
 }

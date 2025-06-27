@@ -2,13 +2,17 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { PortfolioData, PortfolioExplorerNode, AssetDefinitionData } from './portfolioExplorerProvider';
 import { AssetNode } from './assetNode';
-import { PortfolioValueCalculator } from '../services/portfolioValueCalculator';
+import { PortfolioDataStore } from '../data/portfolioDataStore';
+import { Asset } from '../data/asset';
 
 export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExplorerNode {
     public nodeType: 'assets' = 'assets';
     
     constructor(
-        private provider: { getPortfolioData(): Promise<PortfolioData | undefined> },
+        private provider: { 
+            getPortfolioData(): Promise<PortfolioData | undefined>;
+            createAsset(definition: AssetDefinitionData): Promise<Asset>;
+        },
         description?: string
     ) {
         super('Assets', vscode.TreeItemCollapsibleState.Expanded);
@@ -18,27 +22,41 @@ export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExp
     }
       /**
      * Create an AssetCollectionNode with portfolio total value
-     */
-    public static async createWithTotalValue(
-        provider: { getPortfolioData(): Promise<PortfolioData | undefined> }
+     */    public static async createWithTotalValue(
+        provider: { 
+            getPortfolioData(): Promise<PortfolioData | undefined>;
+            createAsset(definition: AssetDefinitionData): Promise<Asset>;
+        }
     ): Promise<AssetCollectionNode> {
         let description = '';
         
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (workspaceFolder) {
-                const portfolioData = await provider.getPortfolioData();
-                if (portfolioData && portfolioData.assets) {
-                    const calculator = new PortfolioValueCalculator(workspaceFolder);
-                    const totalValue = await calculator.calculateTotalValue(portfolioData.assets);
-                    
-                    // Format the total value with CNY currency symbol
+            const portfolioData = await provider.getPortfolioData();
+            if (portfolioData && portfolioData.assets) {
+                // Calculate total value using Asset instances
+                let totalValue = 0;
+                let hasErrors = false;
+                
+                for (const assetDefinition of portfolioData.assets) {
+                    try {
+                        const asset = await provider.createAsset(assetDefinition);
+                        const currentValue = await asset.calculateCurrentValue();
+                        totalValue += currentValue.valueInCNY;
+                    } catch (error) {
+                        console.error(`Error calculating value for asset ${assetDefinition.name}:`, error);
+                        hasErrors = true;
+                    }
+                }
+                
+                if (hasErrors) {
+                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Some errors)`;
+                } else {
                     description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
                 }
             }
         } catch (error) {
             console.error('Error calculating portfolio total value:', error);
-            description = 'Total: Exchange rate missing';
+            description = 'Total: Calculation failed';
             
             // Show user-friendly error message
             vscode.window.showErrorMessage(
@@ -56,19 +74,26 @@ export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExp
         }
         
         return new AssetCollectionNode(provider, description);
-    }
-      async getChildren(): Promise<PortfolioExplorerNode[]> {
+    }      async getChildren(): Promise<PortfolioExplorerNode[]> {
         const portfolioData = await this.provider.getPortfolioData();
         
         if (!portfolioData || !portfolioData.assets) {
             return [];
         }        
         
-        // Create asset nodes with current values
+        // Create asset nodes with current values using Asset instances
         const assetNodes: PortfolioExplorerNode[] = [];
-        for (const asset of portfolioData.assets) {
-            const assetNode = await AssetNode.createWithCurrentValue(asset);
-            assetNodes.push(assetNode);
+        for (const assetDefinition of portfolioData.assets) {
+            try {
+                const asset = await this.provider.createAsset(assetDefinition);
+                const assetNode = await AssetNode.createWithCurrentValue(asset);
+                assetNodes.push(assetNode);
+            } catch (error) {
+                console.error(`Error creating asset node for ${assetDefinition.name}:`, error);
+                // Fallback to legacy approach
+                const assetNode = await AssetNode.createWithCurrentValueLegacy(assetDefinition);
+                assetNodes.push(assetNode);
+            }
         }
         
         return assetNodes;
