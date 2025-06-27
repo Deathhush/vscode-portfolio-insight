@@ -1,0 +1,27 @@
+{
+  "date": "2025-06-28",
+  "assets": [
+    {
+      "name": "TestAsset",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 1000,
+          "date": "2025-06-28"
+        },
+        {
+          "type": "snapshot", 
+          "currentValue": 2000,
+          "date": "2025-06-27"
+        },
+        {
+          "type": "snapshot",
+          "currentValue": 0,
+          "date": "2025-06-26"
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "exchangeRates": []
+}

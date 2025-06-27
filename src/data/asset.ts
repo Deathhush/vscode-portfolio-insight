@@ -78,18 +78,25 @@ export class Asset {
 
     private mergeAssetEvents(updates: PortfolioUpdateData[]): { event: AssetEventData; date: string } | undefined {
         let latestSnapshot: { event: AssetEventData; date: string } | undefined;
+        let latestSnapshotTime = 0;
 
-        // Process updates in chronological order
+        // Process all updates to collect all snapshot events
         for (const update of updates) {
             for (const assetUpdate of update.assets) {
                 if (assetUpdate.name === this.name) {
                     const assetDate = assetUpdate.date || update.date;
                     
-                    // Find the latest snapshot event for this asset
+                    // Find all snapshot events for this asset and compare dates
                     for (const event of assetUpdate.events) {
                         if (event.type === 'snapshot') {
                             const eventDate = event.date || assetDate;
-                            latestSnapshot = { event, date: eventDate };
+                            const eventTime = new Date(eventDate).getTime();
+                            
+                            // Only update if this snapshot is chronologically later
+                            if (!latestSnapshot || eventTime > latestSnapshotTime) {
+                                latestSnapshot = { event, date: eventDate };
+                                latestSnapshotTime = eventTime;
+                            }
                         }
                     }
                 }

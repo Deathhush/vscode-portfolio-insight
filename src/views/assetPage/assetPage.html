@@ -891,6 +891,15 @@
             gap: 16px;
         }
         
+        .snapshot-inputs .form-group {
+            margin-bottom: 0;
+        }
+        
+        /* For simple/investment assets with only one field, span full width */
+        .snapshot-inputs .form-group:only-child {
+            grid-column: 1 / -1;
+        }
+        
         .modal-actions {
             display: flex;
             gap: 12px;
@@ -945,13 +954,15 @@
                 <div class="form-group">
                     <label for="activityType">Activity Type</label>
                     <select id="activityType" class="form-control" onchange="onActivityTypeChange()">
-                        <option value="">Select activity type...</option>
                         <option value="snapshot">Snapshot (Current Value)</option>
                         <option value="income">Income</option>
                         <option value="expense">Expense</option>
                         <option value="transfer_in">Transfer In</option>
                         <option value="transfer_out">Transfer Out</option>
                     </select>
+                    <small class="activity-type-note" style="font-size: 0.8em; color: var(--text-secondary); margin-top: 4px; display: block;">
+                        Available options depend on asset type. Income/Expense only for simple assets.
+                    </small>
                 </div>
 
                 <div class="form-row">
@@ -968,23 +979,11 @@
                 <!-- Snapshot specific fields -->
                 <div id="snapshotFields" class="activity-type-specific">
                     <h4>Snapshot Details</h4>
-                    <div class="snapshot-inputs">
-                        <div class="form-group">
-                            <label for="snapshotCurrentValue">Current Value</label>
-                            <input type="number" id="snapshotCurrentValue" class="form-control" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label for="marketValue">Market Value (optional)</label>
-                            <input type="number" id="marketValue" class="form-control" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label for="shares">Shares (optional)</label>
-                            <input type="number" id="shares" class="form-control" step="0.01" min="0" placeholder="0.00">
-                        </div>
-                        <div class="form-group">
-                            <label for="price">Price per Share (optional)</label>
-                            <input type="number" id="price" class="form-control" step="0.01" min="0" placeholder="0.00">
-                        </div>
+                    <p class="field-description" style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 16px;">
+                        Fields shown are specific to the asset type (<span id="assetTypeDisplay"></span>).
+                    </p>
+                    <div class="snapshot-inputs" id="snapshotInputsContainer">
+                        <!-- Dynamic fields will be populated based on asset type -->
                     </div>
                 </div>
 
@@ -1064,6 +1063,9 @@
         
         function updateAssetDisplay(assetSummary) {
             console.log('Updating asset display with:', assetSummary);
+            
+            // Store current asset information for later use
+            currentAsset = assetSummary.definition;
             
             // Update asset header with animation
             const assetNameEl = document.getElementById('assetName');
@@ -1296,6 +1298,7 @@
         let allAssets = [];
         let pendingActivities = []; // Track activities that haven't been saved yet
         let lastLoadedActivities = []; // Keep track of the last loaded activities from server
+        let currentAsset = null; // Store current asset information for type-specific behavior
         
         function addActivity() {
             const modal = document.getElementById('addActivityModal');
@@ -1309,12 +1312,115 @@
             document.getElementById('addActivityForm').reset();
             document.getElementById('activityDate').value = today;
             
-            // Initialize form state - this will hide all type-specific fields and clear required attributes
+            // Populate activity type options based on current asset type
+            populateActivityTypeOptions();
+            
+            // Initialize form state - this will show snapshot fields by default
             onActivityTypeChange();
         }
         
         function closeModal() {
             document.getElementById('addActivityModal').style.display = 'none';
+        }
+        
+        function populateActivityTypeOptions() {
+            const activityTypeSelect = document.getElementById('activityType');
+            let optionsHtml = '<option value="snapshot">Current Value</option>';
+            
+            // Income and Expense are only available for simple assets
+            if (currentAsset && currentAsset.type === 'simple') {
+                optionsHtml += '<option value="income">Income</option>';
+                optionsHtml += '<option value="expense">Expense</option>';
+            }
+            
+            // Transfer options are available for all asset types
+            optionsHtml += '<option value="transfer_in">Transfer In</option>';
+            optionsHtml += '<option value="transfer_out">Transfer Out</option>';
+            
+            activityTypeSelect.innerHTML = optionsHtml;
+            
+            // Default to snapshot
+            activityTypeSelect.value = 'snapshot';
+        }
+        
+        function generateSnapshotFields(assetType) {
+            const container = document.getElementById('snapshotInputsContainer');
+            const assetTypeDisplay = document.getElementById('assetTypeDisplay');
+            let fieldsHtml = '';
+            
+            // Update the asset type display
+            if (assetTypeDisplay) {
+                assetTypeDisplay.textContent = assetType;
+            }
+            
+            switch (assetType) {
+                case 'simple':
+                    fieldsHtml = `
+                        <div class="form-group">
+                            <label for="snapshotCurrentValue">Current Value *</label>
+                            <input type="number" id="snapshotCurrentValue" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'investment':
+                    fieldsHtml = `
+                        <div class="form-group">
+                            <label for="snapshotCurrentValue">Current Value *</label>
+                            <input type="number" id="snapshotCurrentValue" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                    `;
+                    break;
+                    
+                case 'composite':
+                    fieldsHtml = `
+                        <div class="form-group">
+                            <label for="snapshotCurrentValue">Current Value *</label>
+                            <input type="number" id="snapshotCurrentValue" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="marketValue">Market Value (optional)</label>
+                            <input type="number" id="marketValue" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                    `;
+                    break;
+                    
+                case 'stock':
+                    fieldsHtml = `
+                        <div class="form-group">
+                            <label for="shares">Shares/Units *</label>
+                            <input type="number" id="shares" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="price">Price per Share *</label>
+                            <input type="number" id="price" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                    `;
+                    break;
+                    
+                default:
+                    // Fallback to show all fields
+                    fieldsHtml = `
+                        <div class="form-group">
+                            <label for="snapshotCurrentValue">Current Value</label>
+                            <input type="number" id="snapshotCurrentValue" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="marketValue">Market Value (optional)</label>
+                            <input type="number" id="marketValue" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="shares">Shares (optional)</label>
+                            <input type="number" id="shares" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="price">Price per Share (optional)</label>
+                            <input type="number" id="price" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                    `;
+            }
+            
+            container.innerHTML = fieldsHtml;
         }
         
         function onActivityTypeChange() {
@@ -1333,8 +1439,14 @@
             if (activityType === 'snapshot') {
                 const snapshotFields = document.getElementById('snapshotFields');
                 snapshotFields.style.display = 'block';
-                // Current value is required for snapshots
-                document.getElementById('snapshotCurrentValue').setAttribute('required', 'required');
+                
+                // Generate appropriate fields based on current asset type
+                if (currentAsset) {
+                    generateSnapshotFields(currentAsset.type);
+                } else {
+                    // Fallback if asset info not available yet
+                    generateSnapshotFields('default');
+                }
             } else if (activityType === 'income' || activityType === 'expense') {
                 const incomeExpenseFields = document.getElementById('incomeExpenseFields');
                 incomeExpenseFields.style.display = 'block';
@@ -1372,19 +1484,34 @@
         }
         
         function showSaveBar() {
+            console.log('showSaveBar called - showing save button');
             hasUnsavedChanges = true;
             document.getElementById('saveActivitiesButton').style.display = 'inline-block';
         }
         
         function hideSaveBar() {
+            console.log('hideSaveBar called - hiding save button');
             hasUnsavedChanges = false;
             document.getElementById('saveActivitiesButton').style.display = 'none';
         }
         
         function saveAllActivities() {
-            vscode.postMessage({
-                type: 'SAVE_ACTIVITIES'
-            });
+            console.log(`saveAllActivities called`);
+            console.log(`pendingActivities.length: ${pendingActivities.length}`);
+            console.log(`pendingActivities content:`, pendingActivities);
+            
+            if (pendingActivities.length === 0) {
+                console.log('No pending activities to save');
+                return;
+            }
+            
+            const dataToSend = {
+                type: 'SAVE_ACTIVITIES',
+                data: pendingActivities
+            };
+            
+            console.log('Sending message to backend:', dataToSend);
+            vscode.postMessage(dataToSend);
         }
         
         // Initialize the page
@@ -1410,6 +1537,13 @@
                     return;
                 }
                 
+                // Validate that income/expense are only used with simple assets
+                if ((activityType === 'income' || activityType === 'expense') && 
+                    (!currentAsset || currentAsset.type !== 'simple')) {
+                    showErrorMessage('Income and Expense activities are only available for simple assets');
+                    return;
+                }
+                
                 let activityData = {
                     type: activityType,
                     date: date,
@@ -1418,23 +1552,67 @@
                 
                 // Add type-specific fields with validation
                 if (activityType === 'snapshot') {
-                    const currentValueInput = document.getElementById('snapshotCurrentValue');
-                    const currentValue = parseFloat(currentValueInput.value);
-                    
-                    if (!currentValue || currentValue < 0) {
-                        showErrorMessage('Please enter a valid current value');
-                        currentValueInput.focus();
+                    if (!currentAsset) {
+                        showErrorMessage('Asset information not available. Please try again.');
                         return;
                     }
                     
-                    const marketValue = parseFloat(document.getElementById('marketValue').value) || undefined;
-                    const shares = parseFloat(document.getElementById('shares').value) || undefined;
-                    const price = parseFloat(document.getElementById('price').value) || undefined;
-                    
-                    activityData.currentValue = currentValue;
-                    if (marketValue && marketValue >= 0) activityData.marketValue = marketValue;
-                    if (shares && shares >= 0) activityData.shares = shares;
-                    if (price && price >= 0) activityData.price = price;
+                    // Handle different asset types
+                    if (currentAsset.type === 'simple' || currentAsset.type === 'investment') {
+                        const currentValueInput = document.getElementById('snapshotCurrentValue');
+                        const currentValue = parseFloat(currentValueInput.value);
+                        
+                        if (isNaN(currentValue) || currentValue < 0) {
+                            showErrorMessage('Please enter a valid current value (0 or greater)');
+                            currentValueInput.focus();
+                            return;
+                        }
+                        
+                        activityData.currentValue = currentValue;
+                        
+                    } else if (currentAsset.type === 'composite') {
+                        const currentValueInput = document.getElementById('snapshotCurrentValue');
+                        const currentValue = parseFloat(currentValueInput.value);
+                        
+                        if (isNaN(currentValue) || currentValue < 0) {
+                            showErrorMessage('Please enter a valid current value (0 or greater)');
+                            currentValueInput.focus();
+                            return;
+                        }
+                        
+                        activityData.currentValue = currentValue;
+                        
+                        // Market value is optional for composite assets
+                        const marketValueInput = document.getElementById('marketValue');
+                        if (marketValueInput.value !== '') {
+                            const marketValue = parseFloat(marketValueInput.value);
+                            if (!isNaN(marketValue) && marketValue >= 0) {
+                                activityData.marketValue = marketValue;
+                            }
+                        }
+                        
+                    } else if (currentAsset.type === 'stock') {
+                        const sharesInput = document.getElementById('shares');
+                        const priceInput = document.getElementById('price');
+                        const shares = parseFloat(sharesInput.value);
+                        const price = parseFloat(priceInput.value);
+                        
+                        if (!shares || shares <= 0) {
+                            showErrorMessage('Please enter a valid number of shares');
+                            sharesInput.focus();
+                            return;
+                        }
+                        
+                        if (!price || price <= 0) {
+                            showErrorMessage('Please enter a valid price per share');
+                            priceInput.focus();
+                            return;
+                        }
+                        
+                        activityData.shares = shares;
+                        activityData.price = price;
+                        // For stock assets, the backend will calculate currentValue as shares * price
+                    }
                     
                 } else if (activityType === 'income' || activityType === 'expense') {
                     const amountInput = document.getElementById('incomeExpenseAmount');
@@ -1482,6 +1660,7 @@
                 // Immediately add to pending activities for UI feedback
                 // (This will be confirmed or replaced when ACTIVITY_ADDED message arrives)
                 pendingActivities.push(activityData);
+                console.log(`Activity added to pendingActivities. Total pending: ${pendingActivities.length}`, pendingActivities);
                 updateActivitiesList(lastLoadedActivities);
                 showSaveBar();
             });
