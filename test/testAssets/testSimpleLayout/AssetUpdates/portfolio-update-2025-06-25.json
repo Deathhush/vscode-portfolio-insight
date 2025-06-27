@@ -1,0 +1,50 @@
+{
+  "date": "2025-06-25",
+  "assets": [
+    {
+      "name": "招行.活期",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 15000
+        }
+      ]
+    },
+    {
+      "name": "招行.沪深300ETF",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 25000
+        }
+      ]
+    },
+    {
+      "name": "国金",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 30000,
+          "marketValue": 28000
+        }
+      ]
+    },
+    {
+      "name": "StockAward",
+      "events": [
+        {
+          "type": "snapshot",
+          "shares": 100,
+          "price": 150
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "exchangeRates": [
+    {
+      "from": "USD",
+      "rate": 7.2
+    }
+  ]
+}
