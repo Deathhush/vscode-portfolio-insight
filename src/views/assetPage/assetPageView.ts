@@ -47,15 +47,6 @@ export class AssetPageView {
                 console.log('Received message from webview:', message.type, message.data);
                 
                 switch (message.type) {
-                    case 'ADD_ACTIVITY':
-                        this.onAddActivity(message.data);
-                        return;
-                    case 'UPDATE_ACTIVITY':
-                        this.onUpdateActivity(message.data);
-                        return;
-                    case 'DELETE_ACTIVITY':
-                        this.onDeleteActivity(message.data);
-                        return;
                     case 'REFRESH_DATA':
                         this.refreshData();
                         return;
@@ -82,52 +73,6 @@ export class AssetPageView {
 
         // Load and send initial data
         this.sendAssetData();
-    }
-
-    // Activity management
-    private async onAddActivity(data: any): Promise<void> {
-        try {
-            // Validate the activity data
-            if (!data.type) {
-                throw new Error('Activity type is required');
-            }
-
-            console.log('Activity received from frontend:', data);
-            
-            // Notify the webview that activity was added (frontend will handle the storage)
-            this._panel.webview.postMessage({
-                type: 'ACTIVITY_ADDED'
-            });
-        } catch (error) {
-            console.error('Error adding activity:', error);
-            vscode.window.showErrorMessage(`Failed to add activity: ${error}`);
-        }
-    }
-
-    private async onUpdateActivity(data: any): Promise<void> {
-        try {
-            // TODO: Implement activity update
-            vscode.window.showInformationMessage(`Activity would be updated: ${JSON.stringify(data)}`);
-            
-            // Refresh the data after updating
-            await this.refreshData();
-        } catch (error) {
-            console.error('Error updating activity:', error);
-            vscode.window.showErrorMessage(`Failed to update activity: ${error}`);
-        }
-    }
-
-    private async onDeleteActivity(data: any): Promise<void> {
-        try {
-            // TODO: Implement activity deletion
-            vscode.window.showInformationMessage(`Activity would be deleted: ${data.activityId}`);
-            
-            // Refresh the data after deleting
-            await this.refreshData();
-        } catch (error) {
-            console.error('Error deleting activity:', error);
-            vscode.window.showErrorMessage(`Failed to delete activity: ${error}`);
-        }
     }
 
     // Data synchronization

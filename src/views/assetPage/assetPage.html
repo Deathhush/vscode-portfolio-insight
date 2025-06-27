@@ -1042,11 +1042,6 @@
                 case 'ALL_ASSETS':
                     populateAssetsList(message.data);
                     break;
-                case 'ACTIVITY_ADDED':
-                    // The activity was already added to pending activities in the form handler
-                    // This message confirms it was processed by the backend
-                    console.log('Activity confirmed by backend:', message.data);
-                    break;
                 case 'ACTIVITIES_SAVED':
                     // Clear pending activities since they're now saved
                     pendingActivities = [];
@@ -1648,17 +1643,11 @@
                 
                 console.log('Sending activity data:', activityData);
                 
-                // Send to backend
-                vscode.postMessage({
-                    type: 'ADD_ACTIVITY',
-                    data: activityData
-                });
-                
-                console.log('Activity message sent, closing modal');
+                console.log('Closing modal and adding activity to pending list');
                 closeModal();
                 
                 // Immediately add to pending activities for UI feedback
-                // (This will be confirmed or replaced when ACTIVITY_ADDED message arrives)
+                // (This will be saved when user clicks Save Activities)
                 pendingActivities.push(activityData);
                 console.log(`Activity added to pendingActivities. Total pending: ${pendingActivities.length}`, pendingActivities);
                 updateActivitiesList(lastLoadedActivities);
