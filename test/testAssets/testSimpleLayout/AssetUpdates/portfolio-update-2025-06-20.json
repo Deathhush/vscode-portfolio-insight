@@ -1,0 +1,35 @@
+{
+  "date": "2025-06-20",
+  "assets": [
+    {
+      "name": "招行.活期",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 12000
+        }
+      ]
+    },
+    {
+      "name": "StockAward",
+      "events": [
+        {
+          "type": "snapshot",
+          "shares": 100,
+          "price": 140
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "exchangeRates": [
+    {
+      "from": "USD",
+      "rate": 7.1
+    },
+    {
+      "from": "EUR", 
+      "rate": 7.8
+    }
+  ]
+}

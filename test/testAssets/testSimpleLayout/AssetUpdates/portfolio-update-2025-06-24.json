@@ -1,0 +1,27 @@
+{
+  "date": "2025-06-24",
+  "assets": [
+    {
+      "name": "EU.Stock",
+      "events": [
+        {
+          "type": "snapshot",
+          "shares": 60,
+          "price": 180,
+          "date": "2025-06-23"
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "exchangeRates": [
+    {
+      "from": "USD",  
+      "rate": 7.25
+    },
+    {
+      "from": "EUR",
+      "rate": 7.65
+    }
+  ]
+}

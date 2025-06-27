@@ -9,7 +9,7 @@ import { AssetNode } from './assetNode';
 export interface AssetDefinitionData {
     name: string;
     type: 'simple' | 'investment' | 'composite' | 'stock';
-    currency?: string;  // Make currency optional
+    currency?: string;  // Make currency optional. When not provided, default to CNY
 }
 
 export interface PortfolioData {
@@ -41,8 +41,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
-            // Return the Assets root node
-            return Promise.resolve([new AssetCollectionNode(this)]);
+            // Return the Assets root node with total value
+            return AssetCollectionNode.createWithTotalValue(this).then(node => [node]);
         }
         
         // Delegate to the node's getChildren method
