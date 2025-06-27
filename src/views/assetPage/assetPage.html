@@ -1062,6 +1062,9 @@
             // Store current asset information for later use
             currentAsset = assetSummary.definition;
             
+            // Store currency information for activities display
+            currentAssetCurrency = assetSummary.currentValue.currency || 'CNY';
+            
             // Update asset header with animation
             const assetNameEl = document.getElementById('assetName');
             const assetTypeEl = document.getElementById('assetType');
@@ -1152,7 +1155,6 @@
                 const isPending = index >= activities.length; // Activities after the saved ones are pending
                 
                 let typeDisplay = activity.type.replace('_', ' ');
-                let amountDisplay = '';
                 
                 // Handle different amount fields based on activity type
                 let activityAmount = activity.amount;
@@ -1162,10 +1164,19 @@
                     activityAmount = 0;
                 }
                 
-                amountDisplay = '¥' + activityAmount.toLocaleString('zh-CN', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                });
+                // Format amount with correct currency
+                let amountDisplay = '';
+                if (currentAssetCurrency === 'CNY') {
+                    amountDisplay = '¥' + activityAmount.toLocaleString('zh-CN', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    });
+                } else {
+                    amountDisplay = currentAssetCurrency + ' ' + activityAmount.toLocaleString('en-US', { 
+                        minimumFractionDigits: 2, 
+                        maximumFractionDigits: 2 
+                    });
+                }
                 
                 let amountClass = '';
                 if (activity.type === 'income' || activity.type === 'transfer_in') {
@@ -1176,11 +1187,7 @@
                     amountDisplay = '-' + amountDisplay;
                 } else if (activity.type === 'snapshot') {
                     amountClass = 'snapshot';
-                    // For snapshots, show the absolute value without + or -
-                    amountDisplay = '¥' + activityAmount.toLocaleString('zh-CN', { 
-                        minimumFractionDigits: 2, 
-                        maximumFractionDigits: 2 
-                    });
+                    // For snapshots, the amount is already formatted above without + or -
                 }
                 
                 let relatedAssetDisplay = '';
@@ -1197,7 +1204,7 @@
                             <div class="activity-type-badge ${activity.type}">${typeDisplay}</div>
                             <div class="activity-amount-display ${amountClass}">${amountDisplay}</div>
                             <div class="activity-date-display">${new Date(activity.date).toLocaleDateString()}</div>
-                            <div class="activity-description-display">${activity.description || '-'}</div>
+                            <div class="activity-description-display">${activity.description || ''}</div>
                             <div class="activity-related-display">${relatedAssetDisplay}</div>
                         </div>
                     </div>
@@ -1294,6 +1301,7 @@
         let pendingActivities = []; // Track activities that haven't been saved yet
         let lastLoadedActivities = []; // Keep track of the last loaded activities from server
         let currentAsset = null; // Store current asset information for type-specific behavior
+        let currentAssetCurrency = 'CNY'; // Store current asset currency for display
         
         function addActivity() {
             const modal = document.getElementById('addActivityModal');
@@ -1306,6 +1314,9 @@
             // Reset form
             document.getElementById('addActivityForm').reset();
             document.getElementById('activityDate').value = today;
+            
+            // Explicitly clear the description field
+            document.getElementById('activityDescription').value = '';
             
             // Populate activity type options based on current asset type
             populateActivityTypeOptions();
@@ -1541,9 +1552,13 @@
                 
                 let activityData = {
                     type: activityType,
-                    date: date,
-                    description: description
+                    date: date
                 };
+                
+                // Only include description if it's not empty
+                if (description && description.trim() !== '') {
+                    activityData.description = description.trim();
+                }
                 
                 // Add type-specific fields with validation
                 if (activityType === 'snapshot') {

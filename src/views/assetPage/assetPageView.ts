@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 import { Asset } from '../../data/asset';
-import { AssetActivity } from '../../data/interfaces';
+import { AssetActivityData } from '../../data/interfaces';
 
 export class AssetPageView {
     private readonly _panel: vscode.WebviewPanel;
@@ -226,17 +226,26 @@ export class AssetPageView {
                         from: activity.type === 'transfer_out' ? this.asset.name : activity.relatedAsset,
                         to: activity.type === 'transfer_in' ? this.asset.name : activity.relatedAsset,
                         amount: activity.amount,
-                        date: activity.date || currentDate, // Preserve original activity date
-                        description: activity.description
+                        date: activity.date || currentDate // Preserve original activity date
                     };
+                    
+                    // Only include description if it's provided and not empty
+                    if (activity.description && activity.description.trim() !== '') {
+                        transfer.description = activity.description.trim();
+                    }
+                    
                     transfers.push(transfer);
                 } else {
                     // Convert to asset event format
                     const event: any = {
                         type: activity.type,
-                        date: activity.date || currentDate, // Preserve original activity date
-                        description: activity.description
+                        date: activity.date || currentDate // Preserve original activity date
                     };
+
+                    // Only include description if it's provided and not empty
+                    if (activity.description && activity.description.trim() !== '') {
+                        event.description = activity.description.trim();
+                    }
 
                     if (activity.type === 'snapshot') {
                         if (activity.currentValue !== undefined) {

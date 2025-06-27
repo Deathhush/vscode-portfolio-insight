@@ -1,8 +1,8 @@
 import {
     AssetDefinitionData,
-    AssetCurrentValue,
-    AssetActivity,
-    AssetSummary,
+    AssetCurrentValueData,
+    AssetActivityData,
+    AssetSummaryData,
     AssetEventData,
     AssetUpdateData,
     TransferData,
@@ -12,8 +12,8 @@ import { PortfolioDataStore } from './portfolioDataStore';
 
 export class Asset {
     private latestSnapshot?: { event: AssetEventData; date: string };
-    private activities: AssetActivity[] = [];
-    private currentValueCache?: AssetCurrentValue;
+    private activities: AssetActivityData[] = [];
+    private currentValueCache?: AssetCurrentValueData;
     private activitiesLoaded = false;
     
     constructor(
@@ -39,7 +39,7 @@ export class Asset {
     }
     
     // Value calculations
-    async calculateCurrentValue(): Promise<AssetCurrentValue> {
+    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
         if (this.currentValueCache) {
             return this.currentValueCache;
         }
@@ -133,7 +133,7 @@ export class Asset {
     }
     
     // Activity management
-    async loadActivities(): Promise<AssetActivity[]> {
+    async loadActivities(): Promise<AssetActivityData[]> {
         if (this.activitiesLoaded) {
             return this.activities;
         }
@@ -145,8 +145,8 @@ export class Asset {
         return this.activities;
     }
 
-    private extractActivities(updates: PortfolioUpdateData[]): AssetActivity[] {
-        const activities: AssetActivity[] = [];
+    private extractActivities(updates: PortfolioUpdateData[]): AssetActivityData[] {
+        const activities: AssetActivityData[] = [];
         let activityId = 1;
 
         // Process updates in chronological order to maintain proper sequence
@@ -163,25 +163,37 @@ export class Asset {
                         
                         // Convert income and expense events to activities
                         if (event.type === 'income' || event.type === 'expense') {
-                            activities.push({
+                            const activity: AssetActivityData = {
                                 id: `${this.name}-event-${activityId++}`,
                                 type: event.type,
                                 amount: event.amount || 0,
-                                date: eventDate,
-                                description: event.description || `${event.type.charAt(0).toUpperCase() + event.type.slice(1)} transaction`
-                            });
+                                date: eventDate
+                            };
+                            
+                            // Only include description if it exists
+                            if (event.description) {
+                                activity.description = event.description;
+                            }
+                            
+                            activities.push(activity);
                         }
                         
                         // Include snapshot events as activities to show asset value changes
                         if (event.type === 'snapshot') {
                             const snapshotValue = this.calculateAssetValue(event);
-                            activities.push({
+                            const snapshotActivity: AssetActivityData = {
                                 id: `${this.name}-snapshot-${activityId++}`,
                                 type: 'snapshot',
                                 amount: snapshotValue,
-                                date: eventDate,
-                                description: event.description || `Asset value snapshot: ${this.currency} ${snapshotValue.toLocaleString()}`
-                            });
+                                date: eventDate
+                            };
+                            
+                            // Only include description if it exists
+                            if (event.description) {
+                                snapshotActivity.description = event.description;
+                            }
+                            
+                            activities.push(snapshotActivity);
                         }
                     }
                 }
@@ -194,26 +206,38 @@ export class Asset {
                     
                     // Transfer OUT from this asset
                     if (transfer.from === this.name) {
-                        activities.push({
+                        const transferOutActivity: AssetActivityData = {
                             id: `${this.name}-transfer-out-${activityId++}`,
                             type: 'transfer_out',
                             amount: transfer.amount,
                             date: transferDate,
-                            description: transfer.description || `Transfer to ${transfer.to}`,
                             relatedAsset: transfer.to
-                        });
+                        };
+                        
+                        // Only include description if it exists
+                        if (transfer.description) {
+                            transferOutActivity.description = transfer.description;
+                        }
+                        
+                        activities.push(transferOutActivity);
                     }
                     
                     // Transfer IN to this asset
                     if (transfer.to === this.name) {
-                        activities.push({
+                        const transferInActivity: AssetActivityData = {
                             id: `${this.name}-transfer-in-${activityId++}`,
                             type: 'transfer_in',
                             amount: transfer.amount,
                             date: transferDate,
-                            description: transfer.description || `Transfer from ${transfer.from}`,
                             relatedAsset: transfer.from
-                        });
+                        };
+                        
+                        // Only include description if it exists
+                        if (transfer.description) {
+                            transferInActivity.description = transfer.description;
+                        }
+                        
+                        activities.push(transferInActivity);
                     }
                 }
             }
@@ -257,11 +281,11 @@ export class Asset {
     }
     
     // Summary generation
-    async generateSummary(): Promise<AssetSummary> {
+    async generateSummary(): Promise<AssetSummaryData> {
         const currentValue = await this.calculateCurrentValue();
         const activities = await this.loadActivities();
         
-        const summary: AssetSummary = {
+        const summary: AssetSummaryData = {
             definition: this.definitionData,
             currentValue,
             activities
@@ -343,7 +367,7 @@ export class Asset {
         return stats;
     }
 
-    getActivitiesByDateRange(startDate: Date, endDate: Date): AssetActivity[] {
+    getActivitiesByDateRange(startDate: Date, endDate: Date): AssetActivityData[] {
         if (!this.activitiesLoaded) {
             return [];
         }
@@ -354,7 +378,7 @@ export class Asset {
         });
     }
 
-    getActivitiesByType(type: AssetActivity['type']): AssetActivity[] {
+    getActivitiesByType(type: AssetActivityData['type']): AssetActivityData[] {
         if (!this.activitiesLoaded) {
             return [];
         }

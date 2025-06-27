@@ -48,7 +48,7 @@ export interface PortfolioUpdateData {
 }
 
 // In-memory business logic interfaces
-export interface AssetCurrentValue {
+export interface AssetCurrentValueData {
     name: string;
     currentValue: number;
     currency: string;
@@ -56,7 +56,7 @@ export interface AssetCurrentValue {
     lastUpdateDate?: string;
 }
 
-export interface AssetActivity {
+export interface AssetActivityData {
     id: string;
     type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'snapshot';
     amount: number;
@@ -65,9 +65,9 @@ export interface AssetActivity {
     relatedAsset?: string; // For transfers
 }
 
-export interface AssetSummary {
+export interface AssetSummaryData {
     definition: AssetDefinitionData;
-    currentValue: AssetCurrentValue;
+    currentValue: AssetCurrentValueData;
     lastMonthIncome?: number; // For simple assets
-    activities: AssetActivity[];
+    activities: AssetActivityData[];
 }
