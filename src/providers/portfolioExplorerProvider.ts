@@ -19,9 +19,10 @@ export interface PortfolioData {
     assets: AssetDefinitionData[];
 }
 
-export interface PortfolioExplorerNode extends vscode.TreeItem {
+export interface PortfolioExplorerNode {
     nodeType: 'assets' | 'asset';
     getChildren(): Promise<PortfolioExplorerNode[]>;
+    getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem>;
 }
 
 export class PortfolioExplorerProvider implements vscode.TreeDataProvider<PortfolioExplorerNode> {    private _onDidChangeTreeData: vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void> = new vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void>();
@@ -50,13 +51,13 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         console.log('Portfolio Explorer tree view refreshed');
     }
     
-    getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem {
-        return element;
+    getTreeItem(element: PortfolioExplorerNode): vscode.TreeItem | Thenable<vscode.TreeItem> {
+        return element.getTreeItem();
     }    
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
-            // Return the Assets root node with total value
-            return AssetCollectionNode.createWithTotalValue(this).then(node => [node]);
+            // Return the Assets root node
+            return Promise.resolve([new AssetCollectionNode(this)]);
         }
         
         // Delegate to the node's getChildren method

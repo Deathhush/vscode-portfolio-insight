@@ -5,40 +5,34 @@ import { AssetNode } from './assetNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { Asset } from '../data/asset';
 
-export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExplorerNode {
+export class AssetCollectionNode implements PortfolioExplorerNode {
     public nodeType: 'assets' = 'assets';
     
-    constructor(
-        private provider: PortfolioExplorerProvider,
-        description?: string
-    ) {
-        super('Assets', vscode.TreeItemCollapsibleState.Expanded);
-        this.iconPath = new vscode.ThemeIcon('folder');
-        this.contextValue = 'assets';
-        this.description = description;
+    constructor(private provider: PortfolioExplorerProvider) {
     }
-      /**
-     * Create an AssetCollectionNode with portfolio total value
-     */    public static async createWithTotalValue(
-        provider: PortfolioExplorerProvider
-    ): Promise<AssetCollectionNode> {
+
+    private async getDescription(): Promise<string> {
         let description = '';
         
         try {
-            const portfolioData = await provider.getPortfolioData();
-            if (portfolioData && portfolioData.assets) {
-                // Calculate total value using Asset instances
+            // Get child asset nodes
+            const children = await this.getChildren();
+            
+            if (children.length > 0) {
+                // Calculate total value using existing asset nodes
                 let totalValue = 0;
                 let hasErrors = false;
                 
-                for (const assetDefinition of portfolioData.assets) {
-                    try {
-                        const asset = await provider.createAsset(assetDefinition);
-                        const currentValue = await asset.calculateCurrentValue();
-                        totalValue += currentValue.valueInCNY;
-                    } catch (error) {
-                        console.error(`Error calculating value for asset ${assetDefinition.name}:`, error);
-                        hasErrors = true;
+                for (const child of children) {
+                    if (child.nodeType === 'asset') {
+                        const assetNode = child as AssetNode;
+                        try {
+                            const currentValue = await assetNode.asset.calculateCurrentValue();
+                            totalValue += currentValue.valueInCNY;
+                        } catch (error) {
+                            console.error(`Error calculating value for asset ${assetNode.asset.definitionData.name}:`, error);
+                            hasErrors = true;
+                        }
                     }
                 }
                 
@@ -67,29 +61,41 @@ export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExp
             });
         }
         
-        return new AssetCollectionNode(provider, description);
-    }      async getChildren(): Promise<PortfolioExplorerNode[]> {
+        return description;
+    }
+    
+    async getChildren(): Promise<PortfolioExplorerNode[]> {
         const portfolioData = await this.provider.getPortfolioData();
         
         if (!portfolioData || !portfolioData.assets) {
             return [];
         }        
         
-        // Create asset nodes with current values using Asset instances
+        // Create asset nodes using Asset instances
         const assetNodes: PortfolioExplorerNode[] = [];
         for (const assetDefinition of portfolioData.assets) {
             try {
                 const asset = await this.provider.createAsset(assetDefinition);
-                const assetNode = await AssetNode.createWithCurrentValue(asset, this.provider);
+                const assetNode = new AssetNode(asset, this.provider);
                 assetNodes.push(assetNode);
             } catch (error) {
                 console.error(`Error creating asset node for ${assetDefinition.name}:`, error);
-                // Fallback to legacy approach
-                const assetNode = await AssetNode.createWithCurrentValueLegacy(assetDefinition, this.provider);
-                assetNodes.push(assetNode);
+                // Skip this asset since we can't create an Asset instance
+                // AssetNode now requires an Asset instance
             }
         }
         
         return assetNodes;
+    }
+
+    async getTreeItem(): Promise<vscode.TreeItem> {
+        const treeItem = new vscode.TreeItem('Assets', vscode.TreeItemCollapsibleState.Expanded);
+        treeItem.iconPath = new vscode.ThemeIcon('folder');
+        treeItem.contextValue = 'assets';
+        
+        // Get description with portfolio total value
+        treeItem.description = await this.getDescription();
+        
+        return treeItem;
     }
 }

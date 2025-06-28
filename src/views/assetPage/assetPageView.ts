@@ -23,7 +23,7 @@ export class AssetPageView {
         // Create a new panel
         this._panel = vscode.window.createWebviewPanel(
             'assetPageView',
-            `Asset: ${this.assetNode.asset?.name || this.assetNode.assetData.name}`,
+            `Asset: ${this.assetNode.asset.name}`,
             column || vscode.ViewColumn.One,
             {
                 // Enable javascript in the webview
@@ -78,16 +78,10 @@ export class AssetPageView {
 
     // Convenience getters for type-safe access
     private get asset(): Asset {
-        if (!this.assetNode.asset) {
-            throw new Error('Asset instance not available on AssetNode');
-        }
         return this.assetNode.asset;
     }
 
     private get provider() {
-        if (!this.assetNode.provider) {
-            throw new Error('Provider not available on AssetNode');
-        }
         return this.assetNode.provider;
     }
 
@@ -318,7 +312,7 @@ export class AssetPageView {
 
     private _update(): void {
         const webview = this._panel.webview;
-        this._panel.title = `Asset: ${this.assetNode.asset?.name || this.assetNode.assetData.name}`;
+        this._panel.title = `Asset: ${this.assetNode.asset.name}`;
         this._panel.webview.html = this._getHtmlForWebview(webview);
     }
 
