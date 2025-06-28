@@ -49,7 +49,6 @@ export interface PortfolioUpdateData {
 
 // In-memory business logic interfaces
 export interface AssetCurrentValueData {
-    name: string;
     currentValue: number;
     currency: string;
     valueInCNY: number;

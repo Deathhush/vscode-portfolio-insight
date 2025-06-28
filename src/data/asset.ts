@@ -64,7 +64,6 @@ export class Asset {
             const valueInCNY = this.convertToCNY(currentValue, currency, snapshotDate, allExchangeRates);
 
             return {
-                name: this.name,
                 currentValue,
                 currency,
                 valueInCNY,

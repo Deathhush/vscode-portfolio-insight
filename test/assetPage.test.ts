@@ -38,7 +38,6 @@ suite('AssetPage Integration Tests', () => {
         try {
             const currentValue = await asset.calculateCurrentValue();
             assert.ok(currentValue);
-            assert.strictEqual(currentValue.name, '招行.活期');
             assert.strictEqual(currentValue.currency, 'CNY');
             console.log('Asset value calculated successfully:', currentValue);
         } catch (error) {
