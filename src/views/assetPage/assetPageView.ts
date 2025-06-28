@@ -9,6 +9,8 @@ export class AssetPageView {
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
+    private _onDisposeEmitter = new vscode.EventEmitter<void>();
+    public readonly onDispose = this._onDisposeEmitter.event;
     
     constructor(
         extensionUri: vscode.Uri,
@@ -298,7 +300,15 @@ export class AssetPageView {
         }
     }
 
+    public reveal(): void {
+        this._panel.reveal();
+    }
+
     public dispose(): void {
+        // Emit dispose event before cleaning up
+        this._onDisposeEmitter.fire();
+        this._onDisposeEmitter.dispose();
+        
         // Clean up our resources
         this._panel.dispose();
 

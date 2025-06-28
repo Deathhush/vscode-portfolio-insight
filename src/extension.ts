@@ -17,15 +17,12 @@ export function activate(context: vscode.ExtensionContext) {
 	const treeView = vscode.window.createTreeView('portfolioExplorer', {
 		treeDataProvider: portfolioExplorerProvider		
 	});
-		// Track the current selection
+	
+	// Track the current selection for other commands
 	let currentSelection: any = null;
 	treeView.onDidChangeSelection(e => {
 		if (e.selection && e.selection.length > 0) {
 			currentSelection = e.selection[0];
-			// Auto-open asset page when asset is clicked
-			if (currentSelection.nodeType === 'asset') {
-				vscode.commands.executeCommand('vscode-portfolio-insight.openAssetPage', currentSelection);
-			}
 		} else {
 			currentSelection = null;
 		}

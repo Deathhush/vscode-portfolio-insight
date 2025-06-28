@@ -7,6 +7,7 @@ export class AssetNode implements PortfolioExplorerNode {
     public nodeType: 'asset' = 'asset';
     public asset: Asset; // Reference to Asset instance
     public provider: PortfolioExplorerProvider; // Reference to the provider
+    private assetPageView?: AssetPageView; // Reference to the current webview for this asset
     
     constructor(asset: Asset, provider: PortfolioExplorerProvider) {
         this.asset = asset;
@@ -57,14 +58,36 @@ export class AssetNode implements PortfolioExplorerNode {
         treeItem.tooltip = `${this.asset.definitionData.name} (${this.asset.definitionData.type}${this.asset.definitionData.currency ? `, ${this.asset.definitionData.currency}` : ''})`;
         treeItem.contextValue = 'asset';
         
+        // Set command to open asset page when clicked
+        treeItem.command = {
+            command: 'vscode-portfolio-insight.openAssetPage',
+            title: 'Open Asset Page',
+            arguments: [this]
+        };
+        
         return treeItem;
     }
 
     // Command handling
     async openAssetPage(context: vscode.ExtensionContext): Promise<void> {
-        // Use Asset instance approach - create AssetPageView with AssetNode
-        new AssetPageView(context.extensionUri, this);
-        console.log(`Opened asset page for ${this.asset.name} using Asset instance`);
+        // Check if a webview already exists for this asset
+        if (this.assetPageView) {
+            // Focus the existing webview
+            this.assetPageView.reveal();
+            console.log(`Focused existing asset page for ${this.asset.name}`);
+            return;
+        }
+        
+        // Create new AssetPageView
+        this.assetPageView = new AssetPageView(context.extensionUri, this);
+        
+        // Set up disposal handler to clear the reference when webview is closed
+        this.assetPageView.onDispose(() => {
+            this.assetPageView = undefined;
+            console.log(`Cleared asset page view reference for ${this.asset.name}`);
+        });
+        
+        console.log(`Created new asset page for ${this.asset.name}`);
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
