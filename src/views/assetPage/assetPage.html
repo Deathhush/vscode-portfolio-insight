@@ -1117,15 +1117,22 @@
             }
             
             // Update activities
-            lastLoadedActivities = assetSummary.activities; // Store for later use
-            updateActivitiesList(assetSummary.activities);
+            // Sort activities by date (newest first) for display
+            const sortedActivities = [...assetSummary.activities].sort((a, b) => {
+                const dateA = new Date(a.date);
+                const dateB = new Date(b.date);
+                return dateB.getTime() - dateA.getTime(); // Newest first
+            });
+            
+            lastLoadedActivities = sortedActivities; // Store sorted activities for later use
+            updateActivitiesList(sortedActivities);
         }
         
         function updateActivitiesList(activities) {
             const activitiesList = document.getElementById('activitiesList');
             
-            // Combine saved activities with pending activities
-            const allActivities = [...activities, ...pendingActivities];
+            // Combine saved activities with pending activities, with pending activities at the top
+            const allActivities = [...pendingActivities, ...activities];
             
             if (allActivities.length === 0) {
                 activitiesList.innerHTML = `
@@ -1152,7 +1159,7 @@
             `;
             
             const activitiesHtml = allActivities.map((activity, index) => {
-                const isPending = index >= activities.length; // Activities after the saved ones are pending
+                const isPending = index < pendingActivities.length; // Pending activities are now at the beginning
                 
                 let typeDisplay = activity.type.replace('_', ' ');
                 
