@@ -1,0 +1,17 @@
+{
+  "date": "2025-06-27",
+  "assets": [
+    {
+      "name": "招行.活期",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 0,
+          "date": "2025-06-24"
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "exchangeRates": []
+}

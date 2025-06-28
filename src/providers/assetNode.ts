@@ -1,66 +1,93 @@
 import * as vscode from 'vscode';
-import { AssetDefinitionData, PortfolioExplorerNode } from './portfolioExplorerProvider';
-import { PortfolioValueCalculator } from '../services/portfolioValueCalculator';
+import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
+import { Asset } from '../data/asset';
+import { AssetPageView } from '../views/assetPage/assetPageView';
 
-export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode {
+export class AssetNode implements PortfolioExplorerNode {
     public nodeType: 'asset' = 'asset';
-    public assetData: AssetDefinitionData;
+    public asset: Asset; // Reference to Asset instance
+    public provider: PortfolioExplorerProvider; // Reference to the provider
+    private assetPageView?: AssetPageView; // Reference to the current webview for this asset
     
-    constructor(asset: AssetDefinitionData, description?: string) {
-        super(asset.name, vscode.TreeItemCollapsibleState.None);
-        this.assetData = asset;
-        // Always use package icon for all assets
-        this.iconPath = new vscode.ThemeIcon('package');
-        
-        // Set description to show asset type and current value if provided
-        this.description = description || asset.type;
-        
-        this.tooltip = `${asset.name} (${asset.type}${asset.currency ? `, ${asset.currency}` : ''})`;
-        this.contextValue = 'asset';
-    }    /**
-     * Create an AssetNode with current value information
-     */
-    public static async createWithCurrentValue(
-        asset: AssetDefinitionData
-    ): Promise<AssetNode> {
-        let description: string = asset.type;
+    constructor(asset: Asset, provider: PortfolioExplorerProvider) {
+        this.asset = asset;
+        this.provider = provider;
+    }
+
+    private async getDescription(): Promise<string> {
+        let description: string = this.asset.definitionData.type;
         
         try {
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (workspaceFolder) {
-                const calculator = new PortfolioValueCalculator(workspaceFolder);
-                const assetValues = await calculator.calculateCurrentValues([asset]);
-                
-                if (assetValues.length > 0) {
-                    const assetValue = assetValues[0];
-                    const currency = assetValue.currency || 'CNY';
-                    
-                    // Format the current value
-                    let valueDisplay = '';
-                    if (currency === 'CNY') {
-                        valueDisplay = `¥${assetValue.currentValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                    } else {
-                        // Show both original currency and CNY equivalent
-                        const originalValue = assetValue.currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        const cnyValue = assetValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-                        valueDisplay = `${currency} ${originalValue} (¥${cnyValue})`;
-                    }
-                    
-                    description = `${asset.type} • ${valueDisplay}`;
-                }
+            const assetValue = await this.asset.calculateCurrentValue();
+            const currency = assetValue.currency || 'CNY';
+            
+            // Format the current value
+            let valueDisplay = '';
+            if (currency === 'CNY') {
+                valueDisplay = `¥${assetValue.currentValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            } else {
+                // Show both original currency and CNY equivalent
+                const originalValue = assetValue.currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const cnyValue = assetValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                valueDisplay = `${currency} ${originalValue} (¥${cnyValue})`;
             }
+            
+            description = `${this.asset.definitionData.type} • ${valueDisplay}`;
         } catch (error) {
-            console.error(`Error calculating current value for asset ${asset.name}:`, error);
+            console.error(`Error calculating current value for asset ${this.asset.definitionData.name}:`, error);
             
             // Show specific error message for exchange rate issues
             if (error instanceof Error && error.message.includes('No exchange rate found')) {
-                description = `${asset.type} • Exchange rate missing`;
+                description = `${this.asset.definitionData.type} • Exchange rate missing`;
             } else {
-                description = `${asset.type} • Error calculating`;
+                description = `${this.asset.definitionData.type} • Error calculating`;
             }
         }
         
-        return new AssetNode(asset, description);
+        return description;
+    }
+
+    async getTreeItem(): Promise<vscode.TreeItem> {
+        const treeItem = new vscode.TreeItem(this.asset.definitionData.name, vscode.TreeItemCollapsibleState.None);
+        
+        // Always use package icon for all assets
+        treeItem.iconPath = new vscode.ThemeIcon('package');
+        
+        // Calculate description with current value
+        treeItem.description = await this.getDescription();
+        treeItem.tooltip = `${this.asset.definitionData.name} (${this.asset.definitionData.type}${this.asset.definitionData.currency ? `, ${this.asset.definitionData.currency}` : ''})`;
+        treeItem.contextValue = 'asset';
+        
+        // Set command to open asset page when clicked
+        treeItem.command = {
+            command: 'vscode-portfolio-insight.openAssetPage',
+            title: 'Open Asset Page',
+            arguments: [this]
+        };
+        
+        return treeItem;
+    }
+
+    // Command handling
+    async openAssetPage(context: vscode.ExtensionContext): Promise<void> {
+        // Check if a webview already exists for this asset
+        if (this.assetPageView) {
+            // Focus the existing webview
+            this.assetPageView.reveal();
+            console.log(`Focused existing asset page for ${this.asset.name}`);
+            return;
+        }
+        
+        // Create new AssetPageView
+        this.assetPageView = new AssetPageView(context.extensionUri, this);
+        
+        // Set up disposal handler to clear the reference when webview is closed
+        this.assetPageView.onDispose(() => {
+            this.assetPageView = undefined;
+            console.log(`Cleared asset page view reference for ${this.asset.name}`);
+        });
+        
+        console.log(`Created new asset page for ${this.asset.name}`);
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {

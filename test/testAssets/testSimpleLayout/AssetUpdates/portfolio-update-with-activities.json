@@ -1,0 +1,50 @@
+{
+  "date": "2025-06-27",
+  "assets": [
+    {
+      "name": "招行.活期",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 25000
+        },
+        {
+          "type": "income",
+          "amount": 5000,
+          "date": "2025-06-25",
+          "description": "Salary deposit"
+        },
+        {
+          "type": "expense",
+          "amount": 1200,
+          "date": "2025-06-26",
+          "description": "Monthly expenses"
+        }
+      ]
+    },
+    {
+      "name": "招行.沪深300ETF",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 15000
+        }
+      ]
+    }
+  ],
+  "transfers": [
+    {
+      "from": "招行.活期",
+      "to": "招行.沪深300ETF",
+      "amount": 3000,
+      "date": "2025-06-24",
+      "description": "Investment transfer"
+    }
+  ],
+  "exchangeRates": [
+    {
+      "from": "USD",
+      "rate": 7.25
+    }
+  ]
+}
