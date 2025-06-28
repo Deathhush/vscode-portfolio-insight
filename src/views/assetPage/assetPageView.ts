@@ -98,10 +98,7 @@ export class AssetPageView {
     // Data synchronization
     private async refreshData(): Promise<void> {
         try {
-            // Invalidate asset cache to force fresh data
-            this.asset.invalidateCache();
-            
-            // Send fresh data to webview
+            // Send fresh data to webview (no cache to invalidate)
             await this.sendAssetData();
             
             console.log(`Refreshed data for asset: ${this.asset.name}`);

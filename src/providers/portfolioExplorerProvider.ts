@@ -354,10 +354,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     }
 
     public invalidateAssetCache(): void {
-        // Invalidate all cached assets
-        for (const asset of this.assetCache.values()) {
-            asset.invalidateCache();
-        }
+        // Clear asset cache
         this.assetCache.clear();
         
         // Also invalidate the data store caches

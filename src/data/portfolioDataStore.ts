@@ -3,8 +3,7 @@ import * as path from 'path';
 import * as vscode from 'vscode';
 import {
     PortfolioData,
-    PortfolioUpdateData,
-    ExchangeRateData
+    PortfolioUpdateData
 } from './interfaces';
 
 export class PortfolioDataStore {
@@ -168,58 +167,5 @@ export class PortfolioDataStore {
 
     invalidateAssetUpdatesCache(): void {
         this.assetUpdatesCache = undefined;
-    }
-
-    // Exchange rate operations
-    getAllExchangeRates(updates?: PortfolioUpdateData[]): Map<string, ExchangeRateData[]> {
-        const exchangeRatesByDate = new Map<string, ExchangeRateData[]>();
-        const updatesToProcess = updates || this.assetUpdatesCache || [];
-        
-        // Process updates in chronological order to collect all rates
-        for (const update of updatesToProcess) {
-            if (update.exchangeRates) {
-                for (const rate of update.exchangeRates) {
-                    const rateWithDate: ExchangeRateData = {
-                        ...rate,
-                        date: rate.date || update.date
-                    };
-                    
-                    if (!exchangeRatesByDate.has(rate.from)) {
-                        exchangeRatesByDate.set(rate.from, []);
-                    }
-                    exchangeRatesByDate.get(rate.from)!.push(rateWithDate);
-                }
-            }
-        }
-
-        // Sort exchange rates by date for each currency
-        for (const [currency, rates] of exchangeRatesByDate.entries()) {
-            rates.sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
-        }
-
-        return exchangeRatesByDate;
-    }
-
-    findClosestExchangeRate(currency: string, targetDate: string, allRates: Map<string, ExchangeRateData[]>): number | undefined {
-        const ratesForCurrency = allRates.get(currency);
-        if (!ratesForCurrency || ratesForCurrency.length === 0) {
-            return undefined;
-        }
-
-        const targetTime = new Date(targetDate).getTime();
-        let closestRate: ExchangeRateData | undefined;
-        let minTimeDiff = Infinity;
-
-        for (const rate of ratesForCurrency) {
-            const rateTime = new Date(rate.date!).getTime();
-            const timeDiff = Math.abs(targetTime - rateTime);
-            
-            if (timeDiff < minTimeDiff) {
-                minTimeDiff = timeDiff;
-                closestRate = rate;
-            }
-        }
-
-        return closestRate?.rate;
     }
 }

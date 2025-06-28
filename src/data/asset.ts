@@ -6,16 +6,12 @@ import {
     AssetEventData,
     AssetUpdateData,
     TransferData,
-    PortfolioUpdateData
+    PortfolioUpdateData,
+    ExchangeRateData
 } from './interfaces';
 import { PortfolioDataStore } from './portfolioDataStore';
 
 export class Asset {
-    private latestSnapshot?: { event: AssetEventData; date: string };
-    private activities: AssetActivityData[] = [];
-    private currentValueCache?: AssetCurrentValueData;
-    private activitiesLoaded = false;
-    
     constructor(
         private definition: AssetDefinitionData,
         private dataStore: PortfolioDataStore
@@ -40,70 +36,44 @@ export class Asset {
     
     // Value calculations
     async calculateCurrentValue(): Promise<AssetCurrentValueData> {
-        if (this.currentValueCache) {
-            return this.currentValueCache;
-        }
-
+        // Load updates and extract current value
         const updates = await this.dataStore.loadAssetUpdates();
-        const latestSnapshot = this.mergeAssetEvents(updates);
-        const allExchangeRates = this.dataStore.getAllExchangeRates(updates);
+        return this.extractCurrentValue(updates);
+    }
+
+    private extractCurrentValue(updates: PortfolioUpdateData[]): AssetCurrentValueData {
+        // Extract activities and exchange rates from the updates
+        const activities = this.extractActivities(updates);
+        const allExchangeRates = this.extractExchangeRates(updates);
         
         const currency = this.currency;
         let currentValue = 0;
         let snapshotDate = new Date().toISOString(); // Default to today if no snapshot
+        let lastUpdateDate: string | undefined;
         
-        if (latestSnapshot) {
-            currentValue = this.calculateAssetValue(latestSnapshot.event);
-            snapshotDate = latestSnapshot.date;
-            this.latestSnapshot = latestSnapshot;
+        // Find the latest snapshot activity (activities are already sorted with most recent first)
+        const latestSnapshotActivity = activities.find(activity => activity.type === 'snapshot');
+        
+        if (latestSnapshotActivity) {
+            currentValue = latestSnapshotActivity.amount;
+            snapshotDate = latestSnapshotActivity.date;
+            lastUpdateDate = latestSnapshotActivity.date;
         }
 
         try {
             const valueInCNY = this.convertToCNY(currentValue, currency, snapshotDate, allExchangeRates);
 
-            this.currentValueCache = {
+            return {
                 name: this.name,
                 currentValue,
                 currency,
                 valueInCNY,
-                lastUpdateDate: latestSnapshot?.date
+                lastUpdateDate
             };
-
-            return this.currentValueCache;
         } catch (error) {
             // Re-throw with more context about which asset failed
             throw new Error(`Failed to calculate value for asset "${this.name}": ${error}`);
         }
-    }
-
-    private mergeAssetEvents(updates: PortfolioUpdateData[]): { event: AssetEventData; date: string } | undefined {
-        let latestSnapshot: { event: AssetEventData; date: string } | undefined;
-        let latestSnapshotTime = 0;
-
-        // Process all updates to collect all snapshot events
-        for (const update of updates) {
-            for (const assetUpdate of update.assets) {
-                if (assetUpdate.name === this.name) {
-                    const assetDate = assetUpdate.date || update.date;
-                    
-                    // Find all snapshot events for this asset and compare dates
-                    for (const event of assetUpdate.events) {
-                        if (event.type === 'snapshot') {
-                            const eventDate = event.date || assetDate;
-                            const eventTime = new Date(eventDate).getTime();
-                            
-                            // Only update if this snapshot is chronologically later
-                            if (!latestSnapshot || eventTime > latestSnapshotTime) {
-                                latestSnapshot = { event, date: eventDate };
-                                latestSnapshotTime = eventTime;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return latestSnapshot;
     }
 
     private calculateAssetValue(event: AssetEventData): number {
@@ -119,30 +89,69 @@ export class Asset {
         return 0;
     }
 
-    private convertToCNY(value: number, currency: string, targetDate: string, allExchangeRates: Map<string, any[]>): number {
+    private convertToCNY(value: number, currency: string, targetDate: string, allExchangeRates: Map<string, ExchangeRateData[]>): number {
         if (currency === 'CNY' || !currency) {
             return value;
         }
 
-        const rate = this.dataStore.findClosestExchangeRate(currency, targetDate, allExchangeRates);
+        const rate = this.findClosestExchangeRate(currency, targetDate, allExchangeRates);
         if (rate === undefined) {
             throw new Error(`No exchange rate found for currency ${currency} near date ${targetDate}. Please provide exchange rates for all foreign currencies in your asset update files.`);
         }
 
         return value * rate;
     }
-    
-    // Activity management
-    async loadActivities(): Promise<AssetActivityData[]> {
-        if (this.activitiesLoaded) {
-            return this.activities;
+
+    // Exchange rate operations (moved from PortfolioDataStore)
+    private extractExchangeRates(updates: PortfolioUpdateData[]): Map<string, ExchangeRateData[]> {
+        const exchangeRatesByDate = new Map<string, ExchangeRateData[]>();
+        
+        // Process updates in chronological order to collect all rates
+        for (const update of updates) {
+            if (update.exchangeRates) {
+                for (const rate of update.exchangeRates) {
+                    const rateWithDate: ExchangeRateData = {
+                        ...rate,
+                        date: rate.date || update.date
+                    };
+                    
+                    if (!exchangeRatesByDate.has(rate.from)) {
+                        exchangeRatesByDate.set(rate.from, []);
+                    }
+                    exchangeRatesByDate.get(rate.from)!.push(rateWithDate);
+                }
+            }
         }
 
-        const updates = await this.dataStore.loadAssetUpdates();
-        this.activities = this.extractActivities(updates);
-        this.activitiesLoaded = true;
-        
-        return this.activities;
+        // Sort exchange rates by date for each currency
+        for (const [currency, rates] of exchangeRatesByDate.entries()) {
+            rates.sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+        }
+
+        return exchangeRatesByDate;
+    }
+
+    private findClosestExchangeRate(currency: string, targetDate: string, allRates: Map<string, ExchangeRateData[]>): number | undefined {
+        const ratesForCurrency = allRates.get(currency);
+        if (!ratesForCurrency || ratesForCurrency.length === 0) {
+            return undefined;
+        }
+
+        const targetTime = new Date(targetDate).getTime();
+        let closestRate: ExchangeRateData | undefined;
+        let minTimeDiff = Infinity;
+
+        for (const rate of ratesForCurrency) {
+            const rateTime = new Date(rate.date!).getTime();
+            const timeDiff = Math.abs(targetTime - rateTime);
+            
+            if (timeDiff < minTimeDiff) {
+                minTimeDiff = timeDiff;
+                closestRate = rate;
+            }
+        }
+
+        return closestRate?.rate;
     }
 
     private extractActivities(updates: PortfolioUpdateData[]): AssetActivityData[] {
@@ -260,16 +269,12 @@ export class Asset {
         return activities;
     }
 
-    getLastMonthIncome(): number {
-        if (!this.activitiesLoaded) {
-            return 0;
-        }
-
+    extractLastMonthIncome(activities: AssetActivityData[]): number {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
         // Calculate income from both direct income events and transfer-in activities
-        return this.activities
+        return activities
             .filter(activity => {
                 const activityDate = new Date(activity.date);
                 const isRecentActivity = activityDate >= oneMonthAgo;
@@ -282,8 +287,11 @@ export class Asset {
     
     // Summary generation
     async generateSummary(): Promise<AssetSummaryData> {
-        const currentValue = await this.calculateCurrentValue();
-        const activities = await this.loadActivities();
+        // Load updates once and extract all needed data
+        const updates = await this.dataStore.loadAssetUpdates();
+        
+        const currentValue = this.extractCurrentValue(updates);
+        const activities = this.extractActivities(updates);
         
         const summary: AssetSummaryData = {
             definition: this.definitionData,
@@ -293,96 +301,9 @@ export class Asset {
 
         // Add last month income for simple assets
         if (this.type === 'simple') {
-            summary.lastMonthIncome = this.getLastMonthIncome();
+            summary.lastMonthIncome = this.extractLastMonthIncome(activities);
         }
 
         return summary;
-    }
-    
-    // Cache management
-    invalidateCache(): void {
-        this.currentValueCache = undefined;
-        this.activities = [];
-        this.activitiesLoaded = false;
-        this.latestSnapshot = undefined;
-    }
-
-    // Activity statistics and helpers
-    getActivityStatistics(): {
-        totalIncome: number;
-        totalExpenses: number;
-        totalTransferIn: number;
-        totalTransferOut: number;
-        totalSnapshots: number;
-        netFlow: number;
-        activityCount: number;
-    } {
-        if (!this.activitiesLoaded) {
-            return {
-                totalIncome: 0,
-                totalExpenses: 0,
-                totalTransferIn: 0,
-                totalTransferOut: 0,
-                totalSnapshots: 0,
-                netFlow: 0,
-                activityCount: 0
-            };
-        }
-
-        const stats = {
-            totalIncome: 0,
-            totalExpenses: 0,
-            totalTransferIn: 0,
-            totalTransferOut: 0,
-            totalSnapshots: 0,
-            netFlow: 0,
-            activityCount: this.activities.length
-        };
-
-        for (const activity of this.activities) {
-            switch (activity.type) {
-                case 'income':
-                    stats.totalIncome += activity.amount;
-                    stats.netFlow += activity.amount;
-                    break;
-                case 'expense':
-                    stats.totalExpenses += activity.amount;
-                    stats.netFlow -= activity.amount;
-                    break;
-                case 'transfer_in':
-                    stats.totalTransferIn += activity.amount;
-                    stats.netFlow += activity.amount;
-                    break;
-                case 'transfer_out':
-                    stats.totalTransferOut += activity.amount;
-                    stats.netFlow -= activity.amount;
-                    break;
-                case 'snapshot':
-                    stats.totalSnapshots += 1;
-                    // Snapshots don't affect net flow as they represent value states, not cash flows
-                    break;
-            }
-        }
-
-        return stats;
-    }
-
-    getActivitiesByDateRange(startDate: Date, endDate: Date): AssetActivityData[] {
-        if (!this.activitiesLoaded) {
-            return [];
-        }
-
-        return this.activities.filter(activity => {
-            const activityDate = new Date(activity.date);
-            return activityDate >= startDate && activityDate <= endDate;
-        });
-    }
-
-    getActivitiesByType(type: AssetActivityData['type']): AssetActivityData[] {
-        if (!this.activitiesLoaded) {
-            return [];
-        }
-
-        return this.activities.filter(activity => activity.type === type);
     }
 }
