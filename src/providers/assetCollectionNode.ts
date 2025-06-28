@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { PortfolioData, PortfolioExplorerNode, AssetDefinitionData } from './portfolioExplorerProvider';
+import { PortfolioData, PortfolioExplorerNode, AssetDefinitionData, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { AssetNode } from './assetNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { Asset } from '../data/asset';
@@ -9,10 +9,7 @@ export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExp
     public nodeType: 'assets' = 'assets';
     
     constructor(
-        private provider: { 
-            getPortfolioData(): Promise<PortfolioData | undefined>;
-            createAsset(definition: AssetDefinitionData): Promise<Asset>;
-        },
+        private provider: PortfolioExplorerProvider,
         description?: string
     ) {
         super('Assets', vscode.TreeItemCollapsibleState.Expanded);
@@ -23,10 +20,7 @@ export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExp
       /**
      * Create an AssetCollectionNode with portfolio total value
      */    public static async createWithTotalValue(
-        provider: { 
-            getPortfolioData(): Promise<PortfolioData | undefined>;
-            createAsset(definition: AssetDefinitionData): Promise<Asset>;
-        }
+        provider: PortfolioExplorerProvider
     ): Promise<AssetCollectionNode> {
         let description = '';
         
@@ -86,12 +80,12 @@ export class AssetCollectionNode extends vscode.TreeItem implements PortfolioExp
         for (const assetDefinition of portfolioData.assets) {
             try {
                 const asset = await this.provider.createAsset(assetDefinition);
-                const assetNode = await AssetNode.createWithCurrentValue(asset);
+                const assetNode = await AssetNode.createWithCurrentValue(asset, this.provider);
                 assetNodes.push(assetNode);
             } catch (error) {
                 console.error(`Error creating asset node for ${assetDefinition.name}:`, error);
                 // Fallback to legacy approach
-                const assetNode = await AssetNode.createWithCurrentValueLegacy(assetDefinition);
+                const assetNode = await AssetNode.createWithCurrentValueLegacy(assetDefinition, this.provider);
                 assetNodes.push(assetNode);
             }
         }

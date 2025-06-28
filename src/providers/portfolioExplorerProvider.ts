@@ -29,7 +29,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     private _portfolioUpdateView?: PortfolioUpdateView;
     private _assetDefinitionEditorView?: AssetDefinitionEditorView;
     private _portfolioData: PortfolioData | undefined = undefined;
-    private dataStore: PortfolioDataStore;
+    public dataStore: PortfolioDataStore;
     private assetCache: Map<string, Asset> = new Map();
 
     constructor(private context: vscode.ExtensionContext) {
@@ -365,28 +365,5 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         this.dataStore.invalidateAssetUpdatesCache();
     }
 
-    // Asset page handling
-    public async openAssetPage(assetName: string): Promise<void> {
-        try {
-            const portfolioData = await this.getPortfolioData();
-            if (!portfolioData) {
-                vscode.window.showErrorMessage('No portfolio data available. Please create assets first.');
-                return;
-            }
 
-            const assetDefinition = portfolioData.assets.find(a => a.name === assetName);
-            if (!assetDefinition) {
-                vscode.window.showErrorMessage(`Asset "${assetName}" not found in portfolio.`);
-                return;
-            }
-
-            const asset = await this.createAsset(assetDefinition);            // Create AssetPageView
-            new AssetPageView(this.context.extensionUri, asset);
-            
-            console.log(`Opened asset page for: ${assetName}`);
-        } catch (error) {
-            console.error('Error opening asset page:', error);
-            vscode.window.showErrorMessage(`Failed to open asset page: ${error}`);
-        }
-    }
 }

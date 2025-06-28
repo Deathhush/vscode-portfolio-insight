@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { AssetDefinitionData, PortfolioExplorerNode } from './portfolioExplorerProvider';
+import { AssetDefinitionData, PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { Asset } from '../data/asset';
 import { AssetPageView } from '../views/assetPage/assetPageView';
 
@@ -7,10 +7,11 @@ export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode 
     public nodeType: 'asset' = 'asset';
     public assetData: AssetDefinitionData;
     public asset?: Asset; // Reference to Asset instance
+    public provider?: PortfolioExplorerProvider; // Reference to the provider
     
-    constructor(asset: Asset, description?: string);
-    constructor(assetData: AssetDefinitionData, description?: string);
-    constructor(assetOrData: Asset | AssetDefinitionData, description?: string) {
+    constructor(asset: Asset, description?: string, provider?: PortfolioExplorerProvider);
+    constructor(assetData: AssetDefinitionData, description?: string, provider?: PortfolioExplorerProvider);
+    constructor(assetOrData: Asset | AssetDefinitionData, description?: string, provider?: PortfolioExplorerProvider) {
         let name: string;
         let assetData: AssetDefinitionData;
         
@@ -25,6 +26,7 @@ export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode 
         super(name, vscode.TreeItemCollapsibleState.None);
         
         this.assetData = assetData;
+        this.provider = provider;
         if (assetOrData instanceof Asset) {
             this.asset = assetOrData;
         }
@@ -41,7 +43,8 @@ export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode 
      * Create an AssetNode with current value information using Asset instance
      */
     public static async createWithCurrentValue(
-        asset: Asset
+        asset: Asset,
+        provider?: PortfolioExplorerProvider
     ): Promise<AssetNode> {
         let description: string = asset.type;
         
@@ -72,7 +75,7 @@ export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode 
             }
         }
         
-        return new AssetNode(asset, description);
+        return new AssetNode(asset, description, provider);
     }
 
     /**
@@ -80,7 +83,8 @@ export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode 
      * @deprecated Use createWithCurrentValue(asset: Asset) instead
      */
     public static async createWithCurrentValueLegacy(
-        assetData: AssetDefinitionData
+        assetData: AssetDefinitionData,
+        provider?: PortfolioExplorerProvider
     ): Promise<AssetNode> {
         let description: string = assetData.type;
         
@@ -97,12 +101,12 @@ export class AssetNode extends vscode.TreeItem implements PortfolioExplorerNode 
             description = `${assetData.type} • Error calculating`;
         }
         
-        return new AssetNode(assetData, description);
+        return new AssetNode(assetData, description, provider);
     }    // Command handling
     async openAssetPage(context: vscode.ExtensionContext): Promise<void> {
-        if (this.asset) {
-            // Use Asset instance approach - create AssetPageView directly
-            new AssetPageView(context.extensionUri, this.asset);
+        if (this.asset && this.provider) {
+            // Use Asset instance approach - create AssetPageView with AssetNode
+            new AssetPageView(context.extensionUri, this);
             console.log(`Opened asset page for ${this.asset.name} using Asset instance`);
         } else {
             // Fallback: find the provider and use its openAssetPage method

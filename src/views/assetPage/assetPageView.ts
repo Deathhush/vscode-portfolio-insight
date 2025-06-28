@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { Asset } from '../../data/asset';
 import { AssetActivityData } from '../../data/interfaces';
+import { AssetNode } from '../../providers/assetNode';
 
 export class AssetPageView {
     private readonly _panel: vscode.WebviewPanel;
@@ -11,7 +12,7 @@ export class AssetPageView {
     
     constructor(
         extensionUri: vscode.Uri,
-        private asset: Asset
+        private assetNode: AssetNode
     ) {
         this._extensionUri = extensionUri;
         
@@ -22,7 +23,7 @@ export class AssetPageView {
         // Create a new panel
         this._panel = vscode.window.createWebviewPanel(
             'assetPageView',
-            `Asset: ${this.asset.name}`,
+            `Asset: ${this.assetNode.asset?.name || this.assetNode.assetData.name}`,
             column || vscode.ViewColumn.One,
             {
                 // Enable javascript in the webview
@@ -75,6 +76,25 @@ export class AssetPageView {
         this.sendAssetData();
     }
 
+    // Convenience getters for type-safe access
+    private get asset(): Asset {
+        if (!this.assetNode.asset) {
+            throw new Error('Asset instance not available on AssetNode');
+        }
+        return this.assetNode.asset;
+    }
+
+    private get provider() {
+        if (!this.assetNode.provider) {
+            throw new Error('Provider not available on AssetNode');
+        }
+        return this.assetNode.provider;
+    }
+
+    private get dataStore() {
+        return this.provider.dataStore;
+    }
+
     // Data synchronization
     private async refreshData(): Promise<void> {
         try {
@@ -121,17 +141,14 @@ export class AssetPageView {
     // Additional message handlers
     private async onGetAllAssets(): Promise<void> {
         try {
-            // Get the portfolio explorer provider from the extension context
-            const portfolioExplorer = vscode.extensions.getExtension('your-extension-id')?.exports?.portfolioExplorer;
-            if (portfolioExplorer) {
-                const portfolioData = await portfolioExplorer.getPortfolioData();
-                if (portfolioData && portfolioData.assets) {
-                    this._panel.webview.postMessage({
-                        type: 'ALL_ASSETS',
-                        data: portfolioData.assets
-                    });
-                    return;
-                }
+            // Use type-safe access to the provider
+            const portfolioData = await this.provider.getPortfolioData();
+            if (portfolioData && portfolioData.assets) {
+                this._panel.webview.postMessage({
+                    type: 'ALL_ASSETS',
+                    data: portfolioData.assets
+                });
+                return;
             }
             
             // Fallback: get assets from the data store directly
@@ -151,13 +168,9 @@ export class AssetPageView {
 
     private async getAllAssetsFromDataStore(): Promise<any[]> {
         try {
-            // Access the data store from the asset
-            const dataStore = (this.asset as any).dataStore;
-            if (dataStore) {
-                const portfolioData = await dataStore.loadPortfolioData();
-                return portfolioData?.assets || [];
-            }
-            return [];
+            // Use type-safe access to the data store
+            const portfolioData = await this.dataStore.loadPortfolioData();
+            return portfolioData?.assets || [];
         } catch (error) {
             console.error('Error accessing data store:', error);
             return [];
@@ -202,10 +215,8 @@ export class AssetPageView {
         try {
             console.log(`Starting saveActivitiesToPortfolioUpdate with ${activities.length} activities:`, activities);
             
-            const dataStore = (this.asset as any).dataStore;
-            if (!dataStore) {
-                throw new Error('Data store not available');
-            }
+            // Use type-safe access to the data store
+            const dataStore = this.dataStore;
 
             // Create a single portfolio update with current date that contains all activities
             const currentDate = new Date().toISOString().split('T')[0];
@@ -310,7 +321,7 @@ export class AssetPageView {
 
     private _update(): void {
         const webview = this._panel.webview;
-        this._panel.title = `Asset: ${this.asset.name}`;
+        this._panel.title = `Asset: ${this.assetNode.asset?.name || this.assetNode.assetData.name}`;
         this._panel.webview.html = this._getHtmlForWebview(webview);
     }
 
