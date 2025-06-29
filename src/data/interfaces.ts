@@ -71,3 +71,31 @@ export interface AssetSummaryData {
     lastMonthIncome?: number; // For simple assets
     activities: AssetActivityData[];
 }
+
+// Category-related interfaces
+export interface CategoryData {
+    name: string;
+    tags: string[];
+}
+
+export interface CategoryTypeData {
+    name: string;
+    categories: CategoryData[];
+}
+
+export interface CategoryDefinitionData {
+    categoryTypes: CategoryTypeData[];
+}
+
+// In-memory business logic interfaces for categories
+export interface CategorySummaryData {
+    definition: CategoryData;
+    assets: AssetSummaryData[];
+    totalValue: AssetCurrentValueData;
+}
+
+export interface CategoryTypeSummaryData {
+    definition: CategoryTypeData;
+    categories: CategorySummaryData[];
+    totalValue: AssetCurrentValueData;
+}

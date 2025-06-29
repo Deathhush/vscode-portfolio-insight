@@ -136,19 +136,9 @@ export class AssetPageView {
         try {
             // Use type-safe access to the provider
             const portfolioData = await this.provider.getPortfolioData();
-            if (portfolioData && portfolioData.assets) {
-                this._panel.webview.postMessage({
-                    type: 'ALL_ASSETS',
-                    data: portfolioData.assets
-                });
-                return;
-            }
-            
-            // Fallback: get assets from the data store directly
-            const allAssets = await this.getAllAssetsFromDataStore();
             this._panel.webview.postMessage({
                 type: 'ALL_ASSETS',
-                data: allAssets
+                data: portfolioData.assets
             });
         } catch (error) {
             console.error('Error getting all assets:', error);
@@ -163,7 +153,7 @@ export class AssetPageView {
         try {
             // Use type-safe access to the data access
             const portfolioData = await this.dataAccess.getPortfolioData();
-            return portfolioData?.assets || [];
+            return portfolioData.assets;
         } catch (error) {
             console.error('Error accessing data store:', error);
             return [];

@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 import { PortfolioDataStore } from './portfolioDataStore';
 import { Asset } from './asset';
-import { AssetDefinitionData, PortfolioData, PortfolioUpdateData } from './interfaces';
+import { Category, CategoryType } from './category';
+import { AssetDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData } from './interfaces';
 
 /**
  * PortfolioDataAccess serves as a bridge between the on-disk store (PortfolioDataStore) 
@@ -13,14 +14,13 @@ export class PortfolioDataAccess {
     private tagsCache: string[] | undefined;
     private portfolioDataCache: PortfolioData | undefined;
     private assetUpdatesCache: PortfolioUpdateData[] | undefined;
+    private categoryDefinitionCache: CategoryDefinitionData | undefined;
     private _onDataUpdatedEmitter = new vscode.EventEmitter<void>();
     
     // Event that fires when portfolio data is updated
     public readonly onDataUpdated: vscode.Event<void> = this._onDataUpdatedEmitter.event;
 
     constructor(private dataStore: PortfolioDataStore) {
-        // Listen to portfolio data changes to invalidate caches
-        // Note: PortfolioDataStore doesn't have events yet, so we'll invalidate manually for now
     }
 
     // Asset management
@@ -57,8 +57,8 @@ export class PortfolioDataAccess {
 
     private async loadAllTagsFromData(): Promise<string[]> {
         try {
-            const portfolioData = await this.dataStore.loadPortfolioData();
-            if (!portfolioData?.assets) {
+            const portfolioData = await this.getPortfolioData();
+            if (portfolioData.assets.length === 0) {
                 return [];
             }
 
@@ -88,7 +88,7 @@ export class PortfolioDataAccess {
     }
 
     // Portfolio data operations
-    public async getPortfolioData(): Promise<PortfolioData | undefined> {
+    public async getPortfolioData(): Promise<PortfolioData> {
         // Return cached data if available
         if (this.portfolioDataCache !== undefined) {
             console.log('Returning cached portfolio data');
@@ -97,6 +97,10 @@ export class PortfolioDataAccess {
 
         console.log('Loading portfolio data via data store');
         this.portfolioDataCache = await this.dataStore.loadPortfolioData();
+        if (!this.portfolioDataCache) {
+            console.warn('No portfolio data found, returning empty portfolio');
+            this.portfolioDataCache = { assets: [] };
+        }
         return this.portfolioDataCache;
     }
 
@@ -144,12 +148,37 @@ export class PortfolioDataAccess {
         this.assetUpdatesCache = undefined;
     }
 
+    // Category operations
+    public async getCategoryDefinitions(): Promise<CategoryDefinitionData | undefined> {
+        // Return cached data if available
+        if (this.categoryDefinitionCache !== undefined) {
+            return this.categoryDefinitionCache;
+        }
+
+        console.log('Loading category definitions via data store');
+        this.categoryDefinitionCache = await this.dataStore.loadCategoryDefinitions();
+        return this.categoryDefinitionCache;
+    }
+
+    public async createCategory(definition: CategoryData): Promise<Category> {
+        return new Category(definition, this);
+    }
+
+    public async createCategoryType(definition: CategoryTypeData): Promise<CategoryType> {
+        return new CategoryType(definition, this);
+    }
+
+    public invalidateCategoryCache(): void {
+        this.categoryDefinitionCache = undefined;
+    }
+
     // Cache management
     public invalidateAllCaches(): void {
         this.invalidateAssetCache();
         this.invalidateTagsCache();
         this.invalidatePortfolioCache();
         this.invalidateAssetUpdatesCache();
+        this.invalidateCategoryCache();
     }
 
     public invalidatePortfolioCache(): void {

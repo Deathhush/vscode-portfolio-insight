@@ -3,22 +3,31 @@
     {
       "name": "招行.活期",
       "type": "simple",
-      "currency": "CNY"
+      "currency": "CNY",
+      "tags": ["活期"]
     },
     {
       "name": "招行.沪深300ETF",
       "type": "investment",
-      "currency": "CNY"
+      "currency": "CNY",
+      "tags": ["指数基金"]
     },
     {
       "name": "国金",
       "type": "composite",
-      "currency": "CNY"
+      "currency": "CNY",
+      "tags": ["股票"]
     },
     {
       "name": "StockAward",
       "type": "stock",
-      "currency": "USD"
+      "currency": "USD",
+      "tags": ["股票", "美股"]
+    },
+    {
+      "name": "富国信用债",
+      "type": "investment",      
+      "tags": ["信用债基金"]
     }
   ]
 }

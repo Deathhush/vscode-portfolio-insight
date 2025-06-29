@@ -10,6 +10,16 @@
           "date": "2025-06-24"
         }
       ]
+    },
+    {
+      "name": "富国信用债",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 50000,
+          "date": "2025-06-24"
+        }
+      ]
     }
   ],
   "transfers": [],
