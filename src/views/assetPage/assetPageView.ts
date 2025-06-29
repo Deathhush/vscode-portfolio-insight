@@ -87,8 +87,8 @@ export class AssetPageView {
         return this.assetNode.provider;
     }
 
-    private get dataStore() {
-        return this.provider.dataStore;
+    private get dataAccess() {
+        return this.provider.dataAccess;
     }
 
     // Data synchronization
@@ -161,8 +161,8 @@ export class AssetPageView {
 
     private async getAllAssetsFromDataStore(): Promise<any[]> {
         try {
-            // Use type-safe access to the data store
-            const portfolioData = await this.dataStore.loadPortfolioData();
+            // Use type-safe access to the data access
+            const portfolioData = await this.dataAccess.getPortfolioData();
             return portfolioData?.assets || [];
         } catch (error) {
             console.error('Error accessing data store:', error);
@@ -208,8 +208,8 @@ export class AssetPageView {
         try {
             console.log(`Starting saveActivitiesToPortfolioUpdate with ${activities.length} activities:`, activities);
             
-            // Use type-safe access to the data store
-            const dataStore = this.dataStore;
+            // Use type-safe access to the data access
+            const dataAccess = this.dataAccess;
 
             // Create a single portfolio update with current date that contains all activities
             const currentDate = new Date().toISOString().split('T')[0];
@@ -287,7 +287,7 @@ export class AssetPageView {
             }
 
             // Save the single portfolio update file
-            const filename = await dataStore.saveAssetUpdate(portfolioUpdate);
+            const filename = await dataAccess.saveAssetUpdate(portfolioUpdate);
             console.log(`Saved portfolio update to ${filename} with ${activities.length} activities:`, portfolioUpdate);
             
             // Show success message

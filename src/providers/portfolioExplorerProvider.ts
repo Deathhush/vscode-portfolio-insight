@@ -6,18 +6,10 @@ import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitio
 import { AssetCollectionNode } from './assetCollectionNode';
 import { AssetNode } from './assetNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
+import { PortfolioDataAccess } from '../data/portfolioDataAccess';
 import { Asset } from '../data/asset';
 import { AssetPageView } from '../views/assetPage/assetPageView';
-
-export interface AssetDefinitionData {
-    name: string;
-    type: 'simple' | 'investment' | 'composite' | 'stock';
-    currency?: string;  // Make currency optional. When not provided, default to CNY
-}
-
-export interface PortfolioData {
-    assets: AssetDefinitionData[];
-}
+import { AssetDefinitionData, PortfolioData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
     nodeType: 'assets' | 'asset';
@@ -30,8 +22,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     private _portfolioUpdateView?: PortfolioUpdateView;
     private _assetDefinitionEditorView?: AssetDefinitionEditorView;
     private _portfolioData: PortfolioData | undefined = undefined;
-    public dataStore: PortfolioDataStore;
-    private assetCache: Map<string, Asset> = new Map();
+    public dataAccess: PortfolioDataAccess;
+    public dataStore: PortfolioDataStore; // Keep for backward compatibility
 
     constructor(private context: vscode.ExtensionContext) {
         // Initialize data store with the first workspace folder
@@ -40,12 +32,18 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             throw new Error('No workspace folder available');
         }
         this.dataStore = new PortfolioDataStore(workspaceFolder);
+        this.dataAccess = new PortfolioDataAccess(this.dataStore);
+        
+        // Listen to data updates to refresh the view
+        this.dataAccess.onDataUpdated(() => {
+            this.refresh();
+        });
     }    
     
     refresh(): void {
         // Clear cached data to force reload on next access
         this.invalidatePortfolioCache();
-        this.invalidateAssetCache();
+        this.dataAccess.invalidateAllCaches();
         // Fire the tree data change event to refresh the view
         this._onDidChangeTreeData.fire();
         console.log('Portfolio Explorer tree view refreshed');
@@ -176,9 +174,9 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             return this._portfolioData;
         }
 
-        console.log('Loading portfolio data via data store');
-        // Load data using the data store and cache it
-        this._portfolioData = await this.dataStore.loadPortfolioData();
+        console.log('Loading portfolio data via data access');
+        // Load data using the data access and cache it
+        this._portfolioData = await this.dataAccess.getPortfolioData();
         return this._portfolioData;
     }
     
@@ -232,7 +230,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     */
     public invalidatePortfolioCache(): void {
         this._portfolioData = undefined;
-        this.dataStore.invalidatePortfolioCache();
+        this.dataAccess.invalidateAllCaches();
     }
     public async openAssetDefinitionEditor(): Promise<void> {
         try {
@@ -252,7 +250,10 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             }
 
             // Create new view and hook to the event
-            this._assetDefinitionEditorView = new AssetDefinitionEditorView(this.context.extensionUri);
+            this._assetDefinitionEditorView = new AssetDefinitionEditorView(
+                this.context.extensionUri,
+                () => this.getAllTags()
+            );
             
             // Subscribe to asset definition submit events
             this._assetDefinitionEditorView.onAssetDefinitionSubmit((data: any) => {
@@ -339,28 +340,18 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             vscode.window.showErrorMessage(`Failed to save asset definitions: ${error}`);
         }
     }    // Asset management
+    // Asset management - delegate to PortfolioDataAccess
     public async createAsset(definition: AssetDefinitionData): Promise<Asset> {
-        const cachedAsset = this.getCachedAsset(definition.name);
-        if (cachedAsset) {
-            return cachedAsset;
-        }
-
-        const asset = new Asset(definition, this.dataStore);
-        this.assetCache.set(definition.name, asset);
-        return asset;
-    }
-
-    private getCachedAsset(name: string): Asset | undefined {
-        return this.assetCache.get(name);
+        return await this.dataAccess.createAsset(definition);
     }
 
     public invalidateAssetCache(): void {
-        // Clear asset cache
-        this.assetCache.clear();
-        
-        // Also invalidate the data store caches
-        this.dataStore.invalidatePortfolioCache();
-        this.dataStore.invalidateAssetUpdatesCache();
+        this.dataAccess.invalidateAllCaches();
+    }
+
+    // Tags management - new functionality
+    public async getAllTags(): Promise<string[]> {
+        return await this.dataAccess.getAllTags();
     }
 
 

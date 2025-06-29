@@ -7,12 +7,14 @@ export class AssetDefinitionEditorView {
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
     private _onAssetDefinitionSubmitEmitter = new vscode.EventEmitter<any>();
+    private _getAllTagsCallback?: () => Promise<string[]>;
     
     // Event that fires when asset definition is received
     public readonly onAssetDefinitionSubmit: vscode.Event<any> = this._onAssetDefinitionSubmitEmitter.event;
 
-    public constructor(extensionUri: vscode.Uri) {
+    public constructor(extensionUri: vscode.Uri, getAllTagsCallback?: () => Promise<string[]>) {
         this._extensionUri = extensionUri;
+        this._getAllTagsCallback = getAllTagsCallback;
         
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
@@ -46,6 +48,9 @@ export class AssetDefinitionEditorView {
                     case 'ASSET_DEFINITION_SUBMIT':
                         this._handleAssetDefinitionSubmit(message.data);
                         return;
+                    case 'GET_ALL_TAGS':
+                        this._handleGetAllTags();
+                        return;
                     case 'error':
                         vscode.window.showErrorMessage(message.message);
                         return;
@@ -64,6 +69,22 @@ export class AssetDefinitionEditorView {
     private _handleAssetDefinitionSubmit(data: any) {
         // Fire the event to notify listeners
         this._onAssetDefinitionSubmitEmitter.fire(data);
+    }
+
+    private async _handleGetAllTags() {
+        try {
+            const tags = this._getAllTagsCallback ? await this._getAllTagsCallback() : [];
+            this._panel.webview.postMessage({
+                type: 'ALL_TAGS',
+                data: tags
+            });
+        } catch (error) {
+            console.error('Error getting all tags:', error);
+            this._panel.webview.postMessage({
+                type: 'ALL_TAGS',
+                data: []
+            });
+        }
     }    
     
     public dispose() {

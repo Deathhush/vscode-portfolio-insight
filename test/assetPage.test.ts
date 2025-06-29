@@ -2,12 +2,14 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { PortfolioDataStore } from '../src/data/portfolioDataStore';
+import { PortfolioDataAccess } from '../src/data/portfolioDataAccess';
 import { Asset } from '../src/data/asset';
 import { AssetDefinitionData } from '../src/data/interfaces';
 
 suite('AssetPage Integration Tests', () => {
     let mockWorkspaceFolder: vscode.WorkspaceFolder;
     let dataStore: PortfolioDataStore;
+    let dataAccess: PortfolioDataAccess;
 
     setup(() => {
         // Create a mock workspace folder pointing to test assets
@@ -19,6 +21,7 @@ suite('AssetPage Integration Tests', () => {
         };
         
         dataStore = new PortfolioDataStore(mockWorkspaceFolder);
+        dataAccess = new PortfolioDataAccess(dataStore);
     });
 
     test('Should create Asset instance and calculate value', async () => {
@@ -27,7 +30,7 @@ suite('AssetPage Integration Tests', () => {
             type: 'simple'
         };
 
-        const asset = new Asset(assetDefinition, dataStore);
+        const asset = new Asset(assetDefinition, dataAccess);
         
         // Test basic properties
         assert.strictEqual(asset.name, '招行.活期');
@@ -52,7 +55,7 @@ suite('AssetPage Integration Tests', () => {
             type: 'simple'
         };
 
-        const asset = new Asset(assetDefinition, dataStore);
+        const asset = new Asset(assetDefinition, dataAccess);
         
         try {
             const summary = await asset.generateSummary();
@@ -70,7 +73,7 @@ suite('AssetPage Integration Tests', () => {
 
     test('Should load portfolio data', async () => {
         try {
-            const portfolioData = await dataStore.loadPortfolioData();
+            const portfolioData = await dataAccess.getPortfolioData();
             if (portfolioData) {
                 assert.ok(portfolioData.assets);
                 assert.ok(Array.isArray(portfolioData.assets));
