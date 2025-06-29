@@ -3,6 +3,7 @@ export interface AssetDefinitionData {
     name: string;
     type: 'simple' | 'investment' | 'composite' | 'stock';
     currency?: string;
+    tags?: string[];
 }
 
 export interface PortfolioData {

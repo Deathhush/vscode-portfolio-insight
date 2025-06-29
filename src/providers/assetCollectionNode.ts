@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { PortfolioData, PortfolioExplorerNode, AssetDefinitionData, PortfolioExplorerProvider } from './portfolioExplorerProvider';
+import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
+import { PortfolioData, AssetDefinitionData } from '../data/interfaces';
 import { AssetNode } from './assetNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { Asset } from '../data/asset';

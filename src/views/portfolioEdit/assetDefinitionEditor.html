@@ -302,6 +302,153 @@
             width: 120px;
         }
 
+        /* Tags row styling */
+        .tags-row {
+            background: var(--bg-secondary);
+            border-left: 3px solid var(--text-accent);
+        }
+
+        .tags-row td {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .tags-content {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .tag-input-first {
+            padding: 4px 8px;
+            border: 1px solid var(--input-border);
+            background: var(--input-bg);
+            color: var(--text-primary);
+            border-radius: 4px;
+            font-size: 0.9em;
+            min-width: 120px;
+            flex-shrink: 0;
+        }
+
+        .tag-input-first:focus {
+            outline: none;
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.3);
+        }
+
+        .tag-input-container {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .tag-add-btn {
+            padding: 4px 8px;
+            background: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.85em;
+            flex-shrink: 0;
+        }
+
+        .tag-add-btn:hover {
+            background: var(--button-hover-bg);
+        }
+
+        .tags-display {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+        }
+
+        .tag-item {
+            display: inline-flex;
+            align-items: center;
+            background: linear-gradient(135deg, var(--text-accent), rgba(79, 195, 247, 0.8));
+            color: var(--button-text);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 500;
+            gap: 4px;
+            white-space: nowrap;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .tag-item:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+        }
+
+        .tag-remove {
+            background: none;
+            border: none;
+            color: var(--button-text);
+            cursor: pointer;
+            font-size: 0.9em;
+            padding: 0;
+            line-height: 1;
+            opacity: 0.8;
+            border-radius: 50%;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .tag-remove:hover {
+            opacity: 1;
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .tag-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 60px;
+            background: var(--input-bg);
+            border: 1px solid var(--input-border);
+            border-top: none;
+            max-height: 120px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .tag-dropdown.visible {
+            display: block;
+        }
+
+        .tag-option {
+            padding: 6px 8px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-secondary);
+            font-size: 0.85em;
+        }
+
+        .tag-option:hover {
+            background: var(--bg-tertiary);
+        }
+
+        .tag-option:last-child {
+            border-bottom: none;
+        }
+
+        .no-tags-placeholder {
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            font-style: italic;
+            opacity: 0.7;
+        }
+
         .validation-summary {
             background: rgba(244, 67, 54, 0.1);
             border: 1px solid var(--error-color);
@@ -340,6 +487,34 @@
             .assets-table th,
             .assets-table td {
                 padding: 8px 4px;
+            }
+            
+            .name-column {
+                width: 200px;
+            }
+            
+            .tags-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            
+            .tag-input-container {
+                width: 100%;
+            }
+            
+            .tag-input-first {
+                flex: 1;
+                min-width: 0;
+            }
+            
+            .tags-display {
+                width: 100%;
+            }
+            
+            .tag-item {
+                font-size: 0.75em;
+                padding: 2px 6px;
             }
         }    
     </style>
@@ -393,6 +568,7 @@
         let assets = [];
         let originalAssets = [];
         let nextAssetId = 1;
+        let allTags = []; // Cache for all available tags
 
         // Asset types
         const ASSET_TYPES = ['simple', 'investment', 'composite', 'stock'];
@@ -402,6 +578,9 @@
 
         // Initialize
         function initialize() {            
+            // Request all tags from backend
+            sendMessage({ type: 'GET_ALL_TAGS' });
+            
             // Add initial empty row if no assets
             if (assets.length === 0) {
                 addNewAsset();
@@ -416,19 +595,27 @@
                 case 'INITIALIZE_ASSETS':
                     initializeAssets(message.assets || []);
                     break;
+                case 'ALL_TAGS':
+                    allTags = message.data || [];
+                    console.log('Received all tags:', allTags);
+                    break;
             }
         });        function initializeAssets(existingAssets) {
             console.log('Initializing with assets:', existingAssets);
             originalAssets = JSON.parse(JSON.stringify(existingAssets));
             assets = JSON.parse(JSON.stringify(existingAssets));
             
-            // Assign IDs to existing assets and set default currency if not specified
+            // Assign IDs to existing assets and set default values
             assets.forEach((asset, index) => {
                 asset.id = nextAssetId++;
                 asset.isExisting = true;
                 // Default to CNY if currency is not specified
                 if (!asset.currency) {
                     asset.currency = 'CNY';
+                }
+                // Ensure tags is an array
+                if (!asset.tags) {
+                    asset.tags = [];
                 }
             });
             
@@ -441,6 +628,7 @@
                 name: '',
                 type: 'simple',
                 currency: 'CNY',
+                tags: [],
                 isExisting: false
             };
             assets.push(newAsset);
@@ -566,10 +754,11 @@
             tbody.innerHTML = '';
 
             assets.forEach(asset => {
-                const row = document.createElement('tr');
-                row.setAttribute('data-id', asset.id);
+                // Create main asset row
+                const assetRow = document.createElement('tr');
+                assetRow.setAttribute('data-id', asset.id);
                 
-                row.innerHTML = `
+                assetRow.innerHTML = `
                     <td class="name-column">
                         <input 
                             type="text" 
@@ -612,7 +801,41 @@
                     </td>
                 `;
                 
-                tbody.appendChild(row);
+                // Create tags row
+                const tagsRow = document.createElement('tr');
+                tagsRow.className = 'tags-row';
+                tagsRow.setAttribute('data-tags-for', asset.id);
+                
+                tagsRow.innerHTML = `
+                    <td colspan="4">
+                        <div class="tags-content">
+                            <div class="tag-input-container">
+                                <input 
+                                    type="text" 
+                                    class="tag-input-first" 
+                                    id="tag-input-${asset.id}"
+                                    placeholder="Add tag..."
+                                    onkeyup="handleTagInput(${asset.id}, event)"
+                                    onblur="hideTagDropdown(${asset.id})"
+                                    onfocus="showTagDropdown(${asset.id})"
+                                />
+                                <button class="tag-add-btn" onclick="addTagFromInput(${asset.id})">Add</button>
+                                <div class="tag-dropdown" id="tag-dropdown-${asset.id}">
+                                    <!-- Tag suggestions will appear here -->
+                                </div>
+                            </div>
+                            <div class="tags-display" id="tags-display-${asset.id}">
+                                <!-- Tags will be rendered here -->
+                            </div>
+                        </div>
+                    </td>
+                `;
+                
+                tbody.appendChild(assetRow);
+                tbody.appendChild(tagsRow);
+                
+                // Render tags for this asset
+                renderTagsForAsset(asset.id);
             });
         }
 
@@ -633,6 +856,146 @@
                 : 'None';
             document.getElementById('typeBreakdown').textContent = typeText;
         }        
+
+        // Tag management functions
+        function renderTagsForAsset(assetId) {
+            const asset = assets.find(a => a.id === assetId);
+            if (!asset) return;
+            
+            const tagsDisplay = document.getElementById(`tags-display-${assetId}`);
+            if (!tagsDisplay) return;
+            
+            // Render tags as compact chips
+            if (asset.tags && asset.tags.length > 0) {
+                tagsDisplay.innerHTML = asset.tags.map(tag => `
+                    <span class="tag-item">
+                        ${tag}
+                        <button class="tag-remove" onclick="removeTag(${assetId}, '${tag.replace(/'/g, "\\'")}')">×</button>
+                    </span>
+                `).join('');
+            } else {
+                tagsDisplay.innerHTML = '<span class="no-tags-placeholder">No tags yet</span>';
+            }
+        }
+        
+        function addTag(assetId, tag) {
+            const asset = assets.find(a => a.id === assetId);
+            if (!asset) return;
+            
+            const trimmedTag = tag.trim();
+            if (!trimmedTag) return;
+            
+            // Check if tag already exists
+            if (!asset.tags) asset.tags = [];
+            if (asset.tags.includes(trimmedTag)) return;
+            
+            asset.tags.push(trimmedTag);
+            renderTagsForAsset(assetId);
+            
+            // Update global tags list if it's a new tag
+            if (!allTags.includes(trimmedTag)) {
+                allTags.push(trimmedTag);
+                allTags.sort();
+            }
+        }
+        
+        function removeTag(assetId, tag) {
+            const asset = assets.find(a => a.id === assetId);
+            if (!asset || !asset.tags) return;
+            
+            asset.tags = asset.tags.filter(t => t !== tag);
+            renderTagsForAsset(assetId);
+        }
+        
+        function addTagFromInput(assetId) {
+            const input = document.getElementById(`tag-input-${assetId}`);
+            if (!input) return;
+            
+            const tag = input.value.trim();
+            if (tag) {
+                addTag(assetId, tag);
+                input.value = '';
+                hideTagDropdown(assetId);
+            }
+        }
+        
+        function handleTagInput(assetId, event) {
+            const input = event.target;
+            const value = input.value.trim();
+            
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                if (value) {
+                    addTag(assetId, value);
+                    input.value = '';
+                    hideTagDropdown(assetId);
+                }
+                return;
+            }
+            
+            if (event.key === 'Escape') {
+                hideTagDropdown(assetId);
+                return;
+            }
+            
+            // Show suggestions based on input
+            showTagSuggestions(assetId, value);
+        }
+        
+        function showTagSuggestions(assetId, searchTerm) {
+            const dropdown = document.getElementById(`tag-dropdown-${assetId}`);
+            if (!dropdown) return;
+            
+            const asset = assets.find(a => a.id === assetId);
+            const existingTags = asset?.tags || [];
+            
+            // Filter available tags
+            const suggestions = allTags.filter(tag => 
+                !existingTags.includes(tag) && 
+                tag.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            if (suggestions.length === 0 && searchTerm === '') {
+                // Show all available tags when input is empty
+                const availableTags = allTags.filter(tag => !existingTags.includes(tag));
+                dropdown.innerHTML = availableTags.map(tag => 
+                    `<div class="tag-option" onclick="selectTagSuggestion(${assetId}, '${tag.replace(/'/g, "\\'")}')">
+                        ${tag}
+                    </div>`
+                ).join('');
+            } else {
+                dropdown.innerHTML = suggestions.map(tag => 
+                    `<div class="tag-option" onclick="selectTagSuggestion(${assetId}, '${tag.replace(/'/g, "\\'")}')">
+                        ${tag}
+                    </div>`
+                ).join('');
+            }
+            
+            dropdown.classList.add('visible');
+        }
+        
+        function selectTagSuggestion(assetId, tag) {
+            addTag(assetId, tag);
+            const input = document.getElementById(`tag-input-${assetId}`);
+            if (input) {
+                input.value = '';
+            }
+            hideTagDropdown(assetId);
+        }
+        
+        function showTagDropdown(assetId) {
+            showTagSuggestions(assetId, '');
+        }
+        
+        function hideTagDropdown(assetId) {
+            // Use setTimeout to allow click events on dropdown items to fire first
+            setTimeout(() => {
+                const dropdown = document.getElementById(`tag-dropdown-${assetId}`);
+                if (dropdown) {
+                    dropdown.classList.remove('visible');
+                }
+            }, 150);
+        }
         
         function submitAssets() {
             if (!validateAllAssets()) {
@@ -649,6 +1012,10 @@
                     // Only include currency if it's not CNY (the default)
                     if (asset.currency && asset.currency !== 'CNY') {
                         cleanAsset.currency = asset.currency;
+                    }
+                    // Include tags if they exist
+                    if (asset.tags && asset.tags.length > 0) {
+                        cleanAsset.tags = asset.tags;
                     }
                     return cleanAsset;
                 });            if (validAssets.length === 0) {

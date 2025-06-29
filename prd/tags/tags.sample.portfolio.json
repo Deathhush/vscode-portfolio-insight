@@ -1,0 +1,39 @@
+{
+    "assets": [
+        {
+            "name": "招行.活期",
+            "type": "simple",
+            "tags": [
+                "现金",
+                "活钱"
+            ]
+        },
+        {
+            "name": "招行.沪深300ETF",
+            "type": "investment",
+            "tags": [
+                "指数基金",
+                "长钱",
+                "沪深300"
+            ]
+        },
+        {
+            "name": "国金",
+            "type": "composite",
+            "tags": [
+                "长钱",
+                "股票"
+            ]
+        },
+        {
+            "name": "StockAward",
+            "type": "stock",
+            "currency": "USD",
+            "tags": [
+                "股票",
+                "美股",
+                "长钱"
+            ]
+        }
+    ]
+}
