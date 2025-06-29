@@ -5,6 +5,7 @@ import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateVie
 import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitionEditorView';
 import { AssetCollectionNode } from './assetCollectionNode';
 import { CategoryCollectionNode } from './categoryCollectionNode';
+import { TagCollectionNode } from './tagCollectionNode';
 import { AssetNode } from './assetNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { PortfolioDataAccess } from '../data/portfolioDataAccess';
@@ -13,7 +14,7 @@ import { AssetPageView } from '../views/assetPage/assetPageView';
 import { AssetDefinitionData, PortfolioData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
-    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category';
+    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag';
     getChildren(): Promise<PortfolioExplorerNode[]>;
     getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem>;
 }
@@ -54,10 +55,11 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     }    
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
-            // Return both Assets and Categories root nodes
+            // Return Assets, Categories, and Tags root nodes
             const nodes: PortfolioExplorerNode[] = [
                 new AssetCollectionNode(this),
-                new CategoryCollectionNode(this)
+                new CategoryCollectionNode(this),
+                new TagCollectionNode(this)
             ];
             return Promise.resolve(nodes);
         }

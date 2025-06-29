@@ -23,25 +23,18 @@ export class Category {
      * Get all assets that belong to this category based on tags
      */
     async getAssets(): Promise<AssetSummaryData[]> {
-        const portfolioData = await this.dataAccess.getPortfolioData();
-        if (!portfolioData.assets || portfolioData.assets.length === 0) {
-            return [];
-        }
-
+        const assetNames = new Set<string>();
         const matchingAssets: AssetSummaryData[] = [];
         
-        for (const assetDefinition of portfolioData.assets) {
-            // Check if asset has any tags that match this category
-            const assetTags = assetDefinition.tags || [];
-            const hasMatchingTag = assetTags.some(tag => this.definition.tags.includes(tag));
+        // Get assets for each tag in this category
+        for (const tag of this.definition.tags) {
+            const assetsWithTag = await this.dataAccess.getAssetsByTag(tag);
             
-            if (hasMatchingTag) {
-                try {
-                    const asset = await this.dataAccess.createAsset(assetDefinition);
-                    const assetSummary = await asset.generateSummary();
-                    matchingAssets.push(assetSummary);
-                } catch (error) {
-                    console.error(`Error creating asset summary for ${assetDefinition.name}:`, error);
+            // Add assets that aren't already in the set (avoid duplicates)
+            for (const asset of assetsWithTag) {
+                if (!assetNames.has(asset.definition.name)) {
+                    assetNames.add(asset.definition.name);
+                    matchingAssets.push(asset);
                 }
             }
         }
