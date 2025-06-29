@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { PortfolioDataStore } from './portfolioDataStore';
 import { Asset } from './asset';
-import { AssetDefinitionData, PortfolioData } from './interfaces';
+import { AssetDefinitionData, PortfolioData, PortfolioUpdateData } from './interfaces';
 
 /**
  * PortfolioDataAccess serves as a bridge between the on-disk store (PortfolioDataStore) 
@@ -11,6 +11,8 @@ import { AssetDefinitionData, PortfolioData } from './interfaces';
 export class PortfolioDataAccess {
     private assetCache: Map<string, Asset> = new Map();
     private tagsCache: string[] | undefined;
+    private portfolioDataCache: PortfolioData | undefined;
+    private assetUpdatesCache: PortfolioUpdateData[] | undefined;
     private _onDataUpdatedEmitter = new vscode.EventEmitter<void>();
     
     // Event that fires when portfolio data is updated
@@ -28,7 +30,7 @@ export class PortfolioDataAccess {
             return cachedAsset;
         }
 
-        const asset = new Asset(definition, this.dataStore);
+        const asset = new Asset(definition, this);
         this.assetCache.set(definition.name, asset);
         return asset;
     }
@@ -87,24 +89,71 @@ export class PortfolioDataAccess {
 
     // Portfolio data operations
     public async getPortfolioData(): Promise<PortfolioData | undefined> {
-        return await this.dataStore.loadPortfolioData();
+        // Return cached data if available
+        if (this.portfolioDataCache !== undefined) {
+            console.log('Returning cached portfolio data');
+            return this.portfolioDataCache;
+        }
+
+        console.log('Loading portfolio data via data store');
+        this.portfolioDataCache = await this.dataStore.loadPortfolioData();
+        return this.portfolioDataCache;
     }
 
     public async savePortfolioData(data: PortfolioData): Promise<void> {
         await this.dataStore.savePortfolioData(data);
         
-        // Invalidate caches after save
-        this.invalidateAllCaches();
+        // Update cache with saved data
+        this.portfolioDataCache = data;
+        
+        // Invalidate other caches after save
+        this.invalidateAssetCache();
+        this.invalidateTagsCache();
+        this.invalidateAssetUpdatesCache();
         
         // Fire update event
         this._onDataUpdatedEmitter.fire();
+    }
+
+    // Asset updates operations
+    public async loadAssetUpdates(): Promise<PortfolioUpdateData[]> {
+        // Return cached data if available
+        if (this.assetUpdatesCache !== undefined) {
+            console.log('Returning cached asset updates');
+            return this.assetUpdatesCache;
+        }
+
+        console.log('Loading asset updates via data store');
+        this.assetUpdatesCache = await this.dataStore.loadAssetUpdates();
+        return this.assetUpdatesCache;
+    }
+
+    public async saveAssetUpdate(update: PortfolioUpdateData): Promise<string> {
+        const filename = await this.dataStore.saveAssetUpdate(update);
+        
+        // Invalidate cache to force reload
+        this.invalidateAssetUpdatesCache();
+        
+        // Fire update event
+        this._onDataUpdatedEmitter.fire();
+        
+        return filename;
+    }
+
+    public invalidateAssetUpdatesCache(): void {
+        this.assetUpdatesCache = undefined;
     }
 
     // Cache management
     public invalidateAllCaches(): void {
         this.invalidateAssetCache();
         this.invalidateTagsCache();
-        this.dataStore.invalidatePortfolioCache();
+        this.invalidatePortfolioCache();
+        this.invalidateAssetUpdatesCache();
+    }
+
+    public invalidatePortfolioCache(): void {
+        this.portfolioDataCache = undefined;
     }
 
     public dispose(): void {

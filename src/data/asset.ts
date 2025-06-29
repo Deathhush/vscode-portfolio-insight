@@ -9,12 +9,12 @@ import {
     PortfolioUpdateData,
     ExchangeRateData
 } from './interfaces';
-import { PortfolioDataStore } from './portfolioDataStore';
+import { PortfolioDataAccess } from './portfolioDataAccess';
 
 export class Asset {
     constructor(
         private definition: AssetDefinitionData,
-        private dataStore: PortfolioDataStore
+        private dataAccess: PortfolioDataAccess
     ) {}
     
     // Core properties
@@ -37,7 +37,7 @@ export class Asset {
     // Value calculations
     async calculateCurrentValue(): Promise<AssetCurrentValueData> {
         // Load updates and extract current value
-        const updates = await this.dataStore.loadAssetUpdates();
+        const updates = await this.dataAccess.loadAssetUpdates();
         return this.extractCurrentValue(updates);
     }
 
@@ -287,7 +287,7 @@ export class Asset {
     // Summary generation
     async generateSummary(): Promise<AssetSummaryData> {
         // Load updates once and extract all needed data
-        const updates = await this.dataStore.loadAssetUpdates();
+        const updates = await this.dataAccess.loadAssetUpdates();
         
         const currentValue = this.extractCurrentValue(updates);
         const activities = this.extractActivities(updates);

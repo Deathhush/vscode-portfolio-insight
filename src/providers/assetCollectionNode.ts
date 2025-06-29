@@ -3,7 +3,6 @@ import * as path from 'path';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { PortfolioData, AssetDefinitionData } from '../data/interfaces';
 import { AssetNode } from './assetNode';
-import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { Asset } from '../data/asset';
 
 export class AssetCollectionNode implements PortfolioExplorerNode {

@@ -7,22 +7,12 @@ import {
 } from './interfaces';
 
 export class PortfolioDataStore {
-    private portfolioDataCache?: PortfolioData;
-    private assetUpdatesCache?: PortfolioUpdateData[];
-
     constructor(private workspaceFolder: vscode.WorkspaceFolder) {}
 
     // Portfolio definition operations
     async loadPortfolioData(): Promise<PortfolioData | undefined> {
-        // Return cached data if available
-        if (this.portfolioDataCache !== undefined) {
-            console.log('Returning cached portfolio data');
-            return this.portfolioDataCache;
-        }
-
         console.log('Loading portfolio data from file');
-        this.portfolioDataCache = await this.loadPortfolioDataFromFile();
-        return this.portfolioDataCache;
+        return await this.loadPortfolioDataFromFile();
     }
 
     private async loadPortfolioDataFromFile(): Promise<PortfolioData | undefined> {
@@ -85,8 +75,6 @@ export class PortfolioDataStore {
             const jsonContent = JSON.stringify(data, null, 2);
             fs.writeFileSync(portfolioJsonPath, jsonContent, 'utf8');
             
-            // Update cache
-            this.portfolioDataCache = data;
             console.log(`Portfolio saved with ${data.assets.length} asset definitions`);
         } catch (error) {
             console.error('Error saving portfolio data:', error);
@@ -94,19 +82,9 @@ export class PortfolioDataStore {
         }
     }
 
-    invalidatePortfolioCache(): void {
-        this.portfolioDataCache = undefined;
-    }
-
     // Asset update operations
     async loadAssetUpdates(): Promise<PortfolioUpdateData[]> {
-        // Return cached data if available
-        if (this.assetUpdatesCache !== undefined) {
-            return this.assetUpdatesCache;
-        }
-
-        this.assetUpdatesCache = await this.loadAssetUpdateFiles();
-        return this.assetUpdatesCache;
+        return await this.loadAssetUpdateFiles();
     }
 
     private async loadAssetUpdateFiles(): Promise<PortfolioUpdateData[]> {
@@ -154,18 +132,11 @@ export class PortfolioDataStore {
             const jsonContent = JSON.stringify(update, null, 2);
             fs.writeFileSync(filePath, jsonContent, 'utf8');
 
-            // Invalidate cache to force reload
-            this.invalidateAssetUpdatesCache();
-
             console.log(`Asset update saved to ${filename}`);
             return filename;
         } catch (error) {
             console.error('Error saving asset update:', error);
             throw error;
         }
-    }
-
-    invalidateAssetUpdatesCache(): void {
-        this.assetUpdatesCache = undefined;
     }
 }
