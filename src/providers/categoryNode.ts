@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { Category, CategoryType } from '../data/category';
 import { AssetNode } from './assetNode';
+import { AssetCollectionNode } from './assetCollectionNode';
 
 export class CategoryNode implements PortfolioExplorerNode {
     public nodeType: 'category' = 'category'; // Using 'assets' as the closest match
@@ -12,9 +13,15 @@ export class CategoryNode implements PortfolioExplorerNode {
         private parentCategoryType?: CategoryType
     ) {}
 
+    async getChildAssetNodes(): Promise<AssetNode[]> {
+        const assets = await this.category.getAssets();
+        return await AssetNode.createAssetNodesFromSummaries(assets, this.provider);
+    }
+
     private async getDescription(): Promise<string> {
         try {
-            const categoryValue = await this.category.calculateCurrentValue();
+            const assetNodes = await this.getChildAssetNodes();
+            const categoryValue = await AssetCollectionNode.calculateTotalValue(assetNodes);
             
             // If we have a parent category type, calculate percentage
             if (this.parentCategoryType) {
@@ -34,20 +41,7 @@ export class CategoryNode implements PortfolioExplorerNode {
     }
 
     async getChildren(): Promise<PortfolioExplorerNode[]> {
-        const assets = await this.category.getAssets();
-        
-        const assetNodes: PortfolioExplorerNode[] = [];
-        for (const assetSummary of assets) {
-            try {
-                const asset = await this.provider.dataAccess.createAsset(assetSummary.definition);
-                const assetNode = new AssetNode(asset, this.provider);
-                assetNodes.push(assetNode);
-            } catch (error) {
-                console.error(`Error creating asset node for ${assetSummary.definition.name}:`, error);
-            }
-        }
-        
-        return assetNodes;
+        return await this.getChildAssetNodes();
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {

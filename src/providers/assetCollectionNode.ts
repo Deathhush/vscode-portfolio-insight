@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
-import { PortfolioData, AssetDefinitionData } from '../data/interfaces';
+import { PortfolioData, AssetDefinitionData, AssetCurrentValueData } from '../data/interfaces';
 import { AssetNode } from './assetNode';
 import { Asset } from '../data/asset';
 
@@ -15,32 +15,13 @@ export class AssetCollectionNode implements PortfolioExplorerNode {
         let description = '';
         
         try {
-            // Get child asset nodes
-            const children = await this.getChildren();
+            // Get child asset nodes directly
+            const assetNodes = await this.getChildAssetNodes();
             
-            if (children.length > 0) {
-                // Calculate total value using existing asset nodes
-                let totalValue = 0;
-                let hasErrors = false;
-                
-                for (const child of children) {
-                    if (child.nodeType === 'asset') {
-                        const assetNode = child as AssetNode;
-                        try {
-                            const currentValue = await assetNode.asset.calculateCurrentValue();
-                            totalValue += currentValue.valueInCNY;
-                        } catch (error) {
-                            console.error(`Error calculating value for asset ${assetNode.asset.definitionData.name}:`, error);
-                            hasErrors = true;
-                        }
-                    }
-                }
-                
-                if (hasErrors) {
-                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Some errors)`;
-                } else {
-                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                }
+            if (assetNodes.length > 0) {
+                // Calculate total value using the static method
+                const totalValue = await AssetCollectionNode.calculateTotalValue(assetNodes);
+                description = `Total: ¥${totalValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
         } catch (error) {
             console.error('Error calculating portfolio total value:', error);
@@ -65,6 +46,10 @@ export class AssetCollectionNode implements PortfolioExplorerNode {
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
+        return await this.getChildAssetNodes();
+    }
+
+    async getChildAssetNodes(): Promise<AssetNode[]> {
         const portfolioData = await this.provider.getPortfolioData();
         
         if (!portfolioData || !portfolioData.assets) {
@@ -72,7 +57,7 @@ export class AssetCollectionNode implements PortfolioExplorerNode {
         }        
         
         // Create asset nodes using Asset instances
-        const assetNodes: PortfolioExplorerNode[] = [];
+        const assetNodes: AssetNode[] = [];
         for (const assetDefinition of portfolioData.assets) {
             try {
                 const asset = await this.provider.createAsset(assetDefinition);
@@ -97,5 +82,38 @@ export class AssetCollectionNode implements PortfolioExplorerNode {
         treeItem.description = await this.getDescription();
         
         return treeItem;
+    }
+
+    /**
+     * Calculate the total current value of multiple AssetNodes
+     */
+    static async calculateTotalValue(assetNodes: AssetNode[]): Promise<AssetCurrentValueData> {
+        let totalValue = 0;
+        let totalValueInCNY = 0;
+        let latestUpdateDate: string | undefined;
+
+        for (const assetNode of assetNodes) {
+            try {
+                const assetValue = await assetNode.calculateCurrentValueInCNY();
+                totalValue += assetValue.currentValue;
+                totalValueInCNY += assetValue.valueInCNY;
+                
+                // Track the latest update date
+                if (assetValue.lastUpdateDate) {
+                    if (!latestUpdateDate || assetValue.lastUpdateDate > latestUpdateDate) {
+                        latestUpdateDate = assetValue.lastUpdateDate;
+                    }
+                }
+            } catch (error) {
+                console.error(`Error calculating value for asset ${assetNode.asset.definitionData.name}:`, error);
+            }
+        }
+
+        return {
+            currentValue: totalValue,
+            currency: 'CNY', // Mixed currencies, so we use CNY as the base
+            valueInCNY: totalValueInCNY,
+            lastUpdateDate: latestUpdateDate
+        };
     }
 }

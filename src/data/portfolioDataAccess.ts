@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioDataStore } from './portfolioDataStore';
 import { Asset } from './asset';
 import { Category, CategoryType } from './category';
-import { AssetDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData } from './interfaces';
+import { AssetDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData, AssetSummaryData } from './interfaces';
 
 /**
  * PortfolioDataAccess serves as a bridge between the on-disk store (PortfolioDataStore) 
@@ -188,5 +188,32 @@ export class PortfolioDataAccess {
     public dispose(): void {
         this._onDataUpdatedEmitter.dispose();
         this.invalidateAllCaches();
+    }
+
+    public async getAssetsByTag(tag: string): Promise<AssetSummaryData[]> {
+        const portfolioData = await this.getPortfolioData();
+        if (portfolioData.assets.length === 0) {
+            return [];
+        }
+
+        const matchingAssets: AssetSummaryData[] = [];
+        
+        for (const assetDefinition of portfolioData.assets) {
+            // Check if asset has the specified tag
+            const assetTags = assetDefinition.tags || [];
+            const hasTag = assetTags.includes(tag);
+            
+            if (hasTag) {
+                try {
+                    const asset = await this.createAsset(assetDefinition);
+                    const assetSummary = await asset.generateSummary();
+                    matchingAssets.push(assetSummary);
+                } catch (error) {
+                    console.error(`Error creating asset summary for ${assetDefinition.name}:`, error);
+                }
+            }
+        }
+
+        return matchingAssets;
     }
 }
