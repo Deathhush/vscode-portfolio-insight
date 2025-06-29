@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import {
+    CategoryDefinitionData,
     PortfolioData,
     PortfolioUpdateData
 } from './interfaces';
@@ -137,6 +138,54 @@ export class PortfolioDataStore {
         } catch (error) {
             console.error('Error saving asset update:', error);
             throw error;
+        }
+    }
+
+    // Category definition operations
+    async loadCategoryDefinitions(): Promise<CategoryDefinitionData | undefined> {
+        console.log('Loading category definitions from file');
+        return await this.loadCategoryDefinitionsFromFile();
+    }
+
+    private async loadCategoryDefinitionsFromFile(): Promise<CategoryDefinitionData | undefined> {
+        try {
+            const assetsFolder = path.join(this.workspaceFolder.uri.fsPath, 'Assets');
+            const categoryJsonPath = path.join(assetsFolder, 'category.json');
+            
+            if (!fs.existsSync(categoryJsonPath)) {
+                console.log('category.json not found');
+                return undefined;
+            }
+
+            const categoryContent = fs.readFileSync(categoryJsonPath, 'utf8');
+            const rawCategoryData = JSON.parse(categoryContent) as CategoryDefinitionData;
+            
+            // Validate the structure
+            if (!rawCategoryData.categoryTypes || !Array.isArray(rawCategoryData.categoryTypes)) {
+                console.error('Invalid category.json: "categoryTypes" array is required');
+                return undefined;
+            }
+            
+            // Validate each category type
+            for (const categoryType of rawCategoryData.categoryTypes) {
+                if (!categoryType.name || !categoryType.categories || !Array.isArray(categoryType.categories)) {
+                    console.error('Invalid category.json: Each categoryType must have "name" and "categories" fields');
+                    return undefined;
+                }
+                
+                // Validate each category
+                for (const category of categoryType.categories) {
+                    if (!category.name || !category.tags || !Array.isArray(category.tags)) {
+                        console.error('Invalid category.json: Each category must have "name" and "tags" fields');
+                        return undefined;
+                    }
+                }
+            }
+            
+            return rawCategoryData;
+        } catch (error) {
+            console.error('Error loading category.json:', error);
+            return undefined;
         }
     }
 }

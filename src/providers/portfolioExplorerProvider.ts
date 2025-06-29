@@ -4,6 +4,7 @@ import * as fs from 'fs';
 import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateView';
 import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitionEditorView';
 import { AssetCollectionNode } from './assetCollectionNode';
+import { CategoryCollectionNode } from './categoryCollectionNode';
 import { AssetNode } from './assetNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { PortfolioDataAccess } from '../data/portfolioDataAccess';
@@ -12,7 +13,7 @@ import { AssetPageView } from '../views/assetPage/assetPageView';
 import { AssetDefinitionData, PortfolioData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
-    nodeType: 'assets' | 'asset';
+    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category';
     getChildren(): Promise<PortfolioExplorerNode[]>;
     getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem>;
 }
@@ -20,8 +21,7 @@ export interface PortfolioExplorerNode {
 export class PortfolioExplorerProvider implements vscode.TreeDataProvider<PortfolioExplorerNode> {    private _onDidChangeTreeData: vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void> = new vscode.EventEmitter<PortfolioExplorerNode | undefined | null | void>();
     readonly onDidChangeTreeData: vscode.Event<PortfolioExplorerNode | undefined | null | void> = this._onDidChangeTreeData.event;
     private _portfolioUpdateView?: PortfolioUpdateView;
-    private _assetDefinitionEditorView?: AssetDefinitionEditorView;
-    private _portfolioData: PortfolioData | undefined = undefined;
+    private _assetDefinitionEditorView?: AssetDefinitionEditorView;    
     public dataAccess: PortfolioDataAccess;
     public dataStore: PortfolioDataStore; // Keep for backward compatibility
 
@@ -54,8 +54,12 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     }    
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
-            // Return the Assets root node
-            return Promise.resolve([new AssetCollectionNode(this)]);
+            // Return both Assets and Categories root nodes
+            const nodes: PortfolioExplorerNode[] = [
+                new AssetCollectionNode(this),
+                new CategoryCollectionNode(this)
+            ];
+            return Promise.resolve(nodes);
         }
         
         // Delegate to the node's getChildren method
@@ -71,19 +75,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 return;
             }
 
-            // Look for portfolio.json in the Assets folder
-            const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
-            const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
-            
             // Try to load existing portfolio data
             let portfolioData = await this.getPortfolioData();
-              if (!portfolioData) {
-                // Check if file exists but failed validation
-                if (fs.existsSync(portfolioJsonPath)) {
-                    vscode.window.showErrorMessage('Invalid Assets/portfolio.json file. Please check the file format and content.');
-                    return;
-                }
-            }
 
             // Dispose existing view if any
             if (this._portfolioUpdateView) {
@@ -98,15 +91,13 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 this.handlePortfolioUpdate(data);
             });
             
-            // If we have portfolio data, send it to the webview after a short delay
+            // Send portfolio data to the webview after a short delay
             // to ensure the webview is loaded
-            if (portfolioData && portfolioData.assets) {
-                setTimeout(() => {
-                    if (this._portfolioUpdateView) {
-                        this._portfolioUpdateView.sendInitializeAssets(portfolioData!.assets);
-                    }
-                }, 1000);
-            }
+            setTimeout(() => {
+                if (this._portfolioUpdateView) {
+                    this._portfolioUpdateView.sendInitializeAssets(portfolioData.assets);
+                }
+            }, 1000);
             
         } catch (error) {
             console.error('Error in openPortfolioUpdate:', error);
@@ -167,69 +158,14 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         }
     }    
     
-    public async getPortfolioData(): Promise<PortfolioData | undefined> {
-        // Return cached data if available
-        if (this._portfolioData !== undefined) {
-            console.log('Returning cached portfolio data');
-            return this._portfolioData;
-        }
-
-        console.log('Loading portfolio data via data access');
-        // Load data using the data access and cache it
-        this._portfolioData = await this.dataAccess.getPortfolioData();
-        return this._portfolioData;
+    public async getPortfolioData(): Promise<PortfolioData> {
+        return await this.dataAccess.getPortfolioData();
     }
-    
-    private async loadPortfolioDataFromFile(): Promise<PortfolioData | undefined> {
-        try {
-            // Get the current workspace folder
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                return undefined;
-            }
 
-            // Look for portfolio.json in the Assets folder
-            const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
-            const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
-            
-            if (!fs.existsSync(portfolioJsonPath)) {
-                return undefined;
-            }
-
-            // Read and parse portfolio.json
-            const portfolioContent = fs.readFileSync(portfolioJsonPath, 'utf8');
-            const rawPortfolioData = JSON.parse(portfolioContent) as PortfolioData;
-              // Validate the structure
-            if (!rawPortfolioData.assets || !Array.isArray(rawPortfolioData.assets)) {
-                console.error('Invalid portfolio.json: "assets" array is required');
-                return undefined;
-            }
-            
-            // Validate each asset
-            for (const asset of rawPortfolioData.assets) {
-                if (!asset.name || !asset.type) {
-                    console.error('Invalid portfolio.json: Each asset must have "name" and "type" fields');
-                    return undefined;
-                }
-                
-                if (!['simple', 'investment', 'composite', 'stock'].includes(asset.type)) {
-                    console.error(`Invalid asset type "${asset.type}". Must be one of: simple, investment, composite, stock`);
-                    return undefined;
-                }
-            }
-            
-            return rawPortfolioData;
-            
-        } catch (error) {
-            console.error('Error loading portfolio.json:', error);
-            return undefined;
-        }
-    }    
     /**
     * Invalidates the cached portfolio data, forcing reload on next access
     */
-    public invalidatePortfolioCache(): void {
-        this._portfolioData = undefined;
+    public invalidatePortfolioCache(): void {        
         this.dataAccess.invalidateAllCaches();
     }
     public async openAssetDefinitionEditor(): Promise<void> {
@@ -260,22 +196,13 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 this.handleAssetDefinitionSubmit(data);
             });
             
-            // If we have portfolio data, send it to the webview after a short delay
+            // Send portfolio data to the webview after a short delay
             // to ensure the webview is loaded
-            if (portfolioData && portfolioData.assets) {
-                setTimeout(() => {
-                    if (this._assetDefinitionEditorView) {
-                        this._assetDefinitionEditorView.sendInitializeAssets(portfolioData!.assets);
-                    }
-                }, 1000);
-            } else {
-                // Send empty array if no portfolio data
-                setTimeout(() => {
-                    if (this._assetDefinitionEditorView) {
-                        this._assetDefinitionEditorView.sendInitializeAssets([]);
-                    }
-                }, 1000);
-            }
+            setTimeout(() => {
+                if (this._assetDefinitionEditorView) {
+                    this._assetDefinitionEditorView.sendInitializeAssets(portfolioData.assets);
+                }
+            }, 1000);
             
         } catch (error) {
             console.error('Error in openAssetDefinitionEditor:', error);
@@ -336,7 +263,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                 await vscode.window.showTextDocument(document);
             }
 
-        } catch (error) {            console.error('Error saving asset definitions:', error);
+        } catch (error) {            
+            console.error('Error saving asset definitions:', error);
             vscode.window.showErrorMessage(`Failed to save asset definitions: ${error}`);
         }
     }    // Asset management
@@ -354,5 +282,17 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         return await this.dataAccess.getAllTags();
     }
 
+    // Category management - new functionality
+    public async getCategoryDefinitions() {
+        return await this.dataAccess.getCategoryDefinitions();
+    }
+
+    public async createCategory(definition: any) {
+        return await this.dataAccess.createCategory(definition);
+    }
+
+    public async createCategoryType(definition: any) {
+        return await this.dataAccess.createCategoryType(definition);
+    }
 
 }

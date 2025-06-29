@@ -6,7 +6,7 @@ import { AssetNode } from './assetNode';
 import { Asset } from '../data/asset';
 
 export class AssetCollectionNode implements PortfolioExplorerNode {
-    public nodeType: 'assets' = 'assets';
+    public nodeType: 'assetCollection' = 'assetCollection';
     
     constructor(private provider: PortfolioExplorerProvider) {
     }
