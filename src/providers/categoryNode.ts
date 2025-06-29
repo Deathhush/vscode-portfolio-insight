@@ -23,17 +23,19 @@ export class CategoryNode implements PortfolioExplorerNode {
             const assetNodes = await this.getChildAssetNodes();
             const categoryValue = await AssetCollectionNode.calculateTotalValue(assetNodes);
             
-            // If we have a parent category type, calculate percentage
+            const totalValueDisplay = `¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            
+            // If we have a parent category type, show both percentage and total value
             if (this.parentCategoryType) {
                 const categoryTypeValue = await this.parentCategoryType.calculateCurrentValue();
                 if (categoryTypeValue.valueInCNY > 0) {
                     const percentage = (categoryValue.valueInCNY / categoryTypeValue.valueInCNY) * 100;
-                    return `${percentage.toFixed(1)}%`;
+                    return `${percentage.toFixed(1)}% • ${totalValueDisplay}`;
                 }
             }
             
-            // Fallback to showing total value if no parent or parent has zero value
-            return `Total: ¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            // Fallback to showing only total value if no parent or parent has zero value
+            return `Total: ${totalValueDisplay}`;
         } catch (error) {
             console.error(`Error calculating value for category ${this.category.name}:`, error);
             return 'Calculation failed';

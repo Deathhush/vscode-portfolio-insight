@@ -9,42 +9,8 @@ export class TagCollectionNode implements PortfolioExplorerNode {
     }
 
     private async getDescription(): Promise<string> {
-        let description = '';
-        
-        try {
-            // Get child tag nodes
-            const children = await this.getChildren();
-            
-            if (children.length > 0) {
-                // Calculate total value using existing tag nodes
-                let totalValue = 0;
-                let hasErrors = false;
-                
-                for (const child of children) {
-                    if (child.nodeType === 'tag') {
-                        const tagNode = child as TagNode;
-                        try {
-                            const tagValue = await tagNode.calculateTotalValue();
-                            totalValue += tagValue.valueInCNY;
-                        } catch (error) {
-                            console.error(`Error calculating value for tag ${tagNode.tag}:`, error);
-                            hasErrors = true;
-                        }
-                    }
-                }
-                
-                if (hasErrors) {
-                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Some errors)`;
-                } else {
-                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                }
-            }
-        } catch (error) {
-            console.error('Error calculating tags total value:', error);
-            description = 'Total: Calculation failed';
-        }
-        
-        return description;
+        // Don't show total value for tag collection
+        return '';
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
