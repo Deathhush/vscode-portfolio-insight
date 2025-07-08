@@ -4,10 +4,18 @@ export interface AssetDefinitionData {
     type: 'simple' | 'investment' | 'composite' | 'stock';
     currency?: string;
     tags?: string[];
+    account?: string; // Add account reference
+}
+
+export interface AccountDefinitionData {
+    name: string;
+    type: string;
+    assets?: AssetDefinitionData[]; // Assets can be nested in accounts
 }
 
 export interface PortfolioData {
     assets: AssetDefinitionData[];
+    accounts?: AccountDefinitionData[]; // Add accounts array
 }
 
 export interface AssetEventData {
@@ -97,5 +105,12 @@ export interface CategorySummaryData {
 export interface CategoryTypeSummaryData {
     definition: CategoryTypeData;
     categories: CategorySummaryData[];
+    totalValue: AssetCurrentValueData;
+}
+
+// Account-related interfaces
+export interface AccountSummaryData {
+    definition: AccountDefinitionData;
+    assets: AssetSummaryData[];
     totalValue: AssetCurrentValueData;
 }

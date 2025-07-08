@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 import { PortfolioDataStore } from './portfolioDataStore';
 import { Asset } from './asset';
+import { Account } from './account';
 import { Category, CategoryType } from './category';
-import { AssetDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData, AssetSummaryData } from './interfaces';
+import { AssetDefinitionData, AccountDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData, AssetSummaryData, AccountSummaryData } from './interfaces';
 
 /**
  * PortfolioDataAccess serves as a bridge between the on-disk store (PortfolioDataStore) 
@@ -11,6 +12,7 @@ import { AssetDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefini
  */
 export class PortfolioDataAccess {
     private assetCache: Map<string, Asset> = new Map();
+    private accountCache: Map<string, Account> = new Map();
     private tagsCache: string[] | undefined;
     private portfolioDataCache: PortfolioData | undefined;
     private assetUpdatesCache: PortfolioUpdateData[] | undefined;
@@ -41,6 +43,40 @@ export class PortfolioDataAccess {
 
     public invalidateAssetCache(): void {
         this.assetCache.clear();
+    }
+
+    // Account management
+    public async createAccount(definition: AccountDefinitionData): Promise<Account> {
+        const cachedAccount = this.getCachedAccount(definition.name);
+        if (cachedAccount) {
+            return cachedAccount;
+        }
+
+        const account = new Account(definition, this);
+        this.accountCache.set(definition.name, account);
+        return account;
+    }
+
+    private getCachedAccount(name: string): Account | undefined {
+        return this.accountCache.get(name);
+    }
+
+    public invalidateAccountCache(): void {
+        this.accountCache.clear();
+    }
+
+    public async getAllAccounts(): Promise<Account[]> {
+        const portfolioData = await this.getPortfolioData();
+        const accounts: Account[] = [];
+
+        if (portfolioData.accounts) {
+            for (const accountDefinition of portfolioData.accounts) {
+                const account = await this.createAccount(accountDefinition);
+                accounts.push(account);
+            }
+        }
+
+        return accounts;
     }
 
     // Tags management
@@ -112,6 +148,7 @@ export class PortfolioDataAccess {
         
         // Invalidate other caches after save
         this.invalidateAssetCache();
+        this.invalidateAccountCache();
         this.invalidateTagsCache();
         this.invalidateAssetUpdatesCache();
         
@@ -175,6 +212,7 @@ export class PortfolioDataAccess {
     // Cache management
     public invalidateAllCaches(): void {
         this.invalidateAssetCache();
+        this.invalidateAccountCache();
         this.invalidateTagsCache();
         this.invalidatePortfolioCache();
         this.invalidateAssetUpdatesCache();
