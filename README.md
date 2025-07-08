@@ -6,8 +6,17 @@ A Visual Studio Code extension for managing and tracking investment portfolios w
 
 ### Portfolio Management
 - **Asset Definition**: Define assets with different types (simple, investment, composite, stock)
+- **Account Management**: Organize assets into accounts (bank, stock, fund, crypto, etc.)
 - **Portfolio Updates**: Track asset values, transfers, and transactions over time
 - **Multi-Currency Support**: Handle assets in different currencies with exchange rate conversion
+- **Tagging System**: Categorize and organize assets using flexible tagging
+
+### Account Organization
+- **Account Types**: Support for bank and stock account types
+- **Asset Assignment**: Assign assets to accounts for better organization
+- **Hierarchical Display**: View assets organized under their respective accounts in the tree view
+- **Optional Accounts**: Assets can exist without being assigned to any account
+- **CRUD Operations**: Create, edit, and remove accounts through the Asset Definition Editor
 
 ### Asset Types
 - **Simple**: Basic assets with current value only
@@ -34,15 +43,27 @@ Create an `Assets/portfolio.json` file in your workspace:
 
 ```json
 {
+  "accounts": [
+    {
+      "name": "Main Bank",
+      "type": "bank"
+    },
+    {
+      "name": "Trading Account",
+      "type": "stock"
+    }
+  ],
   "assets": [
     {
       "name": "Cash Account",
-      "type": "simple"
+      "type": "simple",
+      "account": "Main Bank"
     },
     {
       "name": "US Stocks",
       "type": "stock",
-      "currency": "USD"
+      "currency": "USD",
+      "account": "Trading Account"
     },
     {
       "name": "EU Investment",
@@ -53,13 +74,23 @@ Create an `Assets/portfolio.json` file in your workspace:
 }
 ```
 
-### 2. Open Portfolio Update
+**Note**: Assets can optionally be assigned to accounts. If no account is specified, assets appear directly under the Assets root in the tree view.
+
+### 2. Asset Definition Editor
+- Open the Portfolio Explorer view in the sidebar
+- Click "Edit Asset Definition" to manage assets and accounts
+- **Accounts Section**: Create, edit, and remove accounts
+- **Assets Section**: Define assets and assign them to accounts
+- **Tag Management**: Add tags to assets for categorization
+- Save changes to update your portfolio structure
+
+### 3. Portfolio Updates
 - Use the Portfolio Explorer view in the sidebar
 - Click "Portfolio Update" to open the update interface
 - Enter asset values and exchange rates
 - Save updates to track portfolio changes over time
 
-### 3. Multi-Currency Assets
+### 4. Multi-Currency Assets
 When your portfolio includes non-CNY assets:
 - Exchange Rate section appears automatically
 - Enter current rates (e.g., 1 USD = 7.25 CNY)
@@ -67,8 +98,12 @@ When your portfolio includes non-CNY assets:
 
 ## Documentation
 
+- **[Complete Documentation Index](doc/README.md)** - Comprehensive documentation guide and navigation
+- **[Account User Guide](doc/AccountUserGuide.md)** - Step-by-step account management instructions
+- **[Account Feature Guide](doc/AccountFeatureImplementation.md)** - Complete guide to account management
 - **[Exchange Rate Feature Guide](doc/ExchangeRateFeature.md)** - Technical overview of exchange rate functionality
 - **[Exchange Rate User Guide](doc/ExchangeRateUserGuide.md)** - Step-by-step user instructions
+- **[Tags Feature Implementation](doc/TagsFeatureImplementation.md)** - Asset tagging system documentation
 - **[Product Requirements](prd/)** - Detailed feature specifications
 
 ## File Structure
@@ -76,10 +111,33 @@ When your portfolio includes non-CNY assets:
 ```
 workspace/
 ├── Assets/
-│   └── portfolio.json          # Asset definitions
+│   └── portfolio.json          # Asset and account definitions
 ├── AssetUpdates/
 │   └── portfolio-update-*.json # Portfolio update history
 └── README.md
+```
+
+### Portfolio.json Structure
+Your main portfolio file supports both assets and accounts:
+
+```json
+{
+  "accounts": [                 // Optional: Account definitions
+    {
+      "name": "Account Name",
+      "type": "bank|stock"
+    }
+  ],
+  "assets": [                   // Required: Asset definitions
+    {
+      "name": "Asset Name",
+      "type": "simple|investment|composite|stock",
+      "currency": "USD",        // Optional: Default is CNY
+      "account": "Account Name", // Optional: Reference to account
+      "tags": ["tag1", "tag2"]  // Optional: Asset tags
+    }
+  ]
+}
 ```
 
 ## Exchange Rate Example

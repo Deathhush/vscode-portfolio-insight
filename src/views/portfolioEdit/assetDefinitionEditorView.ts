@@ -1,20 +1,23 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
+import { PortfolioData } from '../../data/interfaces';
 
 export class AssetDefinitionEditorView {
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
-    private _onAssetDefinitionSubmitEmitter = new vscode.EventEmitter<any>();
+    private _onAssetDefinitionSubmitEmitter = new vscode.EventEmitter<PortfolioData>();
     private _getAllTagsCallback?: () => Promise<string[]>;
+    private _getAllAccountsCallback?: () => Promise<any[]>;
     
     // Event that fires when asset definition is received
-    public readonly onAssetDefinitionSubmit: vscode.Event<any> = this._onAssetDefinitionSubmitEmitter.event;
+    public readonly onAssetDefinitionSubmit: vscode.Event<PortfolioData> = this._onAssetDefinitionSubmitEmitter.event;
 
-    public constructor(extensionUri: vscode.Uri, getAllTagsCallback?: () => Promise<string[]>) {
+    public constructor(extensionUri: vscode.Uri, getAllTagsCallback?: () => Promise<string[]>, getAllAccountsCallback?: () => Promise<any[]>) {
         this._extensionUri = extensionUri;
         this._getAllTagsCallback = getAllTagsCallback;
+        this._getAllAccountsCallback = getAllAccountsCallback;
         
         const column = vscode.window.activeTextEditor
             ? vscode.window.activeTextEditor.viewColumn
@@ -51,6 +54,9 @@ export class AssetDefinitionEditorView {
                     case 'GET_ALL_TAGS':
                         this._handleGetAllTags();
                         return;
+                    case 'GET_ALL_ACCOUNTS':
+                        this._handleGetAllAccounts();
+                        return;
                     case 'error':
                         vscode.window.showErrorMessage(message.message);
                         return;
@@ -66,7 +72,7 @@ export class AssetDefinitionEditorView {
         }, null, this._disposables);
     }
 
-    private _handleAssetDefinitionSubmit(data: any) {
+    private _handleAssetDefinitionSubmit(data: PortfolioData) {
         // Fire the event to notify listeners
         this._onAssetDefinitionSubmitEmitter.fire(data);
     }
@@ -86,7 +92,23 @@ export class AssetDefinitionEditorView {
             });
         }
     }    
-    
+
+    private async _handleGetAllAccounts() {
+        try {
+            const accounts = this._getAllAccountsCallback ? await this._getAllAccountsCallback() : [];
+            this._panel.webview.postMessage({
+                type: 'INITIALIZE_ACCOUNTS',
+                accounts: accounts
+            });
+        } catch (error) {
+            console.error('Error getting all accounts:', error);
+            this._panel.webview.postMessage({
+                type: 'INITIALIZE_ACCOUNTS',
+                accounts: []
+            });
+        }
+    }
+
     public dispose() {
         // Clean up our resources
         this._panel.dispose();
@@ -151,6 +173,29 @@ export class AssetDefinitionEditorView {
         }
     }    
     
+    public sendInitializePortfolioData(portfolioData: PortfolioData) {
+        if (this._panel && this._panel.webview) {
+            // Send assets
+            this._panel.webview.postMessage({
+                type: 'INITIALIZE_ASSETS',
+                assets: portfolioData.assets || []
+            });
+            
+            // Send accounts if available
+            if (portfolioData.accounts && portfolioData.accounts.length > 0) {
+                this._panel.webview.postMessage({
+                    type: 'INITIALIZE_ACCOUNTS',
+                    accounts: portfolioData.accounts
+                });
+            }
+            
+            console.log('INITIALIZE_PORTFOLIO_DATA messages sent to webview');
+        } else {
+            console.warn('Cannot send INITIALIZE_PORTFOLIO_DATA: No active Asset Definition Editor panel');
+        }
+    }
+    
+    // Keep backward compatibility method
     public sendInitializeAssets(assets: any[]) {
         if (this._panel && this._panel.webview) {
             const message = {

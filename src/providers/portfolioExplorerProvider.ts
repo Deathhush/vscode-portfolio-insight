@@ -7,6 +7,7 @@ import { AssetCollectionNode } from './assetCollectionNode';
 import { CategoryCollectionNode } from './categoryCollectionNode';
 import { TagCollectionNode } from './tagCollectionNode';
 import { AssetNode } from './assetNode';
+import { PortfolioNode } from './portfolioNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { PortfolioDataAccess } from '../data/portfolioDataAccess';
 import { Asset } from '../data/asset';
@@ -14,7 +15,7 @@ import { AssetPageView } from '../views/assetPage/assetPageView';
 import { AssetDefinitionData, PortfolioData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
-    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag';
+    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag' | 'account';
     getChildren(): Promise<PortfolioExplorerNode[]>;
     getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem>;
 }
@@ -55,9 +56,9 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     }    
     getChildren(element?: PortfolioExplorerNode): Thenable<PortfolioExplorerNode[]> {
         if (!element) {
-            // Return Assets, Categories, and Tags root nodes
+            // Return Portfolio (Assets with Accounts), Categories, and Tags root nodes
             const nodes: PortfolioExplorerNode[] = [
-                new AssetCollectionNode(this),
+                new PortfolioNode(this),
                 new CategoryCollectionNode(this),
                 new TagCollectionNode(this)
             ];
@@ -190,11 +191,12 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // Create new view and hook to the event
             this._assetDefinitionEditorView = new AssetDefinitionEditorView(
                 this.context.extensionUri,
-                () => this.getAllTags()
+                () => this.getAllTags(),
+                () => this.getAllAccounts()
             );
             
             // Subscribe to asset definition submit events
-            this._assetDefinitionEditorView.onAssetDefinitionSubmit((data: any) => {
+            this._assetDefinitionEditorView.onAssetDefinitionSubmit((data: PortfolioData) => {
                 this.handleAssetDefinitionSubmit(data);
             });
             
@@ -202,7 +204,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // to ensure the webview is loaded
             setTimeout(() => {
                 if (this._assetDefinitionEditorView) {
-                    this._assetDefinitionEditorView.sendInitializeAssets(portfolioData.assets);
+                    this._assetDefinitionEditorView.sendInitializePortfolioData(portfolioData);
                 }
             }, 1000);
             
@@ -212,14 +214,17 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         }
     }
     
-    private async handleAssetDefinitionSubmit(newAssets: AssetDefinitionData[]): Promise<void> {
+    private async handleAssetDefinitionSubmit(portfolioData: PortfolioData): Promise<void> {
         try {
-            console.log(`Handling asset definition submit with ${newAssets.length} asset definitions`);
+            // Only accept PortfolioData structure with assets and accounts arrays
+            const assets: AssetDefinitionData[] = portfolioData.assets || [];
+            const accounts: any[] = portfolioData.accounts || [];
+            console.log(`Handling portfolio submit with ${assets.length} assets and ${accounts.length} accounts`);
             
             // Get the current workspace folder
             const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
             if (!workspaceFolder) {
-                vscode.window.showErrorMessage('No workspace folder is open. Cannot save asset definitions.');
+                vscode.window.showErrorMessage('No workspace folder is open. Cannot save portfolio data.');
                 return;
             }
 
@@ -239,24 +244,29 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             }
 
             // Create the new portfolio data
-            const portfolioData: PortfolioData = {
-                assets: newAssets
-            };            
+            const newPortfolioData: PortfolioData = {
+                assets: assets
+            };
+
+            // Include accounts if there are any
+            if (accounts.length > 0) {
+                newPortfolioData.accounts = accounts;
+            }
             
             // Format and save the data
-            const jsonContent = JSON.stringify(portfolioData, null, 2);
+            const jsonContent = JSON.stringify(newPortfolioData, null, 2);
             fs.writeFileSync(portfolioJsonPath, jsonContent, 'utf8');
-            console.log(`Portfolio saved with ${newAssets.length} asset definitions`);
+            console.log(`Portfolio saved with ${assets.length} assets and ${accounts.length} accounts`);
 
             // Clear cached data to force reload and refresh the tree view
             this.invalidatePortfolioCache();
             console.log('Portfolio cache invalidated');
             
-            
             this.refresh();
-                // Show success message
+
+            // Show success message
             const action = await vscode.window.showInformationMessage(
-                `Successfully saved ${newAssets.length} asset definition(s) to Assets/portfolio.json`,
+                `Successfully saved ${assets.length} asset(s) and ${accounts.length} account(s) to Assets/portfolio.json`,
                 'Open Portfolio'
             );
 
@@ -279,6 +289,16 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         this.dataAccess.invalidateAllCaches();
     }
 
+    // Account management - delegate to PortfolioDataAccess
+    public async getAllAccounts() {
+        const accounts = await this.dataAccess.getAllAccounts();
+        return accounts.map(account => account.definitionData);
+    }
+
+    public async createAccount(definition: any) {
+        return await this.dataAccess.createAccount(definition);
+    }
+
     // Tags management - new functionality
     public async getAllTags(): Promise<string[]> {
         return await this.dataAccess.getAllTags();
@@ -296,5 +316,4 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
     public async createCategoryType(definition: any) {
         return await this.dataAccess.createCategoryType(definition);
     }
-
 }

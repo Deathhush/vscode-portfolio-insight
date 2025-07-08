@@ -148,12 +148,50 @@
             background: #c62828;
         }
 
-        .table-container {
+        /* Section styling */
+        .section {
             background: var(--bg-secondary);
             border: 1px solid var(--border-primary);
             border-radius: 8px;
             padding: 20px;
             margin-bottom: 20px;
+        }
+
+        .section h2 {
+            color: var(--text-accent);
+            margin-bottom: 8px;
+            font-size: 1.5em;
+            border-bottom: 2px solid var(--text-accent);
+            padding-bottom: 8px;
+        }
+
+        .section p {
+            color: var(--text-secondary);
+            margin-bottom: 15px;
+        }
+
+        /* Accounts table styling */
+        .accounts-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-primary);
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .accounts-table th,
+        .accounts-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .accounts-table th {
+            background: var(--bg-tertiary);
+            font-weight: 600;
+            color: var(--text-primary);
+            border-bottom: 2px solid var(--border-primary);
         }
 
         .assets-table {
@@ -300,6 +338,10 @@
 
         .currency-column {
             width: 120px;
+        }
+
+        .account-column {
+            width: 150px;
         }
 
         /* Tags row styling */
@@ -533,6 +575,36 @@
             <ul id="validationList"></ul>
         </div>
 
+        <!-- Accounts Management Section -->
+        <div class="section">
+            <h2>Accounts</h2>
+            <p>Manage your portfolio accounts. Assets can be assigned to accounts for better organization.</p>
+            
+            <div class="table-container">
+                <table class="accounts-table">
+                    <thead>
+                        <tr>
+                            <th class="name-column">Account Name</th>
+                            <th class="type-column">Account Type</th>
+                            <th class="action-column">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="accountsTableBody">
+                        <!-- Accounts will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="controls">
+                <button class="btn" onclick="addNewAccount()">+ Add Account</button>
+            </div>
+        </div>
+
+        <!-- Assets Management Section -->
+        <div class="section">
+            <h2>Assets</h2>
+            <p>Define and edit your portfolio assets.</p>
+
         <div class="table-container">
             <table class="assets-table">
                 <thead>
@@ -540,6 +612,7 @@
                         <th class="name-column">Asset Name</th>
                         <th class="type-column">Type</th>
                         <th class="currency-column">Currency</th>
+                        <th class="account-column">Account</th>
                         <th class="action-column">Actions</th>
                     </tr>
                 </thead>
@@ -566,13 +639,17 @@
     <script>
         // Global state
         let assets = [];
+        let accounts = []; // Available accounts
         let originalAssets = [];
+        let originalAccounts = []; // Original accounts for change tracking
         let nextAssetId = 1;
+        let nextAccountId = 1;
         let allTags = []; // Cache for all available tags
 
         // Asset types
         const ASSET_TYPES = ['simple', 'investment', 'composite', 'stock'];
         const CURRENCIES = ['CNY', 'USD', 'HKD'];
+        const ACCOUNT_TYPES = ['bank', 'stock'];
 
         const vscode = acquireVsCodeApi();
 
@@ -580,6 +657,9 @@
         function initialize() {            
             // Request all tags from backend
             sendMessage({ type: 'GET_ALL_TAGS' });
+            
+            // Request all accounts from backend
+            sendMessage({ type: 'GET_ALL_ACCOUNTS' });
             
             // Add initial empty row if no assets
             if (assets.length === 0) {
@@ -594,6 +674,9 @@
             switch (message.type) {
                 case 'INITIALIZE_ASSETS':
                     initializeAssets(message.assets || []);
+                    break;
+                case 'INITIALIZE_ACCOUNTS':
+                    initializeAccounts(message.accounts || []);
                     break;
                 case 'ALL_TAGS':
                     allTags = message.data || [];
@@ -613,6 +696,10 @@
                 if (!asset.currency) {
                     asset.currency = 'CNY';
                 }
+                // Ensure account is initialized
+                if (!asset.account) {
+                    asset.account = '';
+                }
                 // Ensure tags is an array
                 if (!asset.tags) {
                     asset.tags = [];
@@ -628,6 +715,7 @@
                 name: '',
                 type: 'simple',
                 currency: 'CNY',
+                account: '',
                 tags: [],
                 isExisting: false
             };
@@ -744,12 +832,230 @@
             return allValid;
         }
 
+        // Account management functions
+        function initializeAccounts(existingAccounts) {
+            console.log('Initializing with accounts:', existingAccounts);
+            originalAccounts = JSON.parse(JSON.stringify(existingAccounts));
+            accounts = JSON.parse(JSON.stringify(existingAccounts));
+            
+            // Assign IDs to existing accounts
+            accounts.forEach((account, index) => {
+                account.id = nextAccountId++;
+                account.isExisting = true;
+            });
+            
+            updateDisplay();
+        }
+
+        function addNewAccount() {
+            const newAccount = {
+                id: nextAccountId++,
+                name: '',
+                type: 'bank',
+                isExisting: false
+            };
+            accounts.push(newAccount);
+            updateDisplay();
+            
+            // Focus on the new account's name field
+            setTimeout(() => {
+                const nameInput = document.querySelector(`input[data-account-id="${newAccount.id}"][data-field="name"]`);
+                if (nameInput) {
+                    nameInput.focus();
+                }
+            }, 100);
+        }
+
+        function removeAccount(id) {
+            const index = accounts.findIndex(account => account.id === id);
+            if (index !== -1) {
+                const accountName = accounts[index].name;
+                
+                // Check if any assets are using this account
+                const assetsUsingAccount = assets.filter(asset => asset.account === accountName);
+                
+                if (assetsUsingAccount.length > 0) {
+                    // Ask for confirmation and what to do with the assets
+                    if (confirm(`This account "${accountName}" is used by ${assetsUsingAccount.length} asset(s). Removing the account will unassign these assets. Continue?`)) {
+                        // Unassign assets from this account
+                        assetsUsingAccount.forEach(asset => {
+                            asset.account = '';
+                        });
+                        
+                        // Remove the account
+                        accounts.splice(index, 1);
+                        updateDisplay();
+                    }
+                } else {
+                    // No assets using this account, safe to remove
+                    accounts.splice(index, 1);
+                    updateDisplay();
+                }
+            }
+        }
+
+        function updateAccount(id, field, value) {
+            const account = accounts.find(a => a.id === id);
+            if (account) {
+                const oldName = account.name;
+                
+                if (field === 'name') {
+                    value = value.trim(); // Trim whitespace
+                }
+                
+                account[field] = value;
+                
+                // If account name changed, update all assets that reference it
+                // But only if the old name was not empty (to avoid assigning unassigned assets to new accounts)
+                if (field === 'name' && oldName && oldName !== '' && oldName !== value) {
+                    assets.forEach(asset => {
+                        if (asset.account === oldName) {
+                            asset.account = value;
+                        }
+                    });
+                }
+                
+                updateDisplay();
+                validateAccount(id);
+            }
+        }
+
+        function validateAccount(id) {
+            const account = accounts.find(a => a.id === id);
+            if (!account) return;
+
+            const row = document.querySelector(`tr[data-account-id="${id}"]`);
+            const nameInput = row.querySelector('input[data-field="name"]');
+            const errorDiv = row.querySelector('.error-message');
+
+            let hasError = false;
+            let errorMessage = '';
+
+            // Check if name is empty
+            if (!account.name || account.name.trim() === '') {
+                hasError = true;
+                errorMessage = 'Account name is required';
+            } else {
+                // Check for duplicate names
+                const duplicateAccount = accounts.find(a => a.id !== id && a.name === account.name);
+                if (duplicateAccount) {
+                    hasError = true;
+                    errorMessage = 'Account name must be unique';
+                }
+            }
+
+            // Update UI
+            if (hasError) {
+                nameInput.classList.add('error');
+                errorDiv.textContent = errorMessage;
+                errorDiv.style.display = 'block';
+            } else {
+                nameInput.classList.remove('error');
+                errorDiv.style.display = 'none';
+            }
+
+            return !hasError;
+        }
+
+        function validateAllAccounts() {
+            const errors = [];
+            let allValid = true;
+
+            // Filter out empty accounts
+            const nonEmptyAccounts = accounts.filter(account => 
+                account.name && account.name.trim() !== ''
+            );
+
+            // Check for required fields and duplicates
+            nonEmptyAccounts.forEach((account, index) => {
+                if (!account.name || account.name.trim() === '') {
+                    errors.push(`Row ${index + 1}: Account name is required`);
+                    allValid = false;
+                } else {
+                    // Check for duplicates
+                    const duplicates = nonEmptyAccounts.filter(a => 
+                        a.id !== account.id && 
+                        a.name.trim().toLowerCase() === account.name.trim().toLowerCase()
+                    );
+                    if (duplicates.length > 0) {
+                        errors.push(`Row ${index + 1}: Account name "${account.name}" is duplicated`);
+                        allValid = false;
+                    }
+                }
+
+                if (!account.type || !ACCOUNT_TYPES.includes(account.type)) {
+                    errors.push(`Row ${index + 1}: Invalid account type`);
+                    allValid = false;
+                }
+            });
+
+            // Update validation summary
+            const validationSummary = document.getElementById('validationSummary');
+            const validationList = document.getElementById('validationList');
+            
+            if (errors.length > 0) {
+                validationList.innerHTML = errors.map(error => `<li>${error}</li>`).join('');
+                validationSummary.classList.add('visible');
+            } else {
+                validationSummary.classList.remove('visible');
+            }
+
+            // Update individual account validations
+            accounts.forEach(account => validateAccount(account.id));
+
+            return allValid;
+        }
+
         function updateDisplay() {
-            updateTable();
+            updateAccountsTable();
+            updateAssetsTable();
             updateSummary();
         }
 
-        function updateTable() {
+        function updateAccountsTable() {
+            const tbody = document.getElementById('accountsTableBody');
+            tbody.innerHTML = '';
+
+            accounts.forEach(account => {
+                const accountRow = document.createElement('tr');
+                accountRow.setAttribute('data-account-id', account.id);
+                
+                accountRow.innerHTML = `
+                    <td class="name-column">
+                        <input 
+                            type="text" 
+                            class="input-field" 
+                            value="${account.name || ''}" 
+                            placeholder="Enter account name"
+                            data-account-id="${account.id}"
+                            data-field="name"
+                            onchange="updateAccount(${account.id}, 'name', this.value)"
+                            onblur="validateAccount(${account.id})"
+                        />
+                        <div class="error-message"></div>
+                    </td>
+                    <td class="type-column">
+                        <select 
+                            class="select-field" 
+                            data-account-id="${account.id}"
+                            data-field="type"
+                            onchange="updateAccount(${account.id}, 'type', this.value)"
+                        >
+                            ${ACCOUNT_TYPES.map(type => 
+                                `<option value="${type}" ${account.type === type ? 'selected' : ''}>${type}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td class="action-column">
+                        <button class="remove-btn" onclick="removeAccount(${account.id})">Remove</button>
+                    </td>
+                `;
+                
+                tbody.appendChild(accountRow);
+            });
+        }
+
+        function updateAssetsTable() {
             const tbody = document.getElementById('assetsTableBody');
             tbody.innerHTML = '';
 
@@ -793,6 +1099,19 @@
                         >
                             ${CURRENCIES.map(currency => 
                                 `<option value="${currency}" ${asset.currency === currency ? 'selected' : ''}>${currency}</option>`
+                            ).join('')}
+                        </select>
+                    </td>
+                    <td class="account-column">
+                        <select 
+                            class="select-field" 
+                            data-id="${asset.id}"
+                            data-field="account"
+                            onchange="updateAsset(${asset.id}, 'account', this.value)"
+                        >
+                            <option value="" ${(asset.account || '') === '' ? 'selected' : ''}>(No Account)</option>
+                            ${accounts.map(account => 
+                                `<option value="${account.name}" ${asset.account === account.name ? 'selected' : ''}>${account.name}</option>`
                             ).join('')}
                         </select>
                     </td>
@@ -840,6 +1159,7 @@
         }
 
         function updateSummary() {
+            // Asset summary
             const assetCount = assets.filter(a => a.name && a.name.trim() !== '').length;
             const typeBreakdown = {};
             
@@ -855,6 +1175,22 @@
                 ? Object.entries(typeBreakdown).map(([type, count]) => `${type}: ${count}`).join(', ')
                 : 'None';
             document.getElementById('typeBreakdown').textContent = typeText;
+
+            // Account summary
+            const accountCount = accounts.filter(a => a.name && a.name.trim() !== '').length;
+            
+            // Update or create account summary
+            let accountSummaryElement = document.getElementById('accountSummary');
+            if (!accountSummaryElement) {
+                const summaryDiv = document.getElementById('summary');
+                const accountParagraph = document.createElement('p');
+                accountParagraph.innerHTML = 'Accounts: <span id="accountCount">0</span>';
+                accountParagraph.id = 'accountSummary';
+                summaryDiv.appendChild(accountParagraph);
+                accountSummaryElement = accountParagraph;
+            }
+            
+            document.getElementById('accountCount').textContent = accountCount;
         }        
 
         // Tag management functions
@@ -998,10 +1334,12 @@
         }
         
         function submitAssets() {
-            if (!validateAllAssets()) {
+            if (!validateAllAssets() || !validateAllAccounts()) {
                 showNotification('Please fix validation errors before submitting', 'error');
                 return;
-            }            // Filter out empty assets and clean the data
+            }
+
+            // Filter out empty assets and clean the data
             const validAssets = assets
                 .filter(asset => asset.name && asset.name.trim() !== '')
                 .map(asset => {
@@ -1013,23 +1351,50 @@
                     if (asset.currency && asset.currency !== 'CNY') {
                         cleanAsset.currency = asset.currency;
                     }
+                    // Include account if specified
+                    if (asset.account && asset.account.trim() !== '') {
+                        cleanAsset.account = asset.account.trim();
+                    }
                     // Include tags if they exist
                     if (asset.tags && asset.tags.length > 0) {
                         cleanAsset.tags = asset.tags;
                     }
                     return cleanAsset;
-                });            if (validAssets.length === 0) {
-                showNotification('Please add at least one asset definition', 'error');
-                return;
-            }
+                });
 
-            // Send message (either to VS Code or parent window)
+            // Filter out empty accounts and clean the data
+            const validAccounts = accounts
+                .filter(account => account.name && account.name.trim() !== '')
+                .map(account => ({
+                    name: account.name.trim(),
+                    type: account.type
+                }));
+
+            // Always create PortfolioData structure, even if arrays are empty
+            const portfolioData = {
+                assets: validAssets,
+                accounts: validAccounts
+            };
+
+            // Send message with PortfolioData structure
             sendMessage({
                 type: 'ASSET_DEFINITION_SUBMIT',
-                data: validAssets
+                data: portfolioData
             });
 
-            showNotification(`Successfully submitted ${validAssets.length} asset definition(s)`, 'success');
+            showNotification(`Successfully submitted ${validAssets.length} asset(s) and ${validAccounts.length} account(s)`, 'success');
+        }
+
+        function validateAllAccounts() {
+            let allValid = true;
+            
+            accounts.forEach(account => {
+                if (!validateAccount(account.id)) {
+                    allValid = false;
+                }
+            });
+
+            return allValid;
         }        function cancelChanges() {
             sendMessage({
                 type: 'CANCEL'
