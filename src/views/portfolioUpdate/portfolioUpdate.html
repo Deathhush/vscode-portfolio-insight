@@ -274,6 +274,87 @@
         background: var(--bg-secondary);
       }
 
+      .account-group {
+        margin-bottom: 20px;
+        border: 2px solid var(--border-primary);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        overflow: hidden;
+        transition: box-shadow 0.3s ease, border-color 0.3s ease;
+      }
+
+      .account-group:hover {
+        box-shadow: 0 4px 12px var(--shadow-primary);
+        border-color: var(--text-accent);
+      }
+
+      .account-header {
+        background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-quaternary) 100%);
+        padding: 16px;
+        border-bottom: 1px solid var(--border-secondary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .account-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .account-name {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .account-type-badge {
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 0.75em;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: var(--text-accent);
+        color: var(--button-text);
+      }
+
+      .account-assets {
+        padding: 8px;
+        background: var(--bg-secondary);
+      }
+
+      .account-assets .asset-group {
+        margin-bottom: 8px;
+        border: 1px solid var(--border-secondary);
+      }
+
+      .standalone-assets {
+        margin-bottom: 20px;
+        border: 2px solid var(--border-primary);
+        border-radius: 8px;
+        background: var(--bg-primary);
+        overflow: hidden;
+      }
+
+      .standalone-assets-header {
+        background: linear-gradient(135deg, var(--bg-tertiary) 0%, var(--bg-quaternary) 100%);
+        padding: 16px;
+        border-bottom: 1px solid var(--border-secondary);
+      }
+
+      .standalone-assets-title {
+        font-size: 1.2em;
+        font-weight: 700;
+        color: var(--text-primary);
+      }
+
+      .standalone-assets .asset-group {
+        margin: 8px;
+        margin-bottom: 8px;
+        border: 1px solid var(--border-secondary);
+      }
+
       .asset-group {
         margin-bottom: 12px;
         border: 1px solid var(--border-primary);
@@ -1111,7 +1192,8 @@
       }      
       
       // Assets data - default values
-      let assets = []; // Track which asset groups have overridden dates
+      let assets = [];
+      let accounts = []; // Track which asset groups have overridden dates
       let overriddenDates = new Set();
 
       // Track which transfer/income-expense items have overridden dates
@@ -1531,9 +1613,23 @@
       
       function generateAllAssets() {
         const container = document.getElementById("assetsContainer");
-        container.innerHTML = assets
-          .map((asset) => generateAssetGroup(asset))
-          .join("");
+        
+        // Group assets by account
+        const groupedAssets = groupAssetsByAccount();
+        
+        let html = '';
+        
+        // Generate account groups
+        groupedAssets.accountGroups.forEach(accountGroup => {
+          html += generateAccountGroup(accountGroup);
+        });
+        
+        // Generate standalone assets (assets without accounts)
+        if (groupedAssets.standaloneAssets.length > 0) {
+          html += generateStandaloneAssetsGroup(groupedAssets.standaloneAssets);
+        }
+        
+        container.innerHTML = html;
 
         // Initialize asset date pickers with the header date value
         initializeAssetDatePickers();
@@ -1543,6 +1639,97 @@
 
         // Generate exchange rates section
         generateExchangeRatesSection();
+      }
+
+      function groupAssetsByAccount() {
+        const accountGroups = [];
+        const standaloneAssets = [];
+        
+        // Create a map of account names to account data
+        const accountMap = new Map();
+        accounts.forEach(account => {
+          accountMap.set(account.name, account);
+        });
+        
+        // Group assets by their account
+        const assetsByAccount = new Map();
+        
+        assets.forEach(asset => {
+          if (asset.account) {
+            // Check if we have account data for this account
+            let accountData = accountMap.get(asset.account);
+            if (!accountData) {
+              // Create a default account data if not found
+              accountData = { name: asset.account, type: 'unknown' };
+              accountMap.set(asset.account, accountData);
+            }
+            
+            if (!assetsByAccount.has(asset.account)) {
+              assetsByAccount.set(asset.account, []);
+            }
+            assetsByAccount.get(asset.account).push(asset);
+          } else {
+            standaloneAssets.push(asset);
+          }
+        });
+        
+        // Also include assets directly nested in account definitions
+        accounts.forEach(account => {
+          if (account.assets && account.assets.length > 0) {
+            if (!assetsByAccount.has(account.name)) {
+              assetsByAccount.set(account.name, []);
+            }
+            assetsByAccount.get(account.name).push(...account.assets);
+          }
+        });
+        
+        // Create account groups
+        assetsByAccount.forEach((assets, accountName) => {
+          const accountData = accountMap.get(accountName);
+          accountGroups.push({
+            account: accountData,
+            assets: assets
+          });
+        });
+        
+        return {
+          accountGroups,
+          standaloneAssets
+        };
+      }
+
+      function generateAccountGroup(accountGroup) {
+        const { account, assets } = accountGroup;
+        const assetsHtml = assets.map(asset => generateAssetGroup(asset)).join('');
+        
+        return `
+          <div class="account-group">
+            <div class="account-header">
+              <div class="account-info">
+                <span class="account-name">${account.name}</span>
+                <span class="account-type-badge">${account.type}</span>
+              </div>
+            </div>
+            <div class="account-assets">
+              ${assetsHtml}
+            </div>
+          </div>
+        `;
+      }
+
+      function generateStandaloneAssetsGroup(standaloneAssets) {
+        const assetsHtml = standaloneAssets.map(asset => generateAssetGroup(asset)).join('');
+        
+        return `
+          <div class="standalone-assets">
+            <div class="standalone-assets-header">
+              <span class="standalone-assets-title">Other Assets</span>
+            </div>
+            <div class="account-assets">
+              ${assetsHtml}
+            </div>
+          </div>
+        `;
       }
 
       function updateAllTransferAssetDropdowns() {
@@ -2211,12 +2398,15 @@
         } else {
           summaryDiv.classList.remove("has-items");
         }
-      } // Listen for postMessage from parent window (host.html)
+      }      // Listen for postMessage from parent window (host.html)
       window.addEventListener("message", function (event) {
-        console.log("Message received in asset-input:", event.data);        if (event.data.type === "INITIALIZE_ASSETS" && event.data.assets) {
-          console.log("Initializing assets with data:", event.data.assets);
-          assets = event.data.assets;
-          // Clear overridden dates and transfer pairs when new assets are loaded
+        console.log("Message received in asset-input:", event.data);        
+        if (event.data.type === "INITIALIZE_PORTFOLIO_DATA" && event.data.portfolioData) {
+          console.log("Initializing portfolio data:", event.data.portfolioData);
+          const portfolioData = event.data.portfolioData;
+          assets = portfolioData.assets || [];
+          accounts = portfolioData.accounts || [];
+          // Clear overridden dates and transfer pairs when new data is loaded
           overriddenDates.clear();
           overriddenTransferDates.clear();
           overriddenIncomeExpenseDates.clear();
@@ -2225,7 +2415,6 @@
           transferIdCounter = 0;
           incomeExpenseIdCounter = 0;
           generateAllAssets();
-          // Removed: sending confirmation back to parent
         } else if (event.data.type === "SET_THEME") {
           console.log("Setting theme:", event.data.theme);
           setTheme(event.data.theme);
