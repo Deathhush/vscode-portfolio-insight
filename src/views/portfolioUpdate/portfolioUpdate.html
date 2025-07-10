@@ -2401,21 +2401,7 @@
       }      // Listen for postMessage from parent window (host.html)
       window.addEventListener("message", function (event) {
         console.log("Message received in asset-input:", event.data);        
-        if (event.data.type === "INITIALIZE_ASSETS" && event.data.assets) {
-          console.log("Initializing assets with data:", event.data.assets);
-          assets = event.data.assets;
-          accounts = []; // Clear accounts for legacy support
-          // Clear overridden dates and transfer pairs when new assets are loaded
-          overriddenDates.clear();
-          overriddenTransferDates.clear();
-          overriddenIncomeExpenseDates.clear();
-          transferPairs.clear();
-          exchangeRates.clear();
-          transferIdCounter = 0;
-          incomeExpenseIdCounter = 0;
-          generateAllAssets();
-          // Removed: sending confirmation back to parent
-        } else if (event.data.type === "INITIALIZE_PORTFOLIO_DATA" && event.data.portfolioData) {
+        if (event.data.type === "INITIALIZE_PORTFOLIO_DATA" && event.data.portfolioData) {
           console.log("Initializing portfolio data:", event.data.portfolioData);
           const portfolioData = event.data.portfolioData;
           assets = portfolioData.assets || [];
