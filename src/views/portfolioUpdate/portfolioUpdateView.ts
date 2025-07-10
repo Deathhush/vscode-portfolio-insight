@@ -145,4 +145,18 @@ export class PortfolioUpdateView {
             console.warn('Cannot send INITIALIZE_ASSETS: No active Portfolio Update panel');
         }
     }
+
+    public sendInitializePortfolioData(portfolioData: any) {
+        if (this._panel && this._panel.webview) {
+            const message = {
+                type: 'INITIALIZE_PORTFOLIO_DATA',
+                portfolioData: portfolioData
+            };
+            
+            this._panel.webview.postMessage(message);
+            console.log('INITIALIZE_PORTFOLIO_DATA message sent to webview:', message);
+        } else {
+            console.warn('Cannot send INITIALIZE_PORTFOLIO_DATA: No active Portfolio Update panel');
+        }
+    }
 }

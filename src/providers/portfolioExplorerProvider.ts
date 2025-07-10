@@ -98,7 +98,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // to ensure the webview is loaded
             setTimeout(() => {
                 if (this._portfolioUpdateView) {
-                    this._portfolioUpdateView.sendInitializeAssets(portfolioData.assets);
+                    this._portfolioUpdateView.sendInitializePortfolioData(portfolioData);
                 }
             }, 1000);
             
