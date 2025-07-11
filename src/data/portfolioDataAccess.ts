@@ -254,4 +254,53 @@ export class PortfolioDataAccess {
 
         return matchingAssets;
     }
+
+    // Asset rename operations
+    public async renameAsset(oldName: string, newName: string): Promise<void> {
+        try {
+            console.log(`Starting asset rename process: "${oldName}" -> "${newName}"`);
+            
+            // Step 1: Validate the new name
+            const portfolioData = await this.getPortfolioData();
+            const existingAsset = portfolioData.assets.find(asset => asset.name === newName);
+            if (existingAsset) {
+                throw new Error(`An asset with the name "${newName}" already exists`);
+            }
+            
+            // Step 2: Find the asset to rename
+            const assetToRename = portfolioData.assets.find(asset => asset.name === oldName);
+            if (!assetToRename) {
+                throw new Error(`Asset "${oldName}" not found`);
+            }
+            
+            // Step 3: Rename asset in all portfolio update files (with backup)
+            await this.dataStore.renameAssetInAllFiles(oldName, newName);
+            
+            // Step 4: Update the asset name in portfolio data
+            assetToRename.name = newName;
+            
+            // Also update in account assets if applicable
+            if (portfolioData.accounts) {
+                for (const account of portfolioData.accounts) {
+                    if (account.assets) {
+                        for (const accountAsset of account.assets) {
+                            if (accountAsset.name === oldName) {
+                                accountAsset.name = newName;
+                                console.log(`Updated asset name in account "${account.name}": ${oldName} -> ${newName}`);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Step 5: Save the updated portfolio data
+            await this.savePortfolioData(portfolioData);
+            
+            console.log(`Asset rename completed successfully: "${oldName}" -> "${newName}"`);
+            
+        } catch (error) {
+            console.error('Error in renameAsset:', error);
+            throw error;
+        }
+    }
 }
