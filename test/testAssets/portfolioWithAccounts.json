@@ -2,44 +2,45 @@
     "accounts": [
         {
             "name": "招行",
-            "type": "bank"
+            "type": "bank",
+            "assets": [
+                {
+                    "name": "招行.活期",
+                    "type": "simple",
+                    "currency": "CNY",
+                    "tags": [
+                        "活期"
+                    ]
+                },
+                {
+                    "name": "招行.沪深300ETF",
+                    "type": "investment",
+                    "tags": [
+                        "指数基金"
+                    ]
+                }
+            ]
         },
         {
             "name": "国金",
-            "type": "stock"
+            "type": "stock",
+            "assets": [
+                {
+                    "name": "贵州茅台",
+                    "type": "stock",
+                    "tags": [
+                        "股票"
+                    ]
+                }
+            ]
         }
     ],
     "assets": [
-        {
-            "name": "招行.活期",
-            "type": "simple",
-            "currency": "CNY",
-            "account": "招行",
-            "tags": [
-                "活期"
-            ]
-        },
-        {
-            "name": "招行.沪深300ETF",
-            "type": "investment",
-            "account": "招行",
-            "tags": [
-                "指数基金"
-            ]
-        },
         {
             "name": "富国信用债",
             "type": "investment",
             "tags": [
                 "信用债基金"
-            ]
-        },
-        {
-            "name": "贵州茅台",
-            "type": "stock",
-            "account": "国金",
-            "tags": [
-                "股票"
             ]
         },
         {
