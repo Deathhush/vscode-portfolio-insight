@@ -188,4 +188,202 @@ export class PortfolioDataStore {
             return undefined;
         }
     }
+
+    // Asset rename operations
+    async renameAssetInAllFiles(oldName: string, newName: string): Promise<void> {
+        try {
+            console.log(`Starting asset rename: "${oldName}" -> "${newName}"`);
+            
+            // Step 1: Find files that will be changed
+            const filesToChange = await this.findFilesWithAssetReferences(oldName);
+            
+            if (filesToChange.length === 0) {
+                console.log(`No files contain references to asset "${oldName}". No backup or update needed.`);
+                return;
+            }
+            
+            // Step 2: Create backup folder with UTF-8 encoded name
+            const backupFolderName = `${oldName}.rename.bak`;
+            const backupFolder = await this.createBackupFolder(backupFolderName);
+            
+            // Step 3: Backup only the files that will be changed
+            await this.backupSpecificFiles(backupFolder, filesToChange);
+            
+            // Step 4: Update all portfolio update files
+            await this.updateAssetNameInPortfolioUpdates(oldName, newName);
+            
+            console.log(`Asset rename completed successfully. Backups stored in: ${backupFolder}`);
+        } catch (error) {
+            console.error('Error during asset rename:', error);
+            throw new Error(`Failed to rename asset "${oldName}" to "${newName}": ${error}`);
+        }
+    }
+
+    private async findFilesWithAssetReferences(assetName: string): Promise<string[]> {
+        const assetUpdatesFolder = path.join(this.workspaceFolder.uri.fsPath, 'AssetUpdates');
+        
+        if (!fs.existsSync(assetUpdatesFolder)) {
+            return [];
+        }
+
+        const files = fs.readdirSync(assetUpdatesFolder)
+            .filter(file => file.endsWith('.json'));
+
+        const filesToChange: string[] = [];
+        
+        for (const file of files) {
+            const filePath = path.join(assetUpdatesFolder, file);
+            
+            try {
+                const content = fs.readFileSync(filePath, 'utf8');
+                const update = JSON.parse(content) as PortfolioUpdateData;
+                let hasReference = false;
+                
+                // Check if asset is referenced in the assets array
+                if (update.assets && Array.isArray(update.assets)) {
+                    for (const asset of update.assets) {
+                        if (asset.name === assetName) {
+                            hasReference = true;
+                            break;
+                        }
+                    }
+                }
+                
+                // Check if asset is referenced in transfers
+                if (!hasReference && update.transfers && Array.isArray(update.transfers)) {
+                    for (const transfer of update.transfers) {
+                        if (transfer.from === assetName || transfer.to === assetName) {
+                            hasReference = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (hasReference) {
+                    filesToChange.push(file);
+                    console.log(`Found reference to "${assetName}" in ${file}`);
+                }
+                
+            } catch (error) {
+                console.error(`Error reading file ${file}:`, error);
+                // Include the file in backup if we can't read it, to be safe
+                filesToChange.push(file);
+            }
+        }
+        
+        console.log(`Found ${filesToChange.length} files with references to "${assetName}"`);
+        return filesToChange;
+    }
+
+    private async backupSpecificFiles(backupFolder: string, filesToBackup: string[]): Promise<void> {
+        const assetUpdatesFolder = path.join(this.workspaceFolder.uri.fsPath, 'AssetUpdates');
+        
+        if (filesToBackup.length === 0) {
+            console.log('No files to backup');
+            return;
+        }
+
+        console.log(`Backing up ${filesToBackup.length} specific portfolio update files`);
+        
+        for (const file of filesToBackup) {
+            const sourcePath = path.join(assetUpdatesFolder, file);
+            const destPath = path.join(backupFolder, file);
+            
+            if (fs.existsSync(sourcePath)) {
+                fs.copyFileSync(sourcePath, destPath);
+                console.log(`Backed up ${file}`);
+            } else {
+                console.warn(`Source file ${file} not found, skipping backup`);
+            }
+        }
+        
+        console.log(`Backup completed: ${filesToBackup.length} files backed up to ${backupFolder}`);
+    }
+
+    private async createBackupFolder(folderName: string): Promise<string> {
+        // Ensure proper UTF-8 encoding for folder names with Unicode characters
+        // This is important for Chinese characters and other non-ASCII characters
+        const backupFolder = path.join(this.workspaceFolder.uri.fsPath, folderName);
+        
+        if (fs.existsSync(backupFolder)) {
+            // If backup folder already exists, add timestamp to make it unique
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+            const uniqueFolderName = `${folderName}-${timestamp}`;
+            const uniqueBackupFolder = path.join(this.workspaceFolder.uri.fsPath, uniqueFolderName);
+            
+            // Use recursive option to ensure proper encoding throughout the path
+            fs.mkdirSync(uniqueBackupFolder, { recursive: true });
+            console.log(`Created backup folder: ${uniqueBackupFolder}`);
+            return uniqueBackupFolder;
+        } else {
+            // Use recursive option to ensure proper encoding throughout the path
+            fs.mkdirSync(backupFolder, { recursive: true });
+            console.log(`Created backup folder: ${backupFolder}`);
+            return backupFolder;
+        }
+    }
+
+    private async updateAssetNameInPortfolioUpdates(oldName: string, newName: string): Promise<void> {
+        const assetUpdatesFolder = path.join(this.workspaceFolder.uri.fsPath, 'AssetUpdates');
+        
+        if (!fs.existsSync(assetUpdatesFolder)) {
+            console.log('No AssetUpdates folder found, skipping portfolio update file updates');
+            return;
+        }
+
+        const files = fs.readdirSync(assetUpdatesFolder)
+            .filter(file => file.endsWith('.json'));
+
+        let filesUpdated = 0;
+        
+        for (const file of files) {
+            const filePath = path.join(assetUpdatesFolder, file);
+            
+            try {
+                const content = fs.readFileSync(filePath, 'utf8');
+                const update = JSON.parse(content) as PortfolioUpdateData;
+                let fileModified = false;
+                
+                // Update asset names in the assets array
+                if (update.assets && Array.isArray(update.assets)) {
+                    for (const asset of update.assets) {
+                        if (asset.name === oldName) {
+                            asset.name = newName;
+                            fileModified = true;
+                            console.log(`Updated asset name in ${file}: ${oldName} -> ${newName}`);
+                        }
+                    }
+                }
+                
+                // Update asset names in transfers (from/to fields)
+                if (update.transfers && Array.isArray(update.transfers)) {
+                    for (const transfer of update.transfers) {
+                        if (transfer.from === oldName) {
+                            transfer.from = newName;
+                            fileModified = true;
+                            console.log(`Updated transfer 'from' field in ${file}: ${oldName} -> ${newName}`);
+                        }
+                        if (transfer.to === oldName) {
+                            transfer.to = newName;
+                            fileModified = true;
+                            console.log(`Updated transfer 'to' field in ${file}: ${oldName} -> ${newName}`);
+                        }
+                    }
+                }
+                
+                // Save the file if it was modified
+                if (fileModified) {
+                    const updatedContent = JSON.stringify(update, null, 2);
+                    fs.writeFileSync(filePath, updatedContent, 'utf8');
+                    filesUpdated++;
+                }
+                
+            } catch (error) {
+                console.error(`Error updating file ${file}:`, error);
+                // Continue with other files even if one fails
+            }
+        }
+        
+        console.log(`Portfolio update files processed: ${filesUpdated} files updated out of ${files.length} total files`);
+    }
 }
