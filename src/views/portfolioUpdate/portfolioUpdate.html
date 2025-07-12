@@ -2096,19 +2096,25 @@
         // Update current asset summary
         updateTransferSummary(currentAssetId);
 
-        // Handle paired transfer
-        if (targetAssetId && finalAmount && parseFloat(finalAmount) > 0) {
-          createOrUpdatePairedTransfer(
-            transferId,
-            currentAssetId,
-            targetAssetId,
-            type,
-            finalAmount,
-            description,
-            date
-          );
+        // Handle paired transfer - but NOT for buy/sell operations
+        // Buy/sell operations are self-contained and don't need paired transfers
+        if (type !== 'buy' && type !== 'sell') {
+          if (targetAssetId && finalAmount && parseFloat(finalAmount) > 0) {
+            createOrUpdatePairedTransfer(
+              transferId,
+              currentAssetId,
+              targetAssetId,
+              type,
+              finalAmount,
+              description,
+              date
+            );
+          } else {
+            // Remove paired transfer if target asset or amount is cleared
+            removePairedTransfer(transferId);
+          }
         } else {
-          // Remove paired transfer if target asset or amount is cleared
+          // For buy/sell operations, always remove any existing paired transfer
           removePairedTransfer(transferId);
         }
       }
