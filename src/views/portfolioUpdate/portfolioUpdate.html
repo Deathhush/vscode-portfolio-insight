@@ -2678,9 +2678,8 @@
             assetData.events = events;
             assetUpdateData.assets.push(assetData);
           }
-        }); // Collect transfer data
+        });        // Collect transfer data
         const allAssetGroups = document.querySelectorAll("[data-asset-id]");
-        const processedTransfers = new Set();
 
         allAssetGroups.forEach((assetGroup) => {
           const transfersContainer = assetGroup.querySelector(
@@ -2691,11 +2690,15 @@
               transfersContainer.querySelectorAll(".transfer-item");
             transferItems.forEach((item) => {
               const transferId = item.dataset.transferId;
+              const isPaired = item.dataset.isPaired === "true";
 
-              // Skip if already processed (paired transfers)
-              if (processedTransfers.has(transferId)) {
+              // Only process user-created transfers, skip auto-paired ones
+              if (isPaired) {
+                console.log(`Skipping auto-paired transfer ${transferId}`);
                 return;
               }
+
+              console.log(`Processing user-created transfer ${transferId}`);
 
               const typeSelect = item.querySelector(".transfer-type-select");
               const assetSelect = item.querySelector(".transfer-asset-select");
@@ -2741,14 +2744,14 @@
                   }
                   
                   // Include additional buy/sell data
+                  transfer.amount = shares; // Amount represents shares for buy/sell operations
                   if (unitPrice > 0) {
                     transfer.unitPrice = unitPrice;
                   }
                   if (totalValue > 0) {
                     transfer.totalValue = totalValue;
-                    transfer.amount = totalValue;
                   } else if (shares > 0 && unitPrice > 0) {
-                    transfer.amount = shares * unitPrice;
+                    transfer.totalValue = shares * unitPrice;
                   }
                   
                 } else {
@@ -2777,13 +2780,6 @@
                 }
 
                 assetUpdateData.transfers.push(transfer);
-                processedTransfers.add(transferId);
-
-                // Also mark paired transfer as processed
-                const pairedId = transferPairs.get(transferId);
-                if (pairedId) {
-                  processedTransfers.add(pairedId);
-                }
               }
             });
           }
