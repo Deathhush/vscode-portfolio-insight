@@ -688,6 +688,27 @@
         color: var(--input-placeholder);
       }
 
+      /* Buy/Sell specific input fields */
+      .transfer-shares-input,
+      .transfer-unitprice-input,
+      .transfer-totalvalue-input {
+        flex: 1;
+        padding: 4px 8px;
+        border: 1px solid var(--input-border);
+        border-radius: 3px;
+        font-size: 0.8em;
+        background: var(--input-bg);
+        color: var(--text-primary);
+        margin-right: 8px;
+        text-align: right;
+      }
+
+      .transfer-shares-input:last-child,
+      .transfer-unitprice-input:last-child,
+      .transfer-totalvalue-input:last-child {
+        margin-right: 0;
+      }
+
       .remove-transfer-btn {
         position: absolute;
         top: 8px;
@@ -1916,6 +1937,10 @@
         transferDiv.dataset.transferId = transferId;
         transferDiv.dataset.isPaired = isPaired;
 
+        // Find the current asset to determine if it's a stock
+        const currentAsset = assets.find(asset => (asset.id || asset.name) === currentAssetId);
+        const isStock = currentAsset && currentAsset.type === 'stock';
+
         // Get list of other assets for the dropdown
         const otherAssets = assets.filter(
           (asset) => (asset.id || asset.name) !== currentAssetId
@@ -1926,12 +1951,28 @@
               `<option value="${asset.id || asset.name}">${asset.name}</option>`
           )
           .join("");
+
+        // Create transfer type options based on whether current asset is stock
+        let transferTypeOptions = '';
+        if (isStock) {
+          transferTypeOptions = `
+            <option value="to">To (Transfer In)</option>
+            <option value="from">From (Transfer Out)</option>
+            <option value="buy">Buy</option>
+            <option value="sell">Sell</option>
+          `;
+        } else {
+          transferTypeOptions = `
+            <option value="to">To</option>
+            <option value="from">From</option>
+          `;
+        }
+
         transferDiv.innerHTML = `
           <button type="button" class="remove-transfer-btn" onclick="removeTransfer('${transferId}', '${currentAssetId}')" title="Remove transfer">×</button>
           <div class="transfer-row">
             <select class="transfer-type-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
-              <option value="to">To</option>
-              <option value="from">From</option>
+              ${transferTypeOptions}
             </select>
             <select class="transfer-asset-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
               <option value="">Select asset...</option>
@@ -1940,6 +1981,14 @@
             <input type="date" class="transfer-date-input" 
                    onchange="handleTransferDateChange('${transferId}', '${currentAssetId}', this)" />
             <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" 
+                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+          </div>
+          <div class="transfer-row" id="buySellRow-${transferId}" style="display: none;">
+            <input type="number" class="transfer-shares-input" placeholder="Shares" step="0.01" min="0" 
+                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+            <input type="number" class="transfer-unitprice-input" placeholder="Unit Price" step="0.01" min="0" 
+                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+            <input type="number" class="transfer-totalvalue-input" placeholder="Total Value" step="0.01" min="0" 
                    oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
           </div>
           <div class="transfer-row">
@@ -1996,17 +2045,45 @@
           ".transfer-description-input"
         ).value;
 
+        // Show/hide buy/sell specific fields based on transfer type
+        const buySellRow = document.getElementById(`buySellRow-${transferId}`);
+        const amountInput = transferItem.querySelector(".transfer-amount-input");
+        
+        if (type === 'buy' || type === 'sell') {
+          buySellRow.style.display = 'flex';
+          amountInput.style.display = 'none';
+          amountInput.placeholder = 'Auto-calculated';
+        } else {
+          buySellRow.style.display = 'none';
+          amountInput.style.display = 'block';
+          amountInput.placeholder = 'Amount';
+        }
+
+        // For buy/sell operations, calculate amount from shares and price
+        let finalAmount = amount;
+        if (type === 'buy' || type === 'sell') {
+          const shares = transferItem.querySelector(".transfer-shares-input")?.value || 0;
+          const unitPrice = transferItem.querySelector(".transfer-unitprice-input")?.value || 0;
+          const totalValue = transferItem.querySelector(".transfer-totalvalue-input")?.value || 0;
+          
+          if (totalValue > 0) {
+            finalAmount = totalValue;
+          } else if (shares > 0 && unitPrice > 0) {
+            finalAmount = shares * unitPrice;
+          }
+        }
+
         // Update current asset summary
         updateTransferSummary(currentAssetId);
 
         // Handle paired transfer
-        if (targetAssetId && amount && parseFloat(amount) > 0) {
+        if (targetAssetId && finalAmount && parseFloat(finalAmount) > 0) {
           createOrUpdatePairedTransfer(
             transferId,
             currentAssetId,
             targetAssetId,
             type,
-            amount,
+            finalAmount,
             description,
             date
           );
@@ -2101,7 +2178,16 @@
           transferPairs.set(transferId, pairedTransferId);
           transferPairs.set(pairedTransferId, transferId);
         } // Update paired transfer values
-        const pairedType = sourceType === "to" ? "from" : "to";
+        // Map the transfer type for the paired transfer
+        let pairedType;
+        if (sourceType === "buy") {
+          pairedType = "from"; // Buy from current asset creates transfer_out on target asset
+        } else if (sourceType === "sell") {
+          pairedType = "to"; // Sell to target asset creates transfer_in on target asset
+        } else {
+          pairedType = sourceType === "to" ? "from" : "to"; // Traditional mapping
+        }
+        
         pairedTransferItem.querySelector(".transfer-type-select").value =
           pairedType;
         pairedTransferItem.querySelector(".transfer-asset-select").value =
@@ -2625,22 +2711,63 @@
                 typeSelect &&
                 typeSelect.value &&
                 assetSelect &&
-                assetSelect.value &&
-                amountInput &&
-                amountInput.value
+                assetSelect.value
               ) {
                 const currentAssetName = assetGroup.dataset.assetId;
+                const transferType = typeSelect.value;
 
-                const transfer = {
-                  amount: parseFloat(amountInput.value),
-                };
+                const transfer = {};
 
-                if (typeSelect.value === "from") {
-                  transfer.from = currentAssetName;
-                  transfer.to = assetSelect.value;
+                // Handle buy/sell operations vs traditional transfers
+                if (transferType === "buy" || transferType === "sell") {
+                  // For buy/sell, get data from buy/sell specific fields
+                  const sharesInput = item.querySelector(".transfer-shares-input");
+                  const unitPriceInput = item.querySelector(".transfer-unitprice-input");
+                  const totalValueInput = item.querySelector(".transfer-totalvalue-input");
+                  
+                  const shares = sharesInput ? parseFloat(sharesInput.value) : 0;
+                  const unitPrice = unitPriceInput ? parseFloat(unitPriceInput.value) : 0;
+                  const totalValue = totalValueInput ? parseFloat(totalValueInput.value) : 0;
+                  
+                  if (shares <= 0) {
+                    return; // Skip if no shares specified
+                  }
+                  
+                  // Set from/to based on operation type
+                  if (transferType === "buy") {
+                    transfer.from = assetSelect.value; // Money comes from target asset
+                    transfer.to = currentAssetName;    // Shares go to current stock asset
+                  } else { // sell
+                    transfer.from = currentAssetName;  // Shares come from current stock asset
+                    transfer.to = assetSelect.value;   // Money goes to target asset
+                  }
+                  
+                  // Include additional buy/sell data
+                  if (unitPrice > 0) {
+                    transfer.unitPrice = unitPrice;
+                  }
+                  if (totalValue > 0) {
+                    transfer.totalValue = totalValue;
+                    transfer.amount = totalValue;
+                  } else if (shares > 0 && unitPrice > 0) {
+                    transfer.amount = shares * unitPrice;
+                  }
+                  
                 } else {
-                  transfer.from = assetSelect.value;
-                  transfer.to = currentAssetName;
+                  // Traditional transfer handling
+                  if (!amountInput || !amountInput.value) {
+                    return; // Skip if no amount specified
+                  }
+                  
+                  transfer.amount = parseFloat(amountInput.value);
+                  
+                  if (transferType === "from") {
+                    transfer.from = currentAssetName;
+                    transfer.to = assetSelect.value;
+                  } else { // "to"
+                    transfer.from = assetSelect.value;
+                    transfer.to = currentAssetName;
+                  }
                 }
 
                 if (dateInput && dateInput.value) {

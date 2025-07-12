@@ -432,6 +432,18 @@
             border: 1px solid var(--warning-color);
         }
         
+        .activity-type-badge.buy {
+            background: rgba(76, 175, 80, 0.15);
+            color: #4CAF50;
+            border: 1px solid #4CAF50;
+        }
+        
+        .activity-type-badge.sell {
+            background: rgba(244, 67, 54, 0.15);
+            color: #F44336;
+            border: 1px solid #F44336;
+        }
+        
         .activity-type-badge.snapshot {
             background: rgba(121, 85, 72, 0.15);
             color: var(--text-accent);
@@ -452,6 +464,14 @@
         
         .activity-amount-display.expense {
             color: var(--error-color);
+        }
+        
+        .activity-amount-display.buy {
+            color: #4CAF50;
+        }
+        
+        .activity-amount-display.sell {
+            color: #F44336;
         }
         
         .activity-amount-display.snapshot {
@@ -998,7 +1018,7 @@
                 <!-- Transfer specific fields -->
                 <div id="transferFields" class="activity-type-specific">
                     <div class="form-row">
-                        <div class="form-group">
+                        <div class="form-group" id="transferAmountGroup">
                             <label for="transferAmount">Amount</label>
                             <input type="number" id="transferAmount" class="form-control" step="0.01" min="0" placeholder="0.00">
                         </div>
@@ -1008,6 +1028,28 @@
                                 <option value="">Select asset...</option>
                             </select>
                         </div>
+                    </div>
+                    
+                    <!-- Buy/Sell specific fields -->
+                    <div id="buySellFields" class="form-row" style="display: none;">
+                        <div class="form-group">
+                            <label for="shareAmount">Share Amount *</label>
+                            <input type="number" id="shareAmount" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="unitPrice">Unit Price</label>
+                            <input type="number" id="unitPrice" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="form-group">
+                            <label for="totalValue">Total Value</label>
+                            <input type="number" id="totalValue" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <small style="font-size: 0.8em; color: var(--text-secondary);">
+                            <span id="transferNote">For buy/sell operations, either unit price or total value is required.</span>
+                        </small>
                     </div>
                 </div>
 
@@ -1347,6 +1389,10 @@
             }
             
             // Transfer options are available for all asset types
+            if (currentAsset && currentAsset.type === 'stock') {
+                optionsHtml += '<option value="buy">Buy</option>';
+                optionsHtml += '<option value="sell">Sell</option>';
+            }
             optionsHtml += '<option value="transfer_in">Transfer In</option>';
             optionsHtml += '<option value="transfer_out">Transfer Out</option>';
             
@@ -1465,11 +1511,20 @@
                 incomeExpenseFields.style.display = 'block';
                 // Amount is required for income/expense
                 document.getElementById('incomeExpenseAmount').setAttribute('required', 'required');
-            } else if (activityType === 'transfer_in' || activityType === 'transfer_out') {
+            } else if (activityType === 'transfer_in' || activityType === 'transfer_out' || activityType === 'buy' || activityType === 'sell') {
                 const transferFields = document.getElementById('transferFields');
                 transferFields.style.display = 'block';
-                // Amount and related asset are required for transfers
-                document.getElementById('transferAmount').setAttribute('required', 'required');
+                
+                // For buy/sell operations, show additional fields
+                if (activityType === 'buy' || activityType === 'sell') {
+                    // Show share-based inputs for stock operations
+                    showBuySellFields();
+                } else {
+                    // Show traditional transfer fields
+                    showTransferFields();
+                }
+                
+                // Related asset is always required for transfers/buy/sell
                 document.getElementById('relatedAsset').setAttribute('required', 'required');
                 loadAssetsList();
             }
@@ -1494,6 +1549,37 @@
                     select.appendChild(option);
                 }
             });
+        }
+        
+        function showBuySellFields() {
+            // Hide traditional transfer amount field
+            document.getElementById('transferAmountGroup').style.display = 'none';
+            document.getElementById('transferAmount').removeAttribute('required');
+            
+            // Show buy/sell specific fields
+            document.getElementById('buySellFields').style.display = 'flex';
+            document.getElementById('shareAmount').setAttribute('required', 'required');
+            
+            // Update the note
+            document.getElementById('transferNote').textContent = 'For buy/sell operations, share amount is required. Either unit price or total value must also be provided.';
+        }
+        
+        function showTransferFields() {
+            // Show traditional transfer amount field
+            document.getElementById('transferAmountGroup').style.display = 'block';
+            document.getElementById('transferAmount').setAttribute('required', 'required');
+            
+            // Hide buy/sell specific fields
+            document.getElementById('buySellFields').style.display = 'none';
+            document.getElementById('shareAmount').removeAttribute('required');
+            
+            // Clear buy/sell fields
+            document.getElementById('shareAmount').value = '';
+            document.getElementById('unitPrice').value = '';
+            document.getElementById('totalValue').value = '';
+            
+            // Update the note
+            document.getElementById('transferNote').textContent = 'Transfer amount is required.';
         }
         
         function showSaveBar() {
@@ -1642,25 +1728,69 @@
                     }
                     activityData.amount = amount;
                     
-                } else if (activityType === 'transfer_in' || activityType === 'transfer_out') {
-                    const amountInput = document.getElementById('transferAmount');
-                    const amount = parseFloat(amountInput.value);
+                } else if (activityType === 'transfer_in' || activityType === 'transfer_out' || activityType === 'buy' || activityType === 'sell') {
                     const relatedAssetSelect = document.getElementById('relatedAsset');
                     const relatedAsset = relatedAssetSelect.value;
                     
-                    if (!amount || amount <= 0) {
-                        showErrorMessage('Please enter a valid amount');
-                        amountInput.focus();
-                        return;
-                    }
                     if (!relatedAsset) {
                         showErrorMessage('Please select a related asset');
                         relatedAssetSelect.focus();
                         return;
                     }
                     
-                    activityData.amount = amount;
                     activityData.relatedAsset = relatedAsset;
+                    
+                    if (activityType === 'buy' || activityType === 'sell') {
+                        // Handle buy/sell operations
+                        const shareAmountInput = document.getElementById('shareAmount');
+                        const unitPriceInput = document.getElementById('unitPrice');
+                        const totalValueInput = document.getElementById('totalValue');
+                        
+                        const shareAmount = parseFloat(shareAmountInput.value);
+                        const unitPrice = parseFloat(unitPriceInput.value) || 0;
+                        const totalValue = parseFloat(totalValueInput.value) || 0;
+                        
+                        if (!shareAmount || shareAmount <= 0) {
+                            showErrorMessage('Please enter a valid share amount');
+                            shareAmountInput.focus();
+                            return;
+                        }
+                        
+                        if (unitPrice <= 0 && totalValue <= 0) {
+                            showErrorMessage('Please enter either unit price or total value');
+                            unitPriceInput.focus();
+                            return;
+                        }
+                        
+                        // Set amount based on calculation or input
+                        if (totalValue > 0) {
+                            activityData.amount = totalValue;
+                        } else {
+                            activityData.amount = shareAmount * unitPrice;
+                        }
+                        
+                        // Store additional buy/sell data for backend processing
+                        activityData.shareAmount = shareAmount;
+                        if (unitPrice > 0) {
+                            activityData.unitPrice = unitPrice;
+                        }
+                        if (totalValue > 0) {
+                            activityData.totalValue = totalValue;
+                        }
+                        
+                    } else {
+                        // Handle traditional transfers
+                        const amountInput = document.getElementById('transferAmount');
+                        const amount = parseFloat(amountInput.value);
+                        
+                        if (!amount || amount <= 0) {
+                            showErrorMessage('Please enter a valid amount');
+                            amountInput.focus();
+                            return;
+                        }
+                        
+                        activityData.amount = amount;
+                    }
                 }
                 
                 console.log('Sending activity data:', activityData);

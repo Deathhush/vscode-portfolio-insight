@@ -214,10 +214,13 @@ export class Asset {
                     
                     // Transfer OUT from this asset
                     if (transfer.from === this.name) {
+                        // Determine if this is a sell operation for stock assets
+                        const isSellOperation = this.type === 'stock';
+                        
                         const transferOutActivity: AssetActivityData = {
                             id: `${this.name}-transfer-out-${activityId++}`,
-                            type: 'transfer_out',
-                            amount: transfer.amount,
+                            type: isSellOperation ? 'sell' : 'transfer_out',
+                            amount: transfer.amount || (transfer.totalValue || 0),
                             date: transferDate,
                             relatedAsset: transfer.to
                         };
@@ -232,10 +235,13 @@ export class Asset {
                     
                     // Transfer IN to this asset
                     if (transfer.to === this.name) {
+                        // Determine if this is a buy operation for stock assets
+                        const isBuyOperation = this.type === 'stock';
+                        
                         const transferInActivity: AssetActivityData = {
                             id: `${this.name}-transfer-in-${activityId++}`,
-                            type: 'transfer_in',
-                            amount: transfer.amount,
+                            type: isBuyOperation ? 'buy' : 'transfer_in',
+                            amount: transfer.amount || (transfer.totalValue || 0),
                             date: transferDate,
                             relatedAsset: transfer.from
                         };
@@ -272,12 +278,12 @@ export class Asset {
         const oneMonthAgo = new Date();
         oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
 
-        // Calculate income from both direct income events and transfer-in activities
+        // Calculate income from direct income events, transfer-in activities, and buy operations
         return activities
             .filter(activity => {
                 const activityDate = new Date(activity.date);
                 const isRecentActivity = activityDate >= oneMonthAgo;
-                const isIncomeActivity = activity.type === 'income' || activity.type === 'transfer_in';
+                const isIncomeActivity = activity.type === 'income' || activity.type === 'transfer_in' || activity.type === 'buy';
                 
                 return isRecentActivity && isIncomeActivity;
             })

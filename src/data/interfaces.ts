@@ -38,7 +38,9 @@ export interface AssetUpdateData {
 export interface TransferData {
     from: string;
     to: string;
-    amount: number;
+    amount?: number;
+    totalValue?: number;
+    unitPrice?: number;
     date?: string;
     description?: string;
 }
@@ -66,7 +68,7 @@ export interface AssetCurrentValueData {
 
 export interface AssetActivityData {
     id: string;
-    type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'snapshot';
+    type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'buy' | 'sell' | 'snapshot';
     amount: number;
     date: string;
     description?: string;
