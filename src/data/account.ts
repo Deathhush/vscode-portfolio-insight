@@ -26,22 +26,12 @@ export class Account {
     /**
      * Get all assets that belong to this account
      */
-    public async getAssets(): Promise<Asset[]> {
-        const portfolioData = await this.dataAccess.getPortfolioData();
+    public async getAssets(): Promise<Asset[]> {        
         const assets: Asset[] = [];
 
-        // Find assets that reference this account
-        for (const assetDefinition of portfolioData.assets) {
-            if (assetDefinition.account === this.name) {
-                const asset = await this.dataAccess.createAsset(assetDefinition);
-                assets.push(asset);
-            }
-        }
-
-        // Also include assets nested in the account definition
         if (this.definitionData.assets) {
             for (const assetDefinition of this.definitionData.assets) {
-                const asset = await this.dataAccess.createAsset(assetDefinition);
+                const asset = await this.dataAccess.getAsset(assetDefinition, this.name);
                 assets.push(asset);
             }
         }

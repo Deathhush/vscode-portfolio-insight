@@ -1,0 +1,41 @@
+{
+  "accounts": [
+    {
+      "name": "招行",
+      "type": "bank",
+      "assets": [
+        {
+          "name": "活期",
+          "type": "simple",
+          "currency": "CNY"
+        },
+        {
+          "name": "沪深300ETF",
+          "type": "investment",
+          "currency": "CNY"
+        }
+      ]
+    },
+    {
+      "name": "国金",
+      "type": "stock",
+      "assets": [
+        {
+          "name": "贵州茅台",
+          "type": "stock"
+        }
+      ]
+    }
+  ],
+  "assets": [
+    {
+      "name": "国金#宁德时代",
+      "type": "stock"
+    },
+    {
+      "name": "StockAward",
+      "type": "stock",
+      "currency": "USD"
+    }
+  ]
+}

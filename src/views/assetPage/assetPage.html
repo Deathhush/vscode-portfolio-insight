@@ -1139,11 +1139,15 @@
             // Store currency information for activities display
             currentAssetCurrency = assetSummary.currentValue.currency || 'CNY';
             
+            // Store the fullName for asset identification (used in transfers and activities)
+            currentAssetFullName = assetSummary.fullName || assetSummary.definition.name;
+            
             // Update asset header with animation
             const assetNameEl = document.getElementById('assetName');
             const assetTypeEl = document.getElementById('assetType');
             
-            assetNameEl.textContent = assetSummary.definition.name;
+            // Display the fullName in the header for clarity
+            assetNameEl.textContent = currentAssetFullName;
             assetTypeEl.textContent = assetSummary.definition.type;
             
             // Update current value
@@ -1477,6 +1481,7 @@
         let lastLoadedActivities = []; // Keep track of the last loaded activities from server
         let currentAsset = null; // Store current asset information for type-specific behavior
         let currentAssetCurrency = 'CNY'; // Store current asset currency for display
+        let currentAssetFullName = null; // Store current asset fullName for identification
         
         function addActivity() {
             const modal = document.getElementById('addActivityModal');
@@ -1670,12 +1675,15 @@
             allAssets = assets;
             const select = document.getElementById('relatedAsset');
             const activityType = document.getElementById('activityType').value;
-            const currentAssetName = document.getElementById('assetName').textContent;
+            // Use the stored fullName instead of getting it from the display text
+            const currentAssetIdentifier = currentAssetFullName;
             
             select.innerHTML = '<option value="">Select asset...</option>';
             
             assets.forEach(asset => {
-                if (asset.name !== currentAssetName) {
+                // Compare using the fullName property for accurate filtering
+                const assetIdentifier = asset.fullName || asset.name;
+                if (assetIdentifier !== currentAssetIdentifier) {
                     // For traditional transfers (transfer_in/transfer_out), exclude stock assets
                     // Stock assets can only participate in buy/sell operations
                     if ((activityType === 'transfer_in' || activityType === 'transfer_out') && asset.type === 'stock') {
@@ -1683,7 +1691,8 @@
                     }
                     
                     const option = document.createElement('option');
-                    option.value = asset.name;
+                    // Use fullName for the value (backend identification) but display name for text
+                    option.value = assetIdentifier;
                     option.textContent = `${asset.name} (${asset.type})`;
                     select.appendChild(option);
                 }
@@ -1937,6 +1946,9 @@
                 }
                 
                 console.log('Sending activity data:', activityData);
+                
+                // Add the current asset's fullName for proper identification
+                activityData.assetName = currentAssetFullName;
                 
                 console.log('Closing modal and adding activity to pending list');
                 closeModal();

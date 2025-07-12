@@ -25,7 +25,7 @@ export class AssetPageView {
         // Create a new panel
         this._panel = vscode.window.createWebviewPanel(
             'assetPageView',
-            `Asset: ${this.assetNode.asset.name}`,
+            `Asset: ${this.assetNode.asset.fullName}`,
             column || vscode.ViewColumn.One,
             {
                 // Enable javascript in the webview
@@ -97,7 +97,7 @@ export class AssetPageView {
             // Send fresh data to webview (no cache to invalidate)
             await this.sendAssetData();
             
-            console.log(`Refreshed data for asset: ${this.asset.name}`);
+            console.log(`Refreshed data for asset: ${this.asset.fullName}`);
         } catch (error) {
             console.error('Error refreshing asset data:', error);
             vscode.window.showErrorMessage(`Failed to refresh asset data: ${error}`);
@@ -110,11 +110,15 @@ export class AssetPageView {
             
             const message = {
                 type: 'ASSET_DATA',
-                data: summary
+                data: {
+                    ...summary,
+                    // Add fullName to the data so frontend can use it for asset identification
+                    fullName: this.asset.fullName
+                }
             };
             
             this._panel.webview.postMessage(message);
-            console.log('Asset data sent to webview:', summary.definition.name);
+            console.log('Asset data sent to webview:', this.asset.fullName);
         } catch (error) {
             console.error('Error sending asset data:', error);
             
@@ -123,7 +127,7 @@ export class AssetPageView {
                 type: 'ERROR',
                 data: {
                     message: `Failed to load asset data: ${error}`,
-                    assetName: this.asset.name
+                    assetName: this.asset.fullName
                 }
             };
             
@@ -134,11 +138,40 @@ export class AssetPageView {
     // Additional message handlers
     private async onGetAllAssets(): Promise<void> {
         try {
-            // Use type-safe access to the provider
+            // Get all assets from both standalone and accounts for transfer operations
             const portfolioData = await this.provider.getPortfolioData();
+            const allAssets: any[] = [];
+            
+            // Add standalone assets (these don't have accounts, so name = fullName)
+            portfolioData.assets.forEach(asset => {
+                allAssets.push({
+                    name: asset.name, // For display purposes
+                    fullName: asset.name, // For identification in transfers
+                    type: asset.type,
+                    currency: asset.currency
+                });
+            });
+            
+            // Add account assets (these have fullName = accountName.assetName)
+            if (portfolioData.accounts) {
+                portfolioData.accounts.forEach(account => {
+                    if (account.assets) {
+                        account.assets.forEach(asset => {
+                            const fullName = `${account.name}.${asset.name}`;
+                            allAssets.push({
+                                name: fullName, // For display purposes, show fullName
+                                fullName: fullName, // For identification in transfers
+                                type: asset.type,
+                                currency: asset.currency
+                            });
+                        });
+                    }
+                });
+            }
+            
             this._panel.webview.postMessage({
                 type: 'ALL_ASSETS',
-                data: portfolioData.assets
+                data: allAssets
             });
         } catch (error) {
             console.error('Error getting all assets:', error);
@@ -224,9 +257,9 @@ export class AssetPageView {
                     if (activity.type === 'buy' || activity.type === 'sell') {
                         if (activity.type === 'buy') {
                             transfer.from = activity.relatedAsset; // Money comes from related asset
-                            transfer.to = this.asset.name;        // Shares go to current asset
+                            transfer.to = this.asset.fullName;        // Shares go to current asset
                         } else { // sell
-                            transfer.from = this.asset.name;      // Shares come from current asset
+                            transfer.from = this.asset.fullName;      // Shares come from current asset
                             transfer.to = activity.relatedAsset;  // Money goes to related asset
                         }
                         
@@ -248,8 +281,8 @@ export class AssetPageView {
                         }
                     } else {
                         // Traditional transfer handling
-                        transfer.from = activity.type === 'transfer_out' ? this.asset.name : activity.relatedAsset;
-                        transfer.to = activity.type === 'transfer_in' ? this.asset.name : activity.relatedAsset;
+                        transfer.from = activity.type === 'transfer_out' ? this.asset.fullName : activity.relatedAsset;
+                        transfer.to = activity.type === 'transfer_in' ? this.asset.fullName : activity.relatedAsset;
                         transfer.amount = activity.amount;
                     }
                     
@@ -295,7 +328,7 @@ export class AssetPageView {
             // Add asset events if any
             if (assetEvents.length > 0) {
                 portfolioUpdate.assets.push({
-                    name: this.asset.name,
+                    name: this.asset.fullName,
                     date: currentDate,
                     events: assetEvents
                 });
@@ -342,7 +375,7 @@ export class AssetPageView {
 
     private _update(): void {
         const webview = this._panel.webview;
-        this._panel.title = `Asset: ${this.assetNode.asset.name}`;
+        this._panel.title = `Asset: ${this.assetNode.asset.fullName}`;
         this._panel.webview.html = this._getHtmlForWebview(webview);
     }
 
