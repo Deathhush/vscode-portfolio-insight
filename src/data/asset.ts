@@ -287,12 +287,19 @@ export class Asset {
                         
                         // Convert currency if this is NOT a stock asset (i.e., paying for stock purchase)
                         // For stock assets selling, no conversion needed (they record in their own currency)
+                        let exchangeRateUsed: number | undefined;
                         if (!isSellOperation && transfer.to) {
                             const sourceCurrency = this.currency;
                             const targetCurrency = getTargetAssetCurrency(transfer.to);
                             
                             try {
+                                const originalValue = totalValue;
                                 totalValue = this.convertCurrencyForTransfer(totalValue, targetCurrency, sourceCurrency, transferDate, allExchangeRates);
+                                
+                                // Store exchange rate if conversion occurred
+                                if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
+                                    exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
+                                }
                             } catch (error) {
                                 console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to} (${targetCurrency}): ${error}`);
                                 // Continue with original value if conversion fails
@@ -313,6 +320,11 @@ export class Asset {
                             transferOutActivity.unitPrice = transfer.unitPrice;
                         }
                         
+                        // Include exchange rate if currency conversion was used
+                        if (exchangeRateUsed) {
+                            transferOutActivity.exchangeRate = exchangeRateUsed;
+                        }
+                        
                         // Only include description if it exists
                         if (transfer.description) {
                             transferOutActivity.description = transfer.description;
@@ -330,12 +342,19 @@ export class Asset {
                         
                         // Convert currency if this is NOT a stock asset (i.e., receiving money from stock sale)
                         // For stock assets buying, no conversion needed (they record in their own currency)
+                        let exchangeRateUsed: number | undefined;
                         if (!isBuyOperation && transfer.from) {
                             const sourceCurrency = getTargetAssetCurrency(transfer.from);
                             const targetCurrency = this.currency;
                             
                             try {
+                                const originalValue = totalValue;
                                 totalValue = this.convertCurrencyForTransfer(totalValue, sourceCurrency, targetCurrency, transferDate, allExchangeRates);
+                                
+                                // Store exchange rate if conversion occurred
+                                if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
+                                    exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
+                                }
                             } catch (error) {
                                 console.warn(`Currency conversion failed for transfer from ${transfer.from} (${sourceCurrency}) to ${this.name} (${targetCurrency}): ${error}`);
                                 // Continue with original value if conversion fails
@@ -354,6 +373,11 @@ export class Asset {
                         // Include buy/sell specific data if available
                         if (transfer.unitPrice) {
                             transferInActivity.unitPrice = transfer.unitPrice;
+                        }
+                        
+                        // Include exchange rate if currency conversion was used
+                        if (exchangeRateUsed) {
+                            transferInActivity.exchangeRate = exchangeRateUsed;
                         }
                         
                         // Only include description if it exists

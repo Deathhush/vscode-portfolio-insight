@@ -1302,17 +1302,44 @@
                     
                     relatedAssetDisplay = `${direction} ${activity.relatedAsset}`;
                     
-                    // For non-stock assets, show buy/sell details in related column
+                    // For non-stock assets, show detailed buy/sell information in related column
                     if (!currentAsset || currentAsset.type !== 'stock') {
-                        if (activity.type === 'buy' || activity.type === 'sell') {
+                        if (activity.type === 'buy' || activity.type === 'sell' || 
+                            activity.type === 'transfer_in' || activity.type === 'transfer_out') {
                             const detailsArray = [];
-                            if (activity.amount) {
-                                detailsArray.push(`${activity.amount} shares`);
+                            
+                            // Add transaction type for clarity first
+                            if (activity.type === 'buy' || activity.type === 'transfer_in') {
+                                detailsArray.push('bought');
+                            } else if (activity.type === 'sell' || activity.type === 'transfer_out') {
+                                detailsArray.push('sold');
                             }
+                            
+                            // Add share information (only if this is related to stock transactions)
+                            if (activity.amount && (activity.unitPrice || activity.exchangeRate)) {
+                                const shareDisplay = activity.amount % 1 === 0 ? activity.amount.toString() : activity.amount.toFixed(2);
+                                detailsArray.push(`${shareDisplay} shares`);
+                            }
+                            
+                            // Add unit price information with currency if available
                             if (activity.unitPrice && activity.unitPrice !== 1) {
-                                detailsArray.push(`@ ${activity.unitPrice}`);
+                                // Try to get the currency of the related asset for proper display
+                                let priceDisplay = activity.unitPrice.toFixed(2);
+                                // If we have the related asset info, we could show its currency
+                                // For now, show the formatted price value
+                                detailsArray.push(`@ ${priceDisplay}`);
                             }
-                            if (detailsArray.length > 0) {
+                            
+                            // Add exchange rate information if this involved currency conversion
+                            // This would be useful when a CNY cash asset is used to buy USD stock or vice versa
+                            if (activity.exchangeRate) {
+                                detailsArray.push(`rate: ${activity.exchangeRate.toFixed(4)}`);
+                            }
+                            
+                            // Debug logging to see what's available
+                            console.log(`Activity ${activity.id}: type=${activity.type}, amount=${activity.amount}, unitPrice=${activity.unitPrice}, exchangeRate=${activity.exchangeRate}`);
+                            
+                            if (detailsArray.length > 1) { // More than just the transaction type
                                 relatedAssetDisplay += ` (${detailsArray.join(', ')})`;
                             }
                         }

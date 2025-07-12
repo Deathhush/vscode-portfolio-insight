@@ -75,6 +75,7 @@ export interface AssetActivityData {
     description?: string;
     relatedAsset?: string; // For transfers
     unitPrice?: number; // For buy/sell operations
+    exchangeRate?: number; // Exchange rate used for currency conversion in this activity
 }
 
 export interface AssetSummaryData {
