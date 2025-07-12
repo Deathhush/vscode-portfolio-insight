@@ -596,6 +596,77 @@
             box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.3);
         }
 
+        /* Rename operation visual indicators */
+        .rename-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 6px;
+            background-color: var(--warning-color);
+            color: #ffffff;
+            border-radius: 3px;
+            font-size: 0.75em;
+            font-weight: 500;
+            margin-left: 8px;
+        }
+
+        .rename-indicator::before {
+            content: "📝";
+            font-size: 0.9em;
+        }
+
+        .input-with-rename {
+            border-left: 3px solid var(--warning-color) !important;
+            background-color: rgba(245, 124, 0, 0.1) !important;
+        }
+
+        .rename-operation-summary {
+            background-color: rgba(245, 124, 0, 0.1);
+            border: 1px solid var(--warning-color);
+            border-radius: 4px;
+            padding: 12px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .rename-operation-summary.visible {
+            display: block;
+        }
+
+        .rename-operation-summary h3 {
+            color: var(--warning-color);
+            margin: 0 0 8px 0;
+            font-size: 1em;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .rename-operation-summary h3::before {
+            content: "📝";
+        }
+
+        .rename-operation-item {
+            font-size: 0.9em;
+            color: var(--text-primary);
+            padding: 4px 0;
+            border-bottom: 1px solid rgba(245, 124, 0, 0.2);
+        }
+
+        .rename-operation-item:last-child {
+            border-bottom: none;
+        }
+
+        .rename-operation-item .old-name {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+        }
+
+        .rename-operation-item .new-name {
+            font-weight: 500;
+            color: var(--warning-color);
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -711,6 +782,10 @@
             <h3>Summary</h3>
             <p>Asset Definitions: <span id="assetCount">0</span></p>
             <p>Types: <span id="typeBreakdown">None</span></p>
+            <div class="rename-operation-summary" id="renameOperationSummary">
+                <h3>Pending Asset Renames</h3>
+                <div id="renameOperationList"></div>
+            </div>
         </div>        
         <div class="submit-controls">
             <button class="btn" onclick="submitAssets()" id="submitBtn">Save Changes</button>
@@ -727,6 +802,7 @@
         let nextAccountId = 1;
         let nextAccountAssetId = 1000; // Start from 1000 to avoid conflicts
         let allTags = []; // Cache for all available tags
+        let renameOperations = []; // Track asset rename operations
 
         // Asset types
         const ASSET_TYPES = ['simple', 'investment', 'composite', 'stock'];
@@ -768,6 +844,12 @@
         });        function initializeAssets(existingAssets) {
             console.log('Initializing with assets:', existingAssets);
             originalAssets = JSON.parse(JSON.stringify(existingAssets));
+            
+            // Clear rename operations when initializing
+            renameOperations = [];
+            
+            // Clear any existing visual indicators
+            updateRenameIndicators();
             
             // Separate standalone assets (those without account)
             assets = existingAssets.filter(asset => !asset.account || asset.account.trim() === '');
@@ -863,10 +945,97 @@
             if (asset) {
                 if (field === 'name') {
                     value = value.trim(); // Trim whitespace
+                    const oldName = asset.name;
+                    
+                    // Check if this is actually a name change and the asset existed in original data
+                    if (oldName && oldName !== value && originalAccounts.some(origAcc => 
+                        origAcc.assets && origAcc.assets.some(origAsset => origAsset.name === oldName))) {
+                        // This is a rename operation - trigger the rename process
+                        handleAccountAssetRename(oldName, value, asset, accountId, assetId);
+                        return; // Early return, handleAccountAssetRename will update the asset
+                    } else if (oldName && oldName !== value) {
+                        // Check if we're reverting a rename operation
+                        const account = accounts.find(a => a.id === accountId);
+                        const accountName = account ? account.name : '';
+                        
+                        const existingRenameIndex = renameOperations.findIndex(op => 
+                            op.newName === oldName && op.isAccountAsset && op.accountName === accountName);
+                        
+                        if (existingRenameIndex >= 0 && value === renameOperations[existingRenameIndex].oldName) {
+                            // User is reverting the rename - remove the rename operation
+                            renameOperations.splice(existingRenameIndex, 1);
+                            showNotification(`Reverted rename operation for "${oldName}"`, 'info');
+                        }
+                    }
                 }
                 asset[field] = value;
                 updateDisplay();
                 validateAccountAsset(accountId, assetId);
+            }
+        }
+        
+        async function handleAccountAssetRename(oldName, newName, asset, accountId, assetId) {
+            if (!newName || newName.trim() === '') {
+                showNotification('Asset name cannot be empty', 'error');
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
+                return;
+            }
+            
+            // Check for duplicate names across all assets (standalone and account assets)
+            const duplicateInStandalone = assets.find(a => a.name === newName);
+            const duplicateInAccounts = accounts.find(acc => 
+                acc.assets && acc.assets.some(a => a.id !== assetId && a.name === newName));
+            
+            if (duplicateInStandalone || duplicateInAccounts) {
+                showNotification(`An asset with the name "${newName}" already exists`, 'error');
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
+                return;
+            }
+            
+            try {
+                // Find the account name for this asset
+                const account = accounts.find(a => a.id === accountId);
+                const accountName = account ? account.name : '';
+                
+                // Track the rename operation for later processing during save
+                const existingRenameIndex = renameOperations.findIndex(op => 
+                    op.oldName === oldName && op.isAccountAsset && op.accountName === accountName);
+                
+                if (existingRenameIndex >= 0) {
+                    // Update existing rename operation
+                    renameOperations[existingRenameIndex].newName = newName;
+                } else {
+                    // Add new rename operation
+                    renameOperations.push({
+                        oldName: oldName,
+                        newName: newName,
+                        isAccountAsset: true,
+                        accountName: accountName
+                    });
+                }
+                
+                // Update the asset
+                asset.name = newName;
+                
+                updateDisplay();
+                validateAccountAsset(accountId, assetId);
+                
+                // Update visual indicators
+                updateRenameIndicators();
+                
+                showNotification(`Account asset will be renamed from "${oldName}" to "${newName}" when changes are saved`, 'info');
+                
+            } catch (error) {
+                console.error('Error tracking account asset rename:', error);
+                showNotification(`Failed to track asset rename: ${error.message || error}`, 'error');
+                
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
             }
         }
 
@@ -924,10 +1093,96 @@
             if (asset) {
                 if (field === 'name') {
                     value = value.trim(); // Trim whitespace
+                    const oldName = asset.name;
+                    
+                    // Check if this is actually a name change and the asset existed in original data
+                    if (oldName && oldName !== value && originalAssets.some(orig => orig.name === oldName)) {
+                        // This is a rename operation - trigger the rename process
+                        handleAssetRename(oldName, value, asset, id);
+                        return; // Early return, handleAssetRename will update the asset
+                    } else if (oldName && oldName !== value) {
+                        // Check if we're reverting a rename operation
+                        const existingRenameIndex = renameOperations.findIndex(op => 
+                            op.newName === oldName && !op.isAccountAsset);
+                        
+                        if (existingRenameIndex >= 0 && value === renameOperations[existingRenameIndex].oldName) {
+                            // User is reverting the rename - remove the rename operation
+                            renameOperations.splice(existingRenameIndex, 1);
+                            showNotification(`Reverted rename operation for "${oldName}"`, 'info');
+                        }
+                    }
                 }
                 asset[field] = value;
                 updateDisplay();
                 validateAsset(id);
+            }
+        }
+        
+        async function handleAssetRename(oldName, newName, asset, assetId) {
+            if (!newName || newName.trim() === '') {
+                showNotification('Asset name cannot be empty', 'error');
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
+                return;
+            }
+            
+            // Check for duplicate names
+            const duplicate = assets.find(a => a.id !== assetId && a.name === newName);
+            if (duplicate) {
+                showNotification(`An asset with the name "${newName}" already exists`, 'error');
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
+                return;
+            }
+            
+            // Check for duplicates in account assets too
+            const duplicateInAccounts = accounts.find(acc => 
+                acc.assets && acc.assets.some(a => a.name === newName));
+            if (duplicateInAccounts) {
+                showNotification(`An asset with the name "${newName}" already exists in accounts`, 'error');
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
+                return;
+            }
+            
+            try {
+                // Track the rename operation for later processing during save
+                const existingRenameIndex = renameOperations.findIndex(op => 
+                    op.oldName === oldName && !op.isAccountAsset);
+                
+                if (existingRenameIndex >= 0) {
+                    // Update existing rename operation
+                    renameOperations[existingRenameIndex].newName = newName;
+                } else {
+                    // Add new rename operation
+                    renameOperations.push({
+                        oldName: oldName,
+                        newName: newName,
+                        isAccountAsset: false
+                    });
+                }
+                
+                // Update the asset
+                asset.name = newName;
+                
+                updateDisplay();
+                validateAsset(assetId);
+                
+                // Update visual indicators
+                updateRenameIndicators();
+                
+                showNotification(`Asset will be renamed from "${oldName}" to "${newName}" when changes are saved`, 'info');
+                
+            } catch (error) {
+                console.error('Error tracking asset rename:', error);
+                showNotification(`Failed to track asset rename: ${error.message || error}`, 'error');
+                
+                // Revert the change
+                asset.name = oldName;
+                updateDisplay();
             }
         }
 
@@ -1230,6 +1485,9 @@
             updateAccountsTable();
             updateAssetsTable();
             updateSummary();
+            
+            // Update rename operation indicators
+            updateRenameIndicators();
             
             // Reset move dropdowns after updating display
             setTimeout(() => {
@@ -1931,21 +2189,40 @@
                 assets: validStandaloneAssets,
                 accounts: validAccounts
             };
+            
+            // Create submission data with portfolio data and rename operations
+            const submissionData = {
+                portfolioData: portfolioData
+            };
+            
+            // Include rename operations if any exist
+            if (renameOperations.length > 0) {
+                submissionData.renameOperations = renameOperations;
+            }
 
-            // Send message with PortfolioData structure
+            // Send message with AssetDefinitionSubmissionData structure
             sendMessage({
                 type: 'ASSET_DEFINITION_SUBMIT',
-                data: portfolioData
+                data: submissionData
             });
 
             const totalAccountAssets = validAccounts.reduce((count, account) => 
                 count + (account.assets ? account.assets.length : 0), 0);
             
-            showNotification(
-                `Successfully submitted ${validStandaloneAssets.length} standalone asset(s), ` +
-                `${validAccounts.length} account(s) with ${totalAccountAssets} account asset(s)`, 
-                'success'
-            );
+            let message = `Successfully submitted ${validStandaloneAssets.length} standalone asset(s), ` +
+                         `${validAccounts.length} account(s) with ${totalAccountAssets} account asset(s)`;
+            
+            if (renameOperations.length > 0) {
+                message += ` and ${renameOperations.length} rename operation(s)`;
+            }
+            
+            showNotification(message, 'success');
+            
+            // Clear rename operations after successful submit
+            renameOperations = [];
+            
+            // Clear visual indicators
+            updateRenameIndicators();
         }
 
         function validateAllAccounts() {
@@ -1968,6 +2245,12 @@
 
             return allValid;
         }        function cancelChanges() {
+            // Clear any pending rename operations
+            renameOperations = [];
+            
+            // Clear visual indicators
+            updateRenameIndicators();
+            
             sendMessage({
                 type: 'CANCEL'
             });
@@ -2037,6 +2320,10 @@
                 return;
             }
             
+            // Check if this asset has pending rename operations
+            const existingRenameIndex = renameOperations.findIndex(op => 
+                (op.newName === asset.name || op.oldName === asset.name) && !op.isAccountAsset);
+            
             // Remove from standalone assets
             const index = assets.findIndex(a => a.id === assetId);
             if (index === -1) return;
@@ -2046,6 +2333,12 @@
             // Update asset properties
             movedAsset.account = accountName;
             movedAsset.id = nextAccountAssetId++; // Assign new ID for account asset
+            
+            // If there was a rename operation for this asset, update it to account asset
+            if (existingRenameIndex >= 0) {
+                renameOperations[existingRenameIndex].isAccountAsset = true;
+                renameOperations[existingRenameIndex].accountName = accountName;
+            }
             
             // Add to target account
             if (!targetAccount.assets) {
@@ -2086,12 +2379,23 @@
                     return;
                 }
                 
+                // Check if this asset has pending rename operations
+                const existingRenameIndex = renameOperations.findIndex(op => 
+                    (op.newName === asset.name || op.oldName === asset.name) && 
+                    op.isAccountAsset && op.accountName === sourceAccount.name);
+                
                 // Remove from account
                 const movedAsset = sourceAccount.assets.splice(assetIndex, 1)[0];
                 
                 // Update asset properties
                 movedAsset.account = '';
                 movedAsset.id = nextAssetId++; // Assign new ID for standalone asset
+                
+                // If there was a rename operation for this asset, update it to standalone
+                if (existingRenameIndex >= 0) {
+                    renameOperations[existingRenameIndex].isAccountAsset = false;
+                    delete renameOperations[existingRenameIndex].accountName;
+                }
                 
                 // Add to standalone assets
                 assets.push(movedAsset);
@@ -2119,12 +2423,22 @@
                     return;
                 }
                 
+                // Check if this asset has pending rename operations
+                const existingRenameIndex = renameOperations.findIndex(op => 
+                    (op.newName === asset.name || op.oldName === asset.name) && 
+                    op.isAccountAsset && op.accountName === sourceAccount.name);
+                
                 // Remove from source account
                 const movedAsset = sourceAccount.assets.splice(assetIndex, 1)[0];
                 
                 // Update asset properties
                 movedAsset.account = destination;
                 movedAsset.id = nextAccountAssetId++; // Assign new ID for account asset
+                
+                // If there was a rename operation for this asset, update the account name
+                if (existingRenameIndex >= 0) {
+                    renameOperations[existingRenameIndex].accountName = destination;
+                }
                 
                 // Add to target account
                 if (!targetAccount.assets) {
@@ -2135,6 +2449,95 @@
                 updateDisplay();
                 showNotification(`Moved "${asset.name}" from "${sourceAccount.name}" to "${destination}"`, 'success');
             }
+        }
+
+        // Rename operation visual indicators
+        function updateRenameIndicators() {
+            updateRenameOperationSummary();
+            updateAssetNameFieldIndicators();
+        }
+
+        function updateRenameOperationSummary() {
+            const summaryDiv = document.getElementById('renameOperationSummary');
+            const listDiv = document.getElementById('renameOperationList');
+            
+            if (renameOperations.length > 0) {
+                listDiv.innerHTML = renameOperations.map(op => `
+                    <div class="rename-operation-item">
+                        <span class="old-name">${op.oldName}</span> → <span class="new-name">${op.newName}</span>
+                        ${op.isAccountAsset ? ` (in account: ${op.accountName})` : ' (standalone)'}
+                    </div>
+                `).join('');
+                summaryDiv.classList.add('visible');
+            } else {
+                summaryDiv.classList.remove('visible');
+            }
+        }
+
+        function updateAssetNameFieldIndicators() {
+            // Update standalone assets
+            assets.forEach(asset => {
+                const renameOp = renameOperations.find(op => 
+                    op.newName === asset.name && !op.isAccountAsset);
+                
+                const nameInput = document.querySelector(`input[data-id="${asset.id}"][data-field="name"]`);
+                if (nameInput) {
+                    if (renameOp) {
+                        nameInput.classList.add('input-with-rename');
+                        
+                        // Add rename indicator if not already present
+                        let indicator = nameInput.parentNode.querySelector('.rename-indicator');
+                        if (!indicator) {
+                            indicator = document.createElement('span');
+                            indicator.className = 'rename-indicator';
+                            indicator.textContent = 'Will be renamed';
+                            nameInput.parentNode.appendChild(indicator);
+                        }
+                    } else {
+                        nameInput.classList.remove('input-with-rename');
+                        
+                        // Remove rename indicator if present
+                        const indicator = nameInput.parentNode.querySelector('.rename-indicator');
+                        if (indicator) {
+                            indicator.remove();
+                        }
+                    }
+                }
+            });
+
+            // Update account assets
+            accounts.forEach(account => {
+                if (account.assets) {
+                    account.assets.forEach(asset => {
+                        const renameOp = renameOperations.find(op => 
+                            op.newName === asset.name && op.isAccountAsset && op.accountName === account.name);
+                        
+                        const nameInput = document.querySelector(`input[data-account-asset-id="${asset.id}"][data-field="name"]`);
+                        if (nameInput) {
+                            if (renameOp) {
+                                nameInput.classList.add('input-with-rename');
+                                
+                                // Add rename indicator if not already present
+                                let indicator = nameInput.parentNode.querySelector('.rename-indicator');
+                                if (!indicator) {
+                                    indicator = document.createElement('span');
+                                    indicator.className = 'rename-indicator';
+                                    indicator.textContent = 'Will be renamed';
+                                    nameInput.parentNode.appendChild(indicator);
+                                }
+                            } else {
+                                nameInput.classList.remove('input-with-rename');
+                                
+                                // Remove rename indicator if present
+                                const indicator = nameInput.parentNode.querySelector('.rename-indicator');
+                                if (indicator) {
+                                    indicator.remove();
+                                }
+                            }
+                        }
+                    });
+                }
+            });
         }
 
         // Helper function to reset move dropdowns

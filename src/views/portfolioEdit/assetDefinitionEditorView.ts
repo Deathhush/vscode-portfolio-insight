@@ -1,18 +1,18 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { PortfolioData } from '../../data/interfaces';
+import { PortfolioData, AssetDefinitionSubmissionData } from '../../data/interfaces';
 
 export class AssetDefinitionEditorView {
     private readonly _panel: vscode.WebviewPanel;
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
-    private _onAssetDefinitionSubmitEmitter = new vscode.EventEmitter<PortfolioData>();
+    private _onAssetDefinitionSubmitEmitter = new vscode.EventEmitter<AssetDefinitionSubmissionData>();
     private _getAllTagsCallback?: () => Promise<string[]>;
     private _getAllAccountsCallback?: () => Promise<any[]>;
     
     // Event that fires when asset definition is received
-    public readonly onAssetDefinitionSubmit: vscode.Event<PortfolioData> = this._onAssetDefinitionSubmitEmitter.event;
+    public readonly onAssetDefinitionSubmit: vscode.Event<AssetDefinitionSubmissionData> = this._onAssetDefinitionSubmitEmitter.event;
 
     public constructor(extensionUri: vscode.Uri, getAllTagsCallback?: () => Promise<string[]>, getAllAccountsCallback?: () => Promise<any[]>) {
         this._extensionUri = extensionUri;
@@ -51,6 +51,9 @@ export class AssetDefinitionEditorView {
                     case 'ASSET_DEFINITION_SUBMIT':
                         this._handleAssetDefinitionSubmit(message.data);
                         return;
+                    case 'ASSET_RENAME':
+                        this._handleAssetRename(message.data);
+                        return;
                     case 'GET_ALL_TAGS':
                         this._handleGetAllTags();
                         return;
@@ -72,9 +75,46 @@ export class AssetDefinitionEditorView {
         }, null, this._disposables);
     }
 
-    private _handleAssetDefinitionSubmit(data: PortfolioData) {
-        // Fire the event to notify listeners
-        this._onAssetDefinitionSubmitEmitter.fire(data);
+    private async _handleAssetDefinitionSubmit(data: AssetDefinitionSubmissionData) {
+        try {
+            // Process rename operations first if they exist
+            if (data.renameOperations && data.renameOperations.length > 0) {
+                for (const renameOp of data.renameOperations) {
+                    console.log(`Processing rename: ${renameOp.oldName} -> ${renameOp.newName}`);
+                    // The actual rename processing will be handled by the extension
+                    // which has access to the PortfolioDataAccess
+                }
+            }
+            
+            // Fire the event to notify listeners (extension will handle the rename operations)
+            this._onAssetDefinitionSubmitEmitter.fire(data);
+            
+        } catch (error) {
+            console.error('Error handling asset definition submit:', error);
+            this._panel.webview.postMessage({
+                type: 'error',
+                message: error instanceof Error ? error.message : 'Unknown error occurred'
+            });
+        }
+    }
+
+    private async _handleAssetRename(data: any) {
+        try {
+            const { oldName, newName } = data;
+            
+            // Send success message back to webview
+            this._panel.webview.postMessage({
+                type: 'ASSET_RENAME_SUCCESS',
+                data: { oldName, newName }
+            });
+            
+        } catch (error) {
+            console.error('Error handling asset rename:', error);
+            this._panel.webview.postMessage({
+                type: 'ASSET_RENAME_ERROR',
+                error: error instanceof Error ? error.message : 'Unknown error occurred'
+            });
+        }
     }
 
     private async _handleGetAllTags() {

@@ -13,9 +13,21 @@ export interface AccountDefinitionData {
     assets?: AssetDefinitionData[]; // Assets can be nested in accounts
 }
 
+export interface AssetRenameOperationData {
+    oldName: string;
+    newName: string;
+    isAccountAsset?: boolean;
+    accountName?: string;
+}
+
 export interface PortfolioData {
     assets: AssetDefinitionData[];
     accounts?: AccountDefinitionData[]; // Add accounts array
+}
+
+export interface AssetDefinitionSubmissionData {
+    portfolioData: PortfolioData;
+    renameOperations?: AssetRenameOperationData[];
 }
 
 export interface AssetEventData {

@@ -254,4 +254,76 @@ export class PortfolioDataAccess {
 
         return matchingAssets;
     }
+
+    // Asset rename operations
+    
+    /**
+     * Helper method to find an asset in either the main portfolio assets or nested in accounts
+     * @param portfolioData The portfolio data to search
+     * @param assetName The name of the asset to find
+     * @returns Object containing the asset and its location info, or null if not found
+     */
+    private findAssetInPortfolio(portfolioData: PortfolioData, assetName: string): AssetDefinitionData | undefined {
+        // First, check in the main portfolio assets
+        const standaloneAsset = portfolioData.assets.find(asset => asset.name === assetName);
+        if (standaloneAsset) {
+            return standaloneAsset;
+        }
+
+        // Then check in account assets
+        if (portfolioData.accounts) {
+            for (const account of portfolioData.accounts) {
+                if (account.assets) {
+                    const accountAsset = account.assets.find(asset => asset.name === assetName);
+                    if (accountAsset) {
+                        return accountAsset;
+                    }
+                }
+            }
+        }
+
+        return undefined;
+    }
+
+    /**
+     * Helper method to validate that the new asset name doesn't exist anywhere in the portfolio
+     * @param portfolioData The portfolio data to search
+     * @param newName The new asset name to validate
+     * @returns true if the name is available, false if it already exists
+     */
+    private isAssetNameAvailable(portfolioData: PortfolioData, newName: string): boolean {
+        return this.findAssetInPortfolio(portfolioData, newName) === undefined;
+    }
+
+    public async renameAsset(oldName: string, newName: string): Promise<void> {
+        try {
+            console.log(`Starting asset rename process: "${oldName}" -> "${newName}"`);
+            
+            // Step 1: Validate the new name doesn't exist anywhere
+            const portfolioData = await this.getPortfolioData();
+            if (!this.isAssetNameAvailable(portfolioData, newName)) {
+                throw new Error(`An asset with the name "${newName}" already exists`);
+            }
+            
+            // Step 2: Find the asset to rename
+            const asset = this.findAssetInPortfolio(portfolioData, oldName);
+            if (!asset) {
+                throw new Error(`Asset "${oldName}" not found`);
+            }
+            
+            // Step 3: Rename asset in all portfolio update files (with backup)
+            await this.dataStore.renameAssetInAllFiles(oldName, newName);
+            
+            // Step 4: Update the asset name in portfolio data
+            asset.name = newName;
+            
+            // Step 5: Save the updated portfolio data
+            await this.savePortfolioData(portfolioData);            
+            console.log(`Asset rename completed successfully: "${oldName}" -> "${newName}"`);
+            
+        } catch (error) {
+            console.error('Error in renameAsset:', error);
+            throw error;
+        }
+    }
 }

@@ -12,7 +12,7 @@ import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { PortfolioDataAccess } from '../data/portfolioDataAccess';
 import { Asset } from '../data/asset';
 import { AssetPageView } from '../views/assetPage/assetPageView';
-import { AssetDefinitionData, PortfolioData } from '../data/interfaces';
+import { AssetDefinitionData, PortfolioData, AssetRenameOperationData, AssetDefinitionSubmissionData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
     nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag' | 'account';
@@ -196,7 +196,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             );
             
             // Subscribe to asset definition submit events
-            this._assetDefinitionEditorView.onAssetDefinitionSubmit((data: PortfolioData) => {
+            this._assetDefinitionEditorView.onAssetDefinitionSubmit((data: AssetDefinitionSubmissionData) => {
                 this.handleAssetDefinitionSubmit(data);
             });
             
@@ -214,48 +214,56 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
         }
     }
     
-    private async handleAssetDefinitionSubmit(portfolioData: PortfolioData): Promise<void> {
+    private async handleAssetDefinitionSubmit(submissionData: AssetDefinitionSubmissionData): Promise<void> {
         try {
-            // Only accept PortfolioData structure with assets and accounts arrays
+            // Extract portfolio data and rename operations
+            const portfolioData: PortfolioData = submissionData.portfolioData;
             const assets: AssetDefinitionData[] = portfolioData.assets || [];
             const accounts: any[] = portfolioData.accounts || [];
-            console.log(`Handling portfolio submit with ${assets.length} assets and ${accounts.length} accounts`);
+            const renameOperations = submissionData.renameOperations || [];
             
-            // Get the current workspace folder
-            const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
-            if (!workspaceFolder) {
-                vscode.window.showErrorMessage('No workspace folder is open. Cannot save portfolio data.');
-                return;
-            }
-
-            const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
-            const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
+            console.log(`Handling portfolio submit with ${assets.length} assets, ${accounts.length} accounts, and ${renameOperations.length} rename operations`);
             
-            // Create Assets folder if it doesn't exist
-            if (!fs.existsSync(assetsFolder)) {
-                fs.mkdirSync(assetsFolder, { recursive: true });
-            }            
-            // Create backup if file exists
-            if (fs.existsSync(portfolioJsonPath)) {
-                const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
-                const backupPath = path.join(assetsFolder, `portfolio-backup-${timestamp}.json`);
-                fs.copyFileSync(portfolioJsonPath, backupPath);
-                console.log(`Backup created: ${backupPath}`);
+            // Process rename operations first
+            if (renameOperations.length > 0) {
+                const progressOptions: vscode.ProgressOptions = {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Processing asset renames...',
+                    cancellable: false
+                };
+                
+                await vscode.window.withProgress(progressOptions, async (progress) => {
+                    for (let i = 0; i < renameOperations.length; i++) {
+                        const renameOp = renameOperations[i];
+                        progress.report({ 
+                            message: `Renaming "${renameOp.oldName}" to "${renameOp.newName}" (${i + 1}/${renameOperations.length})`,
+                            increment: (100 / renameOperations.length)
+                        });
+                        
+                        try {
+                            await this.dataAccess.renameAsset(renameOp.oldName, renameOp.newName);
+                            console.log(`Successfully renamed asset: ${renameOp.oldName} -> ${renameOp.newName}`);
+                        } catch (error) {
+                            console.error(`Failed to rename asset ${renameOp.oldName} to ${renameOp.newName}:`, error);
+                            vscode.window.showErrorMessage(`Failed to rename asset "${renameOp.oldName}" to "${renameOp.newName}": ${error}`);
+                            // Continue with other renames even if one fails
+                        }
+                    }
+                });
             }
-
-            // Create the new portfolio data
-            const newPortfolioData: PortfolioData = {
+            
+            // Now save the updated portfolio data using the dataAccess layer
+            // Remove renameOperations from the data before saving
+            const cleanPortfolioData: PortfolioData = {
                 assets: assets
             };
 
             // Include accounts if there are any
             if (accounts.length > 0) {
-                newPortfolioData.accounts = accounts;
+                cleanPortfolioData.accounts = accounts;
             }
             
-            // Format and save the data
-            const jsonContent = JSON.stringify(newPortfolioData, null, 2);
-            fs.writeFileSync(portfolioJsonPath, jsonContent, 'utf8');
+            await this.dataAccess.savePortfolioData(cleanPortfolioData);
             console.log(`Portfolio saved with ${assets.length} assets and ${accounts.length} accounts`);
 
             // Clear cached data to force reload and refresh the tree view
@@ -265,14 +273,26 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             this.refresh();
 
             // Show success message
+            let successMessage = `Successfully saved ${assets.length} asset(s) and ${accounts.length} account(s)`;
+            if (renameOperations.length > 0) {
+                successMessage += ` and processed ${renameOperations.length} rename operation(s)`;
+            }
+            successMessage += ' to Assets/portfolio.json';
+            
             const action = await vscode.window.showInformationMessage(
-                `Successfully saved ${assets.length} asset(s) and ${accounts.length} account(s) to Assets/portfolio.json`,
+                successMessage,
                 'Open Portfolio'
             );
 
             if (action === 'Open Portfolio') {
-                const document = await vscode.workspace.openTextDocument(portfolioJsonPath);
-                await vscode.window.showTextDocument(document);
+                // Get the current workspace folder
+                const workspaceFolder = vscode.workspace.workspaceFolders?.[0];
+                if (workspaceFolder) {
+                    const assetsFolder = path.join(workspaceFolder.uri.fsPath, 'Assets');
+                    const portfolioJsonPath = path.join(assetsFolder, 'portfolio.json');
+                    const document = await vscode.workspace.openTextDocument(portfolioJsonPath);
+                    await vscode.window.showTextDocument(document);
+                }
             }
 
         } catch (error) {            
