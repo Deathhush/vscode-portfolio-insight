@@ -38,12 +38,13 @@ export class Asset {
     async calculateCurrentValue(): Promise<AssetCurrentValueData> {
         // Load updates and extract current value
         const updates = await this.dataAccess.loadAssetUpdates();
-        return this.extractCurrentValue(updates);
+        const portfolioData = await this.dataAccess.getPortfolioData();
+        return this.extractCurrentValue(updates, portfolioData.assets);
     }
 
-    private extractCurrentValue(updates: PortfolioUpdateData[]): AssetCurrentValueData {
+    private extractCurrentValue(updates: PortfolioUpdateData[], portfolioAssets?: AssetDefinitionData[]): AssetCurrentValueData {
         // Extract activities and exchange rates from the updates
-        const activities = this.extractActivities(updates);
+        const activities = this.extractActivities(updates, portfolioAssets);
         const allExchangeRates = this.extractExchangeRates(updates);
         
         const currency = this.currency;
@@ -101,6 +102,48 @@ export class Asset {
         return value * rate;
     }
 
+    private convertFromCNY(cnyValue: number, targetCurrency: string, targetDate: string, allExchangeRates: Map<string, ExchangeRateData[]>): number {
+        if (targetCurrency === 'CNY' || !targetCurrency) {
+            return cnyValue;
+        }
+
+        const rate = this.findClosestExchangeRate(targetCurrency, targetDate, allExchangeRates);
+        if (rate === undefined) {
+            throw new Error(`No exchange rate found for currency ${targetCurrency} near date ${targetDate}. Please provide exchange rates for all foreign currencies in your asset update files.`);
+        }
+
+        return cnyValue / rate; // Divide to convert from CNY to target currency
+    }
+
+    private convertCurrencyForTransfer(
+        value: number, 
+        fromCurrency: string, 
+        toCurrency: string, 
+        transferDate: string, 
+        allExchangeRates: Map<string, ExchangeRateData[]>
+    ): number {
+        // Only handle USD <-> CNY conversions
+        if (fromCurrency === toCurrency || 
+            (fromCurrency !== 'USD' && fromCurrency !== 'CNY') ||
+            (toCurrency !== 'USD' && toCurrency !== 'CNY')) {
+            return value;
+        }
+
+        try {
+            if (fromCurrency === 'USD' && toCurrency === 'CNY') {
+                // Convert USD to CNY
+                return value * this.findClosestExchangeRate('USD', transferDate, allExchangeRates)!;
+            } else if (fromCurrency === 'CNY' && toCurrency === 'USD') {
+                // Convert CNY to USD
+                return value / this.findClosestExchangeRate('USD', transferDate, allExchangeRates)!;
+            }
+        } catch (error) {
+            throw new Error(`Currency conversion failed from ${fromCurrency} to ${toCurrency}: ${error}`);
+        }
+
+        return value;
+    }
+
     // Exchange rate operations (moved from PortfolioDataStore)
     private extractExchangeRates(updates: PortfolioUpdateData[]): Map<string, ExchangeRateData[]> {
         const exchangeRatesByDate = new Map<string, ExchangeRateData[]>();
@@ -153,9 +196,21 @@ export class Asset {
         return closestRate?.rate;
     }
 
-    private extractActivities(updates: PortfolioUpdateData[]): AssetActivityData[] {
+    private extractActivities(updates: PortfolioUpdateData[], portfolioAssets?: AssetDefinitionData[]): AssetActivityData[] {
         const activities: AssetActivityData[] = [];
         let activityId = 1;
+
+        // Extract exchange rates for currency conversion
+        const allExchangeRates = this.extractExchangeRates(updates);
+        
+        // Helper function to get target asset currency
+        const getTargetAssetCurrency = (assetName: string): string => {
+            if (portfolioAssets) {
+                const targetAsset = portfolioAssets.find(asset => asset.name === assetName);
+                return targetAsset?.currency || 'CNY';
+            }
+            return 'CNY'; // Fallback
+        };
 
         // Process updates in chronological order to maintain proper sequence
         for (const update of updates) {
@@ -228,11 +283,27 @@ export class Asset {
                         // Determine if this is a sell operation for stock assets
                         const isSellOperation = this.type === 'stock';
                         
+                        let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+                        
+                        // Convert currency if this is NOT a stock asset (i.e., paying for stock purchase)
+                        // For stock assets selling, no conversion needed (they record in their own currency)
+                        if (!isSellOperation && transfer.to) {
+                            const sourceCurrency = this.currency;
+                            const targetCurrency = getTargetAssetCurrency(transfer.to);
+                            
+                            try {
+                                totalValue = this.convertCurrencyForTransfer(totalValue, targetCurrency, sourceCurrency, transferDate, allExchangeRates);
+                            } catch (error) {
+                                console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to} (${targetCurrency}): ${error}`);
+                                // Continue with original value if conversion fails
+                            }
+                        }
+                        
                         const transferOutActivity: AssetActivityData = {
                             id: `${this.name}-transfer-out-${activityId++}`,
                             type: isSellOperation ? 'sell' : 'transfer_out',
                             amount: transfer.amount,
-                            totalValue: transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0),
+                            totalValue: totalValue,
                             date: transferDate,
                             relatedAsset: transfer.to
                         };                       
@@ -255,11 +326,27 @@ export class Asset {
                         // Determine if this is a buy operation for stock assets
                         const isBuyOperation = this.type === 'stock';
                         
+                        let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+                        
+                        // Convert currency if this is NOT a stock asset (i.e., receiving money from stock sale)
+                        // For stock assets buying, no conversion needed (they record in their own currency)
+                        if (!isBuyOperation && transfer.from) {
+                            const sourceCurrency = getTargetAssetCurrency(transfer.from);
+                            const targetCurrency = this.currency;
+                            
+                            try {
+                                totalValue = this.convertCurrencyForTransfer(totalValue, sourceCurrency, targetCurrency, transferDate, allExchangeRates);
+                            } catch (error) {
+                                console.warn(`Currency conversion failed for transfer from ${transfer.from} (${sourceCurrency}) to ${this.name} (${targetCurrency}): ${error}`);
+                                // Continue with original value if conversion fails
+                            }
+                        }
+                        
                         const transferInActivity: AssetActivityData = {
                             id: `${this.name}-transfer-in-${activityId++}`,
                             type: isBuyOperation ? 'buy' : 'transfer_in',
                             amount: transfer.amount,
-                            totalValue: transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0),
+                            totalValue: totalValue,
                             date: transferDate,
                             relatedAsset: transfer.from
                         };
@@ -318,8 +405,11 @@ export class Asset {
         // Load updates once and extract all needed data
         const updates = await this.dataAccess.loadAssetUpdates();
         
-        const currentValue = this.extractCurrentValue(updates);
-        const activities = this.extractActivities(updates);
+        // Load portfolio data to get asset currencies for currency conversion
+        const portfolioData = await this.dataAccess.getPortfolioData();
+        
+        const currentValue = this.extractCurrentValue(updates, portfolioData.assets);
+        const activities = this.extractActivities(updates, portfolioData.assets);
         
         const summary: AssetSummaryData = {
             definition: this.definitionData,
