@@ -194,6 +194,62 @@
             border-bottom: 2px solid var(--border-primary);
         }
 
+        .account-header-row {
+            background-color: var(--bg-secondary);
+            font-weight: 600;
+        }
+
+        .account-assets-row {
+            background-color: var(--bg-primary);
+        }
+
+        .account-asset-row {
+            background-color: var(--bg-tertiary);
+            border-left: 3px solid var(--text-accent);
+        }
+
+        .account-asset-row td {
+            padding-left: 24px;
+        }
+
+        .nested-asset-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 8px;
+        }
+
+        .nested-asset-table th {
+            background-color: var(--bg-tertiary);
+            padding: 8px;
+            font-size: 1em;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .nested-asset-table td {
+            padding: 8px;
+            font-size: 1em;
+            border-bottom: 1px solid var(--border-secondary);
+        }
+
+        .add-account-asset-btn {
+            background: var(--text-accent);
+            color: var(--button-text);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            min-width: 120px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-account-asset-btn:hover {
+            background: var(--button-hover-bg);
+        }
+
         .assets-table {
             width: 100%;
             border-collapse: collapse;
@@ -275,6 +331,11 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
+            min-width: 120px;
+            height: 32px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .remove-btn:hover {
@@ -324,7 +385,7 @@
         }
 
         .action-column {
-            width: 100px;
+            width: 200px;
             text-align: center;
         }
 
@@ -514,6 +575,27 @@
             color: var(--error-color);
         }
 
+        .move-select {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-primary);
+            color: var(--text-secondary);
+            font-size: 0.85em;
+            padding: 4px;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+
+        .move-select:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--text-accent);
+        }
+
+        .move-select:focus {
+            outline: none;
+            border-color: var(--text-accent);
+            box-shadow: 0 0 0 1px rgba(79, 195, 247, 0.3);
+        }
+
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -578,7 +660,7 @@
         <!-- Accounts Management Section -->
         <div class="section">
             <h2>Accounts</h2>
-            <p>Manage your portfolio accounts. Assets can be assigned to accounts for better organization.</p>
+            <p>Manage your portfolio accounts. Assets can be assigned to accounts for better organization. Use the "Move to" dropdown in each asset row to move assets between accounts or to standalone.</p>
             
             <div class="table-container">
                 <table class="accounts-table">
@@ -590,7 +672,7 @@
                         </tr>
                     </thead>
                     <tbody id="accountsTableBody">
-                        <!-- Accounts will be populated here -->
+                        <!-- Accounts and their assets will be populated here -->
                     </tbody>
                 </table>
             </div>
@@ -602,8 +684,8 @@
 
         <!-- Assets Management Section -->
         <div class="section">
-            <h2>Assets</h2>
-            <p>Define and edit your portfolio assets.</p>
+            <h2>Standalone Assets</h2>
+            <p>Define assets that are not assigned to any specific account. Use the "Move to Account" dropdown to assign an asset to an account.</p>
 
         <div class="table-container">
             <table class="assets-table">
@@ -612,18 +694,17 @@
                         <th class="name-column">Asset Name</th>
                         <th class="type-column">Type</th>
                         <th class="currency-column">Currency</th>
-                        <th class="account-column">Account</th>
                         <th class="action-column">Actions</th>
                     </tr>
                 </thead>
                 <tbody id="assetsTableBody">
-                    <!-- Assets will be populated here -->
+                    <!-- Standalone assets will be populated here -->
                 </tbody>
             </table>
         </div>
 
         <div class="controls">
-            <button class="btn" onclick="addNewAsset()">+ Add Asset</button>
+            <button class="btn" onclick="addNewStandaloneAsset()">+ Add Standalone Asset</button>
         </div>
 
         <div class="summary" id="summary">
@@ -638,12 +719,13 @@
 
     <script>
         // Global state
-        let assets = [];
-        let accounts = []; // Available accounts
+        let assets = []; // Standalone assets only
+        let accounts = []; // Available accounts with their nested assets
         let originalAssets = [];
         let originalAccounts = []; // Original accounts for change tracking
         let nextAssetId = 1;
         let nextAccountId = 1;
+        let nextAccountAssetId = 1000; // Start from 1000 to avoid conflicts
         let allTags = []; // Cache for all available tags
 
         // Asset types
@@ -661,9 +743,9 @@
             // Request all accounts from backend
             sendMessage({ type: 'GET_ALL_ACCOUNTS' });
             
-            // Add initial empty row if no assets
+            // Add initial empty row if no standalone assets
             if (assets.length === 0) {
-                addNewAsset();
+                addNewStandaloneAsset();
             }
             updateDisplay();
         }
@@ -686,9 +768,12 @@
         });        function initializeAssets(existingAssets) {
             console.log('Initializing with assets:', existingAssets);
             originalAssets = JSON.parse(JSON.stringify(existingAssets));
-            assets = JSON.parse(JSON.stringify(existingAssets));
             
-            // Assign IDs to existing assets and set default values
+            // Separate standalone assets (those without account)
+            assets = existingAssets.filter(asset => !asset.account || asset.account.trim() === '');
+            assets = JSON.parse(JSON.stringify(assets));
+            
+            // Assign IDs to existing standalone assets and set default values
             assets.forEach((asset, index) => {
                 asset.id = nextAssetId++;
                 asset.isExisting = true;
@@ -696,10 +781,8 @@
                 if (!asset.currency) {
                     asset.currency = 'CNY';
                 }
-                // Ensure account is initialized
-                if (!asset.account) {
-                    asset.account = '';
-                }
+                // Ensure account is empty for standalone assets
+                asset.account = '';
                 // Ensure tags is an array
                 if (!asset.tags) {
                     asset.tags = [];
@@ -709,7 +792,7 @@
             updateDisplay();
         }
         
-        function addNewAsset() {
+        function addNewStandaloneAsset() {
             const newAsset = {
                 id: nextAssetId++,
                 name: '',
@@ -729,6 +812,103 @@
                     nameInput.focus();
                 }
             }, 100);
+        }
+
+        // Account asset management functions
+        function addNewAccountAsset(accountId) {
+            const account = accounts.find(a => a.id === accountId);
+            if (!account) return;
+
+            const newAsset = {
+                id: nextAccountAssetId++,
+                name: '',
+                type: 'simple',
+                currency: 'CNY',
+                account: account.name,
+                tags: [],
+                isExisting: false
+            };
+            
+            if (!account.assets) {
+                account.assets = [];
+            }
+            account.assets.push(newAsset);
+            updateDisplay();
+            
+            // Focus on the new asset's name field
+            setTimeout(() => {
+                const nameInput = document.querySelector(`input[data-account-asset-id="${newAsset.id}"][data-field="name"]`);
+                if (nameInput) {
+                    nameInput.focus();
+                }
+            }, 100);
+        }
+
+        function removeAccountAsset(accountId, assetId) {
+            const account = accounts.find(a => a.id === accountId);
+            if (!account || !account.assets) return;
+
+            const index = account.assets.findIndex(asset => asset.id === assetId);
+            if (index !== -1) {
+                account.assets.splice(index, 1);
+                updateDisplay();
+            }
+        }
+
+        function updateAccountAsset(accountId, assetId, field, value) {
+            const account = accounts.find(a => a.id === accountId);
+            if (!account || !account.assets) return;
+
+            const asset = account.assets.find(a => a.id === assetId);
+            if (asset) {
+                if (field === 'name') {
+                    value = value.trim(); // Trim whitespace
+                }
+                asset[field] = value;
+                updateDisplay();
+                validateAccountAsset(accountId, assetId);
+            }
+        }
+
+        function validateAccountAsset(accountId, assetId) {
+            const account = accounts.find(a => a.id === accountId);
+            if (!account || !account.assets) return true;
+
+            const asset = account.assets.find(a => a.id === assetId);
+            if (!asset) return true;
+
+            const row = document.querySelector(`tr[data-account-asset-id="${assetId}"]`);
+            if (!row) return true;
+
+            const nameInput = row.querySelector('input[data-field="name"]');
+            const errorDiv = row.querySelector('.error-message');
+
+            let hasError = false;
+            let errorMessage = '';
+
+            // Check if name is empty
+            if (!asset.name || asset.name.trim() === '') {
+                hasError = true;
+                errorMessage = 'Asset name is required';
+            } else {
+                // Check for duplicate names within the same account
+                const duplicates = account.assets.filter(a => a.id !== assetId && a.name.trim().toLowerCase() === asset.name.trim().toLowerCase());
+                if (duplicates.length > 0) {
+                    hasError = true;
+                    errorMessage = 'Asset name must be unique within account';
+                }
+            }
+
+            // Update UI
+            if (nameInput) {
+                nameInput.classList.toggle('error', hasError);
+            }
+            if (errorDiv) {
+                errorDiv.textContent = errorMessage;
+                errorDiv.classList.toggle('visible', hasError);
+            }
+
+            return !hasError;
         }
 
         function removeAsset(id) {
@@ -838,10 +1018,55 @@
             originalAccounts = JSON.parse(JSON.stringify(existingAccounts));
             accounts = JSON.parse(JSON.stringify(existingAccounts));
             
-            // Assign IDs to existing accounts
+            // Assign IDs to existing accounts and their assets
             accounts.forEach((account, index) => {
                 account.id = nextAccountId++;
                 account.isExisting = true;
+                
+                // Initialize assets array if not present
+                if (!account.assets) {
+                    account.assets = [];
+                }
+                
+                // Assign IDs to account assets
+                account.assets.forEach((asset, assetIndex) => {
+                    asset.id = nextAccountAssetId++;
+                    asset.isExisting = true;
+                    // Default to CNY if currency is not specified
+                    if (!asset.currency) {
+                        asset.currency = 'CNY';
+                    }
+                    // Ensure account reference
+                    asset.account = account.name;
+                    // Ensure tags is an array
+                    if (!asset.tags) {
+                        asset.tags = [];
+                    }
+                });
+                
+                // Find assets from the original assets list that belong to this account
+                if (originalAssets) {
+                    const accountAssets = originalAssets.filter(asset => 
+                        asset.account && asset.account.trim() === account.name
+                    );
+                    
+                    // Add these assets to the account if not already present
+                    accountAssets.forEach(asset => {
+                        const exists = account.assets.find(a => a.name === asset.name);
+                        if (!exists) {
+                            const accountAsset = JSON.parse(JSON.stringify(asset));
+                            accountAsset.id = nextAccountAssetId++;
+                            accountAsset.isExisting = true;
+                            if (!accountAsset.currency) {
+                                accountAsset.currency = 'CNY';
+                            }
+                            if (!accountAsset.tags) {
+                                accountAsset.tags = [];
+                            }
+                            account.assets.push(accountAsset);
+                        }
+                    });
+                }
             });
             
             updateDisplay();
@@ -852,6 +1077,7 @@
                 id: nextAccountId++,
                 name: '',
                 type: 'bank',
+                assets: [],
                 isExisting: false
             };
             accounts.push(newAccount);
@@ -869,25 +1095,19 @@
         function removeAccount(id) {
             const index = accounts.findIndex(account => account.id === id);
             if (index !== -1) {
-                const accountName = accounts[index].name;
+                const account = accounts[index];
+                const accountName = account.name;
+                const assetCount = (account.assets || []).length;
                 
-                // Check if any assets are using this account
-                const assetsUsingAccount = assets.filter(asset => asset.account === accountName);
-                
-                if (assetsUsingAccount.length > 0) {
-                    // Ask for confirmation and what to do with the assets
-                    if (confirm(`This account "${accountName}" is used by ${assetsUsingAccount.length} asset(s). Removing the account will unassign these assets. Continue?`)) {
-                        // Unassign assets from this account
-                        assetsUsingAccount.forEach(asset => {
-                            asset.account = '';
-                        });
-                        
+                if (assetCount > 0) {
+                    // Ask for confirmation
+                    if (confirm(`This account "${accountName}" contains ${assetCount} asset(s). Removing the account will also remove these assets. Continue?`)) {
                         // Remove the account
                         accounts.splice(index, 1);
                         updateDisplay();
                     }
                 } else {
-                    // No assets using this account, safe to remove
+                    // No assets in this account, safe to remove
                     accounts.splice(index, 1);
                     updateDisplay();
                 }
@@ -1010,6 +1230,11 @@
             updateAccountsTable();
             updateAssetsTable();
             updateSummary();
+            
+            // Reset move dropdowns after updating display
+            setTimeout(() => {
+                resetMoveDropdowns();
+            }, 100);
         }
 
         function updateAccountsTable() {
@@ -1017,41 +1242,175 @@
             tbody.innerHTML = '';
 
             accounts.forEach(account => {
-                const accountRow = document.createElement('tr');
-                accountRow.setAttribute('data-account-id', account.id);
+                // Account header row
+                const accountHeaderRow = document.createElement('tr');
+                accountHeaderRow.className = 'account-header-row';
+                accountHeaderRow.setAttribute('data-account-id', account.id);
                 
-                accountRow.innerHTML = `
-                    <td class="name-column">
-                        <input 
-                            type="text" 
-                            class="input-field" 
-                            value="${account.name || ''}" 
-                            placeholder="Enter account name"
-                            data-account-id="${account.id}"
-                            data-field="name"
-                            onchange="updateAccount(${account.id}, 'name', this.value)"
-                            onblur="validateAccount(${account.id})"
-                        />
+                accountHeaderRow.innerHTML = `
+                    <td colspan="3">
+                        <div style="display: flex; align-items: center; gap: 12px; padding: 8px 0;">
+                            <div style="flex: 1; display: flex; align-items: center; gap: 12px;">
+                                <input 
+                                    type="text" 
+                                    class="input-field" 
+                                    value="${account.name || ''}" 
+                                    placeholder="Enter account name"
+                                    data-account-id="${account.id}"
+                                    data-field="name"
+                                    onchange="updateAccount(${account.id}, 'name', this.value)"
+                                    onblur="validateAccount(${account.id})"
+                                    style="width: 300px;"
+                                />
+                                <select 
+                                    class="select-field" 
+                                    data-account-id="${account.id}"
+                                    data-field="type"
+                                    onchange="updateAccount(${account.id}, 'type', this.value)"
+                                    style="width: 150px;"
+                                >
+                                    ${ACCOUNT_TYPES.map(type => 
+                                        `<option value="${type}" ${account.type === type ? 'selected' : ''}>${type}</option>`
+                                    ).join('')}
+                                </select>
+                            </div>
+                            <div style="display: flex; gap: 8px;">
+                                <button class="add-account-asset-btn" onclick="addNewAccountAsset(${account.id})">+ Add Asset</button>
+                                <button class="remove-btn" onclick="removeAccount(${account.id})">Remove Account</button>
+                            </div>
+                        </div>
                         <div class="error-message"></div>
-                    </td>
-                    <td class="type-column">
-                        <select 
-                            class="select-field" 
-                            data-account-id="${account.id}"
-                            data-field="type"
-                            onchange="updateAccount(${account.id}, 'type', this.value)"
-                        >
-                            ${ACCOUNT_TYPES.map(type => 
-                                `<option value="${type}" ${account.type === type ? 'selected' : ''}>${type}</option>`
-                            ).join('')}
-                        </select>
-                    </td>
-                    <td class="action-column">
-                        <button class="remove-btn" onclick="removeAccount(${account.id})">Remove</button>
                     </td>
                 `;
                 
-                tbody.appendChild(accountRow);
+                tbody.appendChild(accountHeaderRow);
+
+                // Account assets section
+                if (account.assets && account.assets.length > 0) {
+                    const assetsHeaderRow = document.createElement('tr');
+                    assetsHeaderRow.className = 'account-assets-row';
+                    assetsHeaderRow.innerHTML = `
+                        <td colspan="3">
+                            <div class="nested-asset-table">
+                                <table style="width: 100%; border-collapse: collapse; margin: 8px 0;">
+                                    <thead>
+                                        <tr style="background: var(--bg-tertiary);">
+                                            <th style="padding: 8px; width: 300px; font-size: 1em;">Asset Name</th>
+                                            <th style="padding: 8px; width: 120px; font-size: 1em;">Type</th>
+                                            <th style="padding: 8px; width: 100px; font-size: 1em;">Currency</th>
+                                            <th style="padding: 8px; width: 200px; font-size: 1em;">Tags</th>
+                                            <th style="padding: 8px; width: 200px; font-size: 1em;">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        ${account.assets.map(asset => `
+                                            <tr data-account-asset-id="${asset.id}" style="border-bottom: 1px solid var(--border-secondary);">
+                                                <td style="padding: 8px;">
+                                                    <input 
+                                                        type="text" 
+                                                        class="input-field" 
+                                                        value="${asset.name || ''}" 
+                                                        placeholder="Enter asset name"
+                                                        data-account-asset-id="${asset.id}"
+                                                        data-field="name"
+                                                        onchange="updateAccountAsset(${account.id}, ${asset.id}, 'name', this.value)"
+                                                        onblur="validateAccountAsset(${account.id}, ${asset.id})"
+                                                        style="width: 100%; font-size: 1em; padding: 4px 8px;"
+                                                    />
+                                                    <div class="error-message"></div>
+                                                </td>
+                                                <td style="padding: 8px;">
+                                                    <select 
+                                                        class="select-field" 
+                                                        data-account-asset-id="${asset.id}"
+                                                        data-field="type"
+                                                        onchange="updateAccountAsset(${account.id}, ${asset.id}, 'type', this.value)"
+                                                        style="width: 100%; font-size: 1em; padding: 4px 8px;"
+                                                    >
+                                                        ${ASSET_TYPES.map(type => 
+                                                            `<option value="${type}" ${asset.type === type ? 'selected' : ''}>${type}</option>`
+                                                        ).join('')}
+                                                    </select>
+                                                </td>
+                                                <td style="padding: 8px;">
+                                                    <select 
+                                                        class="select-field" 
+                                                        data-account-asset-id="${asset.id}"
+                                                        data-field="currency"
+                                                        onchange="updateAccountAsset(${account.id}, ${asset.id}, 'currency', this.value)"
+                                                        style="width: 100%; font-size: 1em; padding: 4px 8px;"
+                                                    >
+                                                        ${CURRENCIES.map(currency => 
+                                                            `<option value="${currency}" ${asset.currency === currency ? 'selected' : ''}>${currency}</option>`
+                                                        ).join('')}
+                                                    </select>
+                                                </td>
+                                                <td style="padding: 8px;">
+                                                    <div class="tags-content" style="min-height: 30px;">
+                                                        <div class="tag-input-container">
+                                                            <input 
+                                                                type="text" 
+                                                                class="tag-input-first" 
+                                                                id="tag-input-account-${asset.id}"
+                                                                placeholder="Add tag..."
+                                                                onkeyup="handleAccountAssetTagInput(${account.id}, ${asset.id}, event)"
+                                                                onblur="hideAccountAssetTagDropdown(${asset.id})"
+                                                                onfocus="showAccountAssetTagDropdown(${asset.id})"
+                                                                style="font-size: 0.8em; padding: 2px 6px; min-width: 80px;"
+                                                            />
+                                                            <button class="tag-add-btn" onclick="addAccountAssetTagFromInput(${account.id}, ${asset.id})" style="font-size: 0.7em; padding: 2px 6px;">Add</button>
+                                                            <div class="tag-dropdown" id="tag-dropdown-account-${asset.id}">
+                                                                <!-- Tag suggestions will appear here -->
+                                                            </div>
+                                                        </div>
+                                                        <div class="tags-display" id="tags-display-account-${asset.id}">
+                                                            <!-- Tags will be rendered here -->
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td style="padding: 8px;">
+                                                    <div style="display: flex; flex-direction: row; gap: 4px; align-items: center;">
+                                                        <select 
+                                                            class="move-select" 
+                                                            data-account-asset-id="${asset.id}"
+                                                            onchange="moveAccountAsset(${account.id}, ${asset.id}, this.value)"
+                                                            style="font-size: 0.75em; padding: 2px 4px; flex: 1;"
+                                                        >
+                                                            <option value="">Move to...</option>
+                                                            <option value="standalone">Standalone</option>
+                                                            ${accounts.filter(acc => acc.id !== account.id && acc.name && acc.name.trim() !== '').map(targetAccount => 
+                                                                `<option value="${targetAccount.name}">${targetAccount.name}</option>`
+                                                            ).join('')}
+                                                        </select>
+                                                        <button class="remove-btn" onclick="removeAccountAsset(${account.id}, ${asset.id})" style="font-size: 0.75em; padding: 2px 6px; flex-shrink: 0;">Remove</button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        `).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(assetsHeaderRow);
+                } else {
+                    // Show message when no assets
+                    const noAssetsRow = document.createElement('tr');
+                    noAssetsRow.className = 'account-assets-row';
+                    noAssetsRow.innerHTML = `
+                        <td colspan="3" style="padding: 16px; text-align: center; color: var(--text-secondary); font-style: italic;">
+                            No assets in this account. Click "Add Asset" to add the first asset.
+                        </td>
+                    `;
+                    tbody.appendChild(noAssetsRow);
+                }
+
+                // Render tags for each account asset
+                if (account.assets) {
+                    account.assets.forEach(asset => {
+                        renderAccountAssetTags(asset.id);
+                    });
+                }
             });
         }
 
@@ -1102,21 +1461,21 @@
                             ).join('')}
                         </select>
                     </td>
-                    <td class="account-column">
-                        <select 
-                            class="select-field" 
-                            data-id="${asset.id}"
-                            data-field="account"
-                            onchange="updateAsset(${asset.id}, 'account', this.value)"
-                        >
-                            <option value="" ${(asset.account || '') === '' ? 'selected' : ''}>(No Account)</option>
-                            ${accounts.map(account => 
-                                `<option value="${account.name}" ${asset.account === account.name ? 'selected' : ''}>${account.name}</option>`
-                            ).join('')}
-                        </select>
-                    </td>
                     <td class="action-column">
-                        <button class="remove-btn" onclick="removeAsset(${asset.id})">Remove</button>
+                        <div style="display: flex; flex-direction: row; gap: 4px; align-items: center;">
+                            <select 
+                                class="move-select" 
+                                data-id="${asset.id}"
+                                onchange="moveAssetToAccount(${asset.id}, this.value)"
+                                style="font-size: 0.85em; padding: 4px; flex: 1;"
+                            >
+                                <option value="">Move to Account...</option>
+                                ${accounts.filter(acc => acc.name && acc.name.trim() !== '').map(account => 
+                                    `<option value="${account.name}">${account.name}</option>`
+                                ).join('')}
+                            </select>
+                            <button class="remove-btn" onclick="removeAsset(${asset.id})" style="font-size: 0.85em; padding: 4px 8px; flex-shrink: 0;">Remove</button>
+                        </div>
                     </td>
                 `;
                 
@@ -1159,7 +1518,7 @@
         }
 
         function updateSummary() {
-            // Asset summary
+            // Standalone Asset summary
             const assetCount = assets.filter(a => a.name && a.name.trim() !== '').length;
             const typeBreakdown = {};
             
@@ -1169,7 +1528,21 @@
                 }
             });
 
-            document.getElementById('assetCount').textContent = assetCount;
+            // Account assets summary
+            let accountAssetsCount = 0;
+            accounts.forEach(account => {
+                if (account.assets) {
+                    accountAssetsCount += account.assets.filter(a => a.name && a.name.trim() !== '').length;
+                    account.assets.forEach(asset => {
+                        if (asset.name && asset.name.trim() !== '' && asset.type) {
+                            typeBreakdown[asset.type] = (typeBreakdown[asset.type] || 0) + 1;
+                        }
+                    });
+                }
+            });
+
+            const totalAssets = assetCount + accountAssetsCount;
+            document.getElementById('assetCount').textContent = `${assetCount} standalone + ${accountAssetsCount} in accounts = ${totalAssets} total`;
             
             const typeText = Object.keys(typeBreakdown).length > 0 
                 ? Object.entries(typeBreakdown).map(([type, count]) => `${type}: ${count}`).join(', ')
@@ -1332,6 +1705,164 @@
                 }
             }, 150);
         }
+
+        // Account asset tag management functions
+        function renderAccountAssetTags(assetId) {
+            // Find the asset in accounts
+            let targetAsset = null;
+            for (const account of accounts) {
+                if (account.assets) {
+                    targetAsset = account.assets.find(a => a.id === assetId);
+                    if (targetAsset) break;
+                }
+            }
+            if (!targetAsset) return;
+            
+            const tagsDisplay = document.getElementById(`tags-display-account-${assetId}`);
+            if (!tagsDisplay) return;
+            
+            // Render tags as compact chips
+            if (targetAsset.tags && targetAsset.tags.length > 0) {
+                tagsDisplay.innerHTML = targetAsset.tags.map(tag => `
+                    <span class="tag-item" style="font-size: 0.7em; padding: 1px 6px;">
+                        ${tag}
+                        <button class="tag-remove" onclick="removeAccountAssetTag(${assetId}, '${tag.replace(/'/g, "\\'")}')">×</button>
+                    </span>
+                `).join('');
+            } else {
+                tagsDisplay.innerHTML = '<span class="no-tags-placeholder" style="font-size: 0.7em;">No tags</span>';
+            }
+        }
+
+        function addAccountAssetTag(assetId, tag) {
+            // Find the asset in accounts
+            let targetAsset = null;
+            for (const account of accounts) {
+                if (account.assets) {
+                    targetAsset = account.assets.find(a => a.id === assetId);
+                    if (targetAsset) break;
+                }
+            }
+            if (!targetAsset) return;
+            
+            const trimmedTag = tag.trim();
+            if (!trimmedTag) return;
+            
+            // Check if tag already exists
+            if (!targetAsset.tags) targetAsset.tags = [];
+            if (targetAsset.tags.includes(trimmedTag)) return;
+            
+            targetAsset.tags.push(trimmedTag);
+            renderAccountAssetTags(assetId);
+            
+            // Update global tags list if it's a new tag
+            if (!allTags.includes(trimmedTag)) {
+                allTags.push(trimmedTag);
+                allTags.sort();
+            }
+        }
+
+        function removeAccountAssetTag(assetId, tag) {
+            // Find the asset in accounts
+            let targetAsset = null;
+            for (const account of accounts) {
+                if (account.assets) {
+                    targetAsset = account.assets.find(a => a.id === assetId);
+                    if (targetAsset) break;
+                }
+            }
+            if (!targetAsset || !targetAsset.tags) return;
+            
+            const index = targetAsset.tags.indexOf(tag);
+            if (index > -1) {
+                targetAsset.tags.splice(index, 1);
+                renderAccountAssetTags(assetId);
+            }
+        }
+
+        function addAccountAssetTagFromInput(accountId, assetId) {
+            const input = document.getElementById(`tag-input-account-${assetId}`);
+            if (!input) return;
+            
+            const tag = input.value.trim();
+            if (tag) {
+                addAccountAssetTag(assetId, tag);
+                input.value = '';
+            }
+        }
+
+        function handleAccountAssetTagInput(accountId, assetId, event) {
+            if (event.key === 'Enter') {
+                addAccountAssetTagFromInput(accountId, assetId);
+                return;
+            }
+            
+            // Show suggestions based on input
+            const searchTerm = event.target.value.trim();
+            showAccountAssetTagSuggestions(assetId, searchTerm);
+        }
+
+        function showAccountAssetTagSuggestions(assetId, searchTerm) {
+            const dropdown = document.getElementById(`tag-dropdown-account-${assetId}`);
+            if (!dropdown) return;
+            
+            // Find existing tags for this asset
+            let targetAsset = null;
+            for (const account of accounts) {
+                if (account.assets) {
+                    targetAsset = account.assets.find(a => a.id === assetId);
+                    if (targetAsset) break;
+                }
+            }
+            const existingTags = targetAsset?.tags || [];
+            
+            // Filter suggestions
+            const suggestions = allTags.filter(tag => 
+                !existingTags.includes(tag) && 
+                tag.toLowerCase().includes(searchTerm.toLowerCase())
+            );
+            
+            if (suggestions.length === 0 && searchTerm === '') {
+                // Show all available tags when input is empty
+                const availableTags = allTags.filter(tag => !existingTags.includes(tag));
+                dropdown.innerHTML = availableTags.map(tag => 
+                    `<div class="tag-option" onclick="selectAccountAssetTagSuggestion(${assetId}, '${tag.replace(/'/g, "\\'")}')">
+                        ${tag}
+                    </div>`
+                ).join('');
+            } else {
+                dropdown.innerHTML = suggestions.map(tag => 
+                    `<div class="tag-option" onclick="selectAccountAssetTagSuggestion(${assetId}, '${tag.replace(/'/g, "\\'")}')">
+                        ${tag}
+                    </div>`
+                ).join('');
+            }
+            
+            dropdown.classList.add('visible');
+        }
+
+        function selectAccountAssetTagSuggestion(assetId, tag) {
+            addAccountAssetTag(assetId, tag);
+            const input = document.getElementById(`tag-input-account-${assetId}`);
+            if (input) {
+                input.value = '';
+            }
+            hideAccountAssetTagDropdown(assetId);
+        }
+
+        function showAccountAssetTagDropdown(assetId) {
+            showAccountAssetTagSuggestions(assetId, '');
+        }
+
+        function hideAccountAssetTagDropdown(assetId) {
+            // Use setTimeout to allow click events on dropdown items to fire first
+            setTimeout(() => {
+                const dropdown = document.getElementById(`tag-dropdown-account-${assetId}`);
+                if (dropdown) {
+                    dropdown.classList.remove('visible');
+                }
+            }, 150);
+        }
         
         function submitAssets() {
             if (!validateAllAssets() || !validateAllAccounts()) {
@@ -1339,8 +1870,8 @@
                 return;
             }
 
-            // Filter out empty assets and clean the data
-            const validAssets = assets
+            // Filter out empty standalone assets and clean the data
+            const validStandaloneAssets = assets
                 .filter(asset => asset.name && asset.name.trim() !== '')
                 .map(asset => {
                     const cleanAsset = {
@@ -1351,10 +1882,6 @@
                     if (asset.currency && asset.currency !== 'CNY') {
                         cleanAsset.currency = asset.currency;
                     }
-                    // Include account if specified
-                    if (asset.account && asset.account.trim() !== '') {
-                        cleanAsset.account = asset.account.trim();
-                    }
                     // Include tags if they exist
                     if (asset.tags && asset.tags.length > 0) {
                         cleanAsset.tags = asset.tags;
@@ -1362,17 +1889,46 @@
                     return cleanAsset;
                 });
 
-            // Filter out empty accounts and clean the data
+            // Filter out empty accounts and clean the data with nested assets
             const validAccounts = accounts
                 .filter(account => account.name && account.name.trim() !== '')
-                .map(account => ({
-                    name: account.name.trim(),
-                    type: account.type
-                }));
+                .map(account => {
+                    const cleanAccount = {
+                        name: account.name.trim(),
+                        type: account.type
+                    };
+                    
+                    // Clean and include account assets if they exist
+                    if (account.assets && account.assets.length > 0) {
+                        const validAccountAssets = account.assets
+                            .filter(asset => asset.name && asset.name.trim() !== '')
+                            .map(asset => {
+                                const cleanAsset = {
+                                    name: asset.name.trim(),
+                                    type: asset.type
+                                };
+                                // Only include currency if it's not CNY (the default)
+                                if (asset.currency && asset.currency !== 'CNY') {
+                                    cleanAsset.currency = asset.currency;
+                                }
+                                // Include tags if they exist
+                                if (asset.tags && asset.tags.length > 0) {
+                                    cleanAsset.tags = asset.tags;
+                                }
+                                return cleanAsset;
+                            });
+                        
+                        if (validAccountAssets.length > 0) {
+                            cleanAccount.assets = validAccountAssets;
+                        }
+                    }
+                    
+                    return cleanAccount;
+                });
 
-            // Always create PortfolioData structure, even if arrays are empty
+            // Create PortfolioData structure with standalone assets and accounts with nested assets
             const portfolioData = {
-                assets: validAssets,
+                assets: validStandaloneAssets,
                 accounts: validAccounts
             };
 
@@ -1382,7 +1938,14 @@
                 data: portfolioData
             });
 
-            showNotification(`Successfully submitted ${validAssets.length} asset(s) and ${validAccounts.length} account(s)`, 'success');
+            const totalAccountAssets = validAccounts.reduce((count, account) => 
+                count + (account.assets ? account.assets.length : 0), 0);
+            
+            showNotification(
+                `Successfully submitted ${validStandaloneAssets.length} standalone asset(s), ` +
+                `${validAccounts.length} account(s) with ${totalAccountAssets} account asset(s)`, 
+                'success'
+            );
         }
 
         function validateAllAccounts() {
@@ -1391,6 +1954,15 @@
             accounts.forEach(account => {
                 if (!validateAccount(account.id)) {
                     allValid = false;
+                }
+                
+                // Validate account assets
+                if (account.assets) {
+                    account.assets.forEach(asset => {
+                        if (!validateAccountAsset(account.id, asset.id)) {
+                            allValid = false;
+                        }
+                    });
                 }
             });
 
@@ -1439,6 +2011,150 @@
             }
         }        // Initialize when page loads
         document.addEventListener('DOMContentLoaded', initialize);
+
+        // Asset movement functions
+        function moveAssetToAccount(assetId, accountName) {
+            if (!accountName || accountName.trim() === '') return;
+            
+            const asset = assets.find(a => a.id === assetId);
+            if (!asset) return;
+            
+            const targetAccount = accounts.find(a => a.name === accountName);
+            if (!targetAccount) return;
+            
+            // Check if asset name would be unique in target account
+            const duplicateInTarget = targetAccount.assets && targetAccount.assets.find(a => 
+                a.name.toLowerCase() === asset.name.toLowerCase()
+            );
+            
+            if (duplicateInTarget) {
+                showNotification(`Asset "${asset.name}" already exists in account "${accountName}"`, 'error');
+                // Reset the specific dropdown
+                setTimeout(() => {
+                    const dropdown = document.querySelector(`select[data-id="${assetId}"]`);
+                    if (dropdown) dropdown.value = '';
+                }, 100);
+                return;
+            }
+            
+            // Remove from standalone assets
+            const index = assets.findIndex(a => a.id === assetId);
+            if (index === -1) return;
+            
+            const movedAsset = assets.splice(index, 1)[0];
+            
+            // Update asset properties
+            movedAsset.account = accountName;
+            movedAsset.id = nextAccountAssetId++; // Assign new ID for account asset
+            
+            // Add to target account
+            if (!targetAccount.assets) {
+                targetAccount.assets = [];
+            }
+            targetAccount.assets.push(movedAsset);
+            
+            updateDisplay();
+            showNotification(`Moved "${asset.name}" to account "${accountName}"`, 'success');
+        }
+        
+        function moveAccountAsset(sourceAccountId, assetId, destination) {
+            if (!destination || destination.trim() === '') return;
+            
+            const sourceAccount = accounts.find(a => a.id === sourceAccountId);
+            if (!sourceAccount || !sourceAccount.assets) return;
+            
+            const assetIndex = sourceAccount.assets.findIndex(a => a.id === assetId);
+            if (assetIndex === -1) return;
+            
+            const asset = sourceAccount.assets[assetIndex];
+            
+            if (destination === 'standalone') {
+                // Move to standalone assets
+                
+                // Check if asset name would be unique in standalone
+                const duplicateInStandalone = assets.find(a => 
+                    a.name.toLowerCase() === asset.name.toLowerCase()
+                );
+                
+                if (duplicateInStandalone) {
+                    showNotification(`Asset "${asset.name}" already exists in standalone assets`, 'error');
+                    // Reset the specific dropdown
+                    setTimeout(() => {
+                        const dropdown = document.querySelector(`select[data-account-asset-id="${assetId}"]`);
+                        if (dropdown) dropdown.value = '';
+                    }, 100);
+                    return;
+                }
+                
+                // Remove from account
+                const movedAsset = sourceAccount.assets.splice(assetIndex, 1)[0];
+                
+                // Update asset properties
+                movedAsset.account = '';
+                movedAsset.id = nextAssetId++; // Assign new ID for standalone asset
+                
+                // Add to standalone assets
+                assets.push(movedAsset);
+                
+                updateDisplay();
+                showNotification(`Moved "${asset.name}" to standalone assets`, 'success');
+                
+            } else {
+                // Move to another account
+                const targetAccount = accounts.find(a => a.name === destination);
+                if (!targetAccount) return;
+                
+                // Check if asset name would be unique in target account
+                const duplicateInTarget = targetAccount.assets && targetAccount.assets.find(a => 
+                    a.name.toLowerCase() === asset.name.toLowerCase()
+                );
+                
+                if (duplicateInTarget) {
+                    showNotification(`Asset "${asset.name}" already exists in account "${destination}"`, 'error');
+                    // Reset the specific dropdown
+                    setTimeout(() => {
+                        const dropdown = document.querySelector(`select[data-account-asset-id="${assetId}"]`);
+                        if (dropdown) dropdown.value = '';
+                    }, 100);
+                    return;
+                }
+                
+                // Remove from source account
+                const movedAsset = sourceAccount.assets.splice(assetIndex, 1)[0];
+                
+                // Update asset properties
+                movedAsset.account = destination;
+                movedAsset.id = nextAccountAssetId++; // Assign new ID for account asset
+                
+                // Add to target account
+                if (!targetAccount.assets) {
+                    targetAccount.assets = [];
+                }
+                targetAccount.assets.push(movedAsset);
+                
+                updateDisplay();
+                showNotification(`Moved "${asset.name}" from "${sourceAccount.name}" to "${destination}"`, 'success');
+            }
+        }
+
+        // Helper function to reset move dropdowns
+        function resetMoveDropdowns() {
+            // Reset standalone asset move dropdowns
+            const standaloneDropdowns = document.querySelectorAll('select[data-id]');
+            standaloneDropdowns.forEach(dropdown => {
+                if (dropdown.onchange && dropdown.onchange.toString().includes('moveAssetToAccount')) {
+                    dropdown.value = '';
+                }
+            });
+            
+            // Reset account asset move dropdowns
+            const accountAssetDropdowns = document.querySelectorAll('select[data-account-asset-id]');
+            accountAssetDropdowns.forEach(dropdown => {
+                if (dropdown.onchange && dropdown.onchange.toString().includes('moveAccountAsset')) {
+                    dropdown.value = '';
+                }
+            });
+        }
     </script>
 </body>
 </html>

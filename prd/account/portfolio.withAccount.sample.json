@@ -8,7 +8,6 @@
                     "name": "招行.活期",
                     "type": "simple",
                     "currency": "CNY",
-                    "account": "招行",
                     "tags": [
                         "活期"
                     ]
@@ -16,7 +15,6 @@
                 {
                     "name": "招行.沪深300ETF",
                     "type": "investment",
-                    "account": "招行",
                     "tags": [
                         "指数基金"
                     ]
