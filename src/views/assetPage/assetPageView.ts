@@ -214,14 +214,44 @@ export class AssetPageView {
             const transfers: any[] = [];
 
             for (const activity of activities) {
-                if (activity.type === 'transfer_in' || activity.type === 'transfer_out') {
+                if (activity.type === 'transfer_in' || activity.type === 'transfer_out' || activity.type === 'buy' || activity.type === 'sell') {
                     // Convert to transfer format
                     const transfer: any = {
-                        from: activity.type === 'transfer_out' ? this.asset.name : activity.relatedAsset,
-                        to: activity.type === 'transfer_in' ? this.asset.name : activity.relatedAsset,
-                        amount: activity.amount,
                         date: activity.date || currentDate // Preserve original activity date
                     };
+                    
+                    // Handle buy/sell vs traditional transfers
+                    if (activity.type === 'buy' || activity.type === 'sell') {
+                        if (activity.type === 'buy') {
+                            transfer.from = activity.relatedAsset; // Money comes from related asset
+                            transfer.to = this.asset.name;        // Shares go to current asset
+                        } else { // sell
+                            transfer.from = this.asset.name;      // Shares come from current asset
+                            transfer.to = activity.relatedAsset;  // Money goes to related asset
+                        }
+                        
+                        // Include buy/sell specific data
+                        if (activity.amount) {
+                            transfer.amount = activity.amount; // Use amount as base amount for shares
+                        }
+                        if (activity.unitPrice) {
+                            transfer.unitPrice = activity.unitPrice;
+                        }
+                        if (activity.totalValue) {
+                            transfer.totalValue = activity.totalValue;
+                        } else if (activity.amount && activity.unitPrice) {
+                            // Calculate totalValue from amount * unitPrice if not provided
+                            transfer.totalValue = activity.amount * activity.unitPrice;
+                        }
+                        if (!transfer.amount && activity.totalValue) {
+                            transfer.amount = activity.totalValue; // Fallback if no amount
+                        }
+                    } else {
+                        // Traditional transfer handling
+                        transfer.from = activity.type === 'transfer_out' ? this.asset.name : activity.relatedAsset;
+                        transfer.to = activity.type === 'transfer_in' ? this.asset.name : activity.relatedAsset;
+                        transfer.amount = activity.amount;
+                    }
                     
                     // Only include description if it's provided and not empty
                     if (activity.description && activity.description.trim() !== '') {

@@ -38,7 +38,9 @@ export interface AssetUpdateData {
 export interface TransferData {
     from: string;
     to: string;
-    amount: number;
+    amount?: number;
+    totalValue?: number;
+    unitPrice?: number;
     date?: string;
     description?: string;
 }
@@ -66,11 +68,14 @@ export interface AssetCurrentValueData {
 
 export interface AssetActivityData {
     id: string;
-    type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'snapshot';
-    amount: number;
+    type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'buy' | 'sell' | 'snapshot';
+    amount?: number; // Optional - for stock snapshots, this represents shares; for others, it's the monetary amount
+    totalValue: number; // Always calculated and required
     date: string;
     description?: string;
     relatedAsset?: string; // For transfers
+    unitPrice?: number; // For buy/sell operations
+    exchangeRate?: number; // Exchange rate used for currency conversion in this activity
 }
 
 export interface AssetSummaryData {
