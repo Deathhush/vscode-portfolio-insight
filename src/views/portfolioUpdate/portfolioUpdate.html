@@ -1764,9 +1764,22 @@
           const currentAssetId = assetGroup.dataset.assetId;
           const selectedValue = select.value;
 
-          // Get list of other assets for the dropdown
+          // Find the current asset to determine if it's a stock
+          const currentAsset = assets.find(asset => (asset.id || asset.name) === currentAssetId);
+          const isStock = currentAsset && currentAsset.type === 'stock';
+
+          // Get list of other assets for the dropdown (exclude current asset and stock assets for traditional transfers)
           const otherAssets = assets.filter(
-            (asset) => (asset.id || asset.name) !== currentAssetId
+            (asset) => {
+              const assetId = asset.id || asset.name;
+              // Exclude current asset
+              if (assetId === currentAssetId) return false;
+              
+              // For traditional transfers (non-stock current asset), exclude stock assets
+              if (!isStock && asset.type === 'stock') return false;
+              
+              return true;
+            }
           );
           const assetOptions =
             '<option value="">Select asset...</option>' +
@@ -1941,9 +1954,18 @@
         const currentAsset = assets.find(asset => (asset.id || asset.name) === currentAssetId);
         const isStock = currentAsset && currentAsset.type === 'stock';
 
-        // Get list of other assets for the dropdown
+        // Get list of other assets for the dropdown (exclude current asset and stock assets for traditional transfers)
         const otherAssets = assets.filter(
-          (asset) => (asset.id || asset.name) !== currentAssetId
+          (asset) => {
+            const assetId = asset.id || asset.name;
+            // Exclude current asset
+            if (assetId === currentAssetId) return false;
+            
+            // For traditional transfers (non-stock current asset), exclude stock assets
+            if (!isStock && asset.type === 'stock') return false;
+            
+            return true;
+          }
         );
         const assetOptions = otherAssets
           .map(

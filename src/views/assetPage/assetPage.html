@@ -1669,10 +1669,19 @@
         function populateAssetsList(assets) {
             allAssets = assets;
             const select = document.getElementById('relatedAsset');
+            const activityType = document.getElementById('activityType').value;
+            const currentAssetName = document.getElementById('assetName').textContent;
+            
             select.innerHTML = '<option value="">Select asset...</option>';
             
             assets.forEach(asset => {
-                if (asset.name !== document.getElementById('assetName').textContent) {
+                if (asset.name !== currentAssetName) {
+                    // For traditional transfers (transfer_in/transfer_out), exclude stock assets
+                    // Stock assets can only participate in buy/sell operations
+                    if ((activityType === 'transfer_in' || activityType === 'transfer_out') && asset.type === 'stock') {
+                        return; // Skip stock assets for traditional transfers
+                    }
+                    
                     const option = document.createElement('option');
                     option.value = asset.name;
                     option.textContent = `${asset.name} (${asset.type})`;
