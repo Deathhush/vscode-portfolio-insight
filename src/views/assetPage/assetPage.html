@@ -1514,13 +1514,17 @@
                 optionsHtml += '<option value="expense">Expense</option>';
             }
             
-            // Transfer options are available for all asset types
+            // Buy/Sell options are only available for stock assets
             if (currentAsset && currentAsset.type === 'stock') {
                 optionsHtml += '<option value="buy">Buy</option>';
                 optionsHtml += '<option value="sell">Sell</option>';
             }
-            optionsHtml += '<option value="transfer_in">Transfer In</option>';
-            optionsHtml += '<option value="transfer_out">Transfer Out</option>';
+            
+            // Transfer options are only available for non-stock assets
+            if (currentAsset && currentAsset.type !== 'stock') {
+                optionsHtml += '<option value="transfer_in">Transfer In</option>';
+                optionsHtml += '<option value="transfer_out">Transfer Out</option>';
+            }
             
             activityTypeSelect.innerHTML = optionsHtml;
             

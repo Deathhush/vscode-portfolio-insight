@@ -280,112 +280,150 @@ export class Asset {
                     
                     // Transfer OUT from this asset
                     if (transfer.from === this.name) {
-                        // Determine if this is a sell operation for stock assets
-                        const isSellOperation = this.type === 'stock';
-                        
-                        let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
-                        
-                        // Convert currency if this is NOT a stock asset (i.e., paying for stock purchase)
-                        // For stock assets selling, no conversion needed (they record in their own currency)
-                        let exchangeRateUsed: number | undefined;
-                        if (!isSellOperation && transfer.to) {
-                            const sourceCurrency = this.currency;
-                            const targetCurrency = getTargetAssetCurrency(transfer.to);
+                        // For stock assets, only allow sell operations (not regular transfers)
+                        if (this.type === 'stock') {
+                            // This is a sell operation for stock assets
+                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
                             
-                            try {
-                                const originalValue = totalValue;
-                                totalValue = this.convertCurrencyForTransfer(totalValue, targetCurrency, sourceCurrency, transferDate, allExchangeRates);
-                                
-                                // Store exchange rate if conversion occurred
-                                if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
-                                    exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
-                                }
-                            } catch (error) {
-                                console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to} (${targetCurrency}): ${error}`);
-                                // Continue with original value if conversion fails
+                            const transferOutActivity: AssetActivityData = {
+                                id: `${this.name}-sell-${activityId++}`,
+                                type: 'sell',
+                                amount: transfer.amount,
+                                totalValue: totalValue,
+                                date: transferDate,
+                                relatedAsset: transfer.to
+                            };                       
+                            
+                            // Include buy/sell specific data if available
+                            if (transfer.unitPrice) {
+                                transferOutActivity.unitPrice = transfer.unitPrice;
                             }
+                            
+                            // Only include description if it exists
+                            if (transfer.description) {
+                                transferOutActivity.description = transfer.description;
+                            }
+                            
+                            activities.push(transferOutActivity);
+                        } else {
+                            // For non-stock assets, create regular transfer_out activities
+                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+                            
+                            // Convert currency for non-stock assets (i.e., paying for stock purchase)
+                            let exchangeRateUsed: number | undefined;
+                            if (transfer.to) {
+                                const sourceCurrency = this.currency;
+                                const targetCurrency = getTargetAssetCurrency(transfer.to);
+                                
+                                try {
+                                    const originalValue = totalValue;
+                                    totalValue = this.convertCurrencyForTransfer(totalValue, targetCurrency, sourceCurrency, transferDate, allExchangeRates);
+                                    
+                                    // Store exchange rate if conversion occurred
+                                    if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
+                                        exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
+                                    }
+                                } catch (error) {
+                                    console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to} (${targetCurrency}): ${error}`);
+                                    // Continue with original value if conversion fails
+                                }
+                            }
+                            
+                            const transferOutActivity: AssetActivityData = {
+                                id: `${this.name}-transfer-out-${activityId++}`,
+                                type: 'transfer_out',
+                                amount: transfer.amount,
+                                totalValue: totalValue,
+                                date: transferDate,
+                                relatedAsset: transfer.to
+                            };                       
+                            
+                            // Include exchange rate if currency conversion was used
+                            if (exchangeRateUsed) {
+                                transferOutActivity.exchangeRate = exchangeRateUsed;
+                            }
+                            
+                            // Only include description if it exists
+                            if (transfer.description) {
+                                transferOutActivity.description = transfer.description;
+                            }
+                            
+                            activities.push(transferOutActivity);
                         }
-                        
-                        const transferOutActivity: AssetActivityData = {
-                            id: `${this.name}-transfer-out-${activityId++}`,
-                            type: isSellOperation ? 'sell' : 'transfer_out',
-                            amount: transfer.amount,
-                            totalValue: totalValue,
-                            date: transferDate,
-                            relatedAsset: transfer.to
-                        };                       
-                        
-                        // Include buy/sell specific data if available
-                        if (transfer.unitPrice) {
-                            transferOutActivity.unitPrice = transfer.unitPrice;
-                        }
-                        
-                        // Include exchange rate if currency conversion was used
-                        if (exchangeRateUsed) {
-                            transferOutActivity.exchangeRate = exchangeRateUsed;
-                        }
-                        
-                        // Only include description if it exists
-                        if (transfer.description) {
-                            transferOutActivity.description = transfer.description;
-                        }
-                        
-                        activities.push(transferOutActivity);
                     }
                     
                     // Transfer IN to this asset
                     if (transfer.to === this.name) {
-                        // Determine if this is a buy operation for stock assets
-                        const isBuyOperation = this.type === 'stock';
-                        
-                        let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
-                        
-                        // Convert currency if this is NOT a stock asset (i.e., receiving money from stock sale)
-                        // For stock assets buying, no conversion needed (they record in their own currency)
-                        let exchangeRateUsed: number | undefined;
-                        if (!isBuyOperation && transfer.from) {
-                            const sourceCurrency = getTargetAssetCurrency(transfer.from);
-                            const targetCurrency = this.currency;
+                        // For stock assets, only allow buy operations (not regular transfers)
+                        if (this.type === 'stock') {
+                            // This is a buy operation for stock assets
+                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
                             
-                            try {
-                                const originalValue = totalValue;
-                                totalValue = this.convertCurrencyForTransfer(totalValue, sourceCurrency, targetCurrency, transferDate, allExchangeRates);
-                                
-                                // Store exchange rate if conversion occurred
-                                if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
-                                    exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
-                                }
-                            } catch (error) {
-                                console.warn(`Currency conversion failed for transfer from ${transfer.from} (${sourceCurrency}) to ${this.name} (${targetCurrency}): ${error}`);
-                                // Continue with original value if conversion fails
+                            const transferInActivity: AssetActivityData = {
+                                id: `${this.name}-buy-${activityId++}`,
+                                type: 'buy',
+                                amount: transfer.amount,
+                                totalValue: totalValue,
+                                date: transferDate,
+                                relatedAsset: transfer.from
+                            };
+                            
+                            // Include buy/sell specific data if available
+                            if (transfer.unitPrice) {
+                                transferInActivity.unitPrice = transfer.unitPrice;
                             }
+                            
+                            // Only include description if it exists
+                            if (transfer.description) {
+                                transferInActivity.description = transfer.description;
+                            }
+                            
+                            activities.push(transferInActivity);
+                        } else {
+                            // For non-stock assets, create regular transfer_in activities
+                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+                            
+                            // Convert currency for non-stock assets (i.e., receiving money from stock sale)
+                            let exchangeRateUsed: number | undefined;
+                            if (transfer.from) {
+                                const sourceCurrency = getTargetAssetCurrency(transfer.from);
+                                const targetCurrency = this.currency;
+                                
+                                try {
+                                    const originalValue = totalValue;
+                                    totalValue = this.convertCurrencyForTransfer(totalValue, sourceCurrency, targetCurrency, transferDate, allExchangeRates);
+                                    
+                                    // Store exchange rate if conversion occurred
+                                    if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
+                                        exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
+                                    }
+                                } catch (error) {
+                                    console.warn(`Currency conversion failed for transfer from ${transfer.from} (${sourceCurrency}) to ${this.name} (${targetCurrency}): ${error}`);
+                                    // Continue with original value if conversion fails
+                                }
+                            }
+                            
+                            const transferInActivity: AssetActivityData = {
+                                id: `${this.name}-transfer-in-${activityId++}`,
+                                type: 'transfer_in',
+                                amount: transfer.amount,
+                                totalValue: totalValue,
+                                date: transferDate,
+                                relatedAsset: transfer.from
+                            };
+                            
+                            // Include exchange rate if currency conversion was used
+                            if (exchangeRateUsed) {
+                                transferInActivity.exchangeRate = exchangeRateUsed;
+                            }
+                            
+                            // Only include description if it exists
+                            if (transfer.description) {
+                                transferInActivity.description = transfer.description;
+                            }
+                            
+                            activities.push(transferInActivity);
                         }
-                        
-                        const transferInActivity: AssetActivityData = {
-                            id: `${this.name}-transfer-in-${activityId++}`,
-                            type: isBuyOperation ? 'buy' : 'transfer_in',
-                            amount: transfer.amount,
-                            totalValue: totalValue,
-                            date: transferDate,
-                            relatedAsset: transfer.from
-                        };
-                        
-                        // Include buy/sell specific data if available
-                        if (transfer.unitPrice) {
-                            transferInActivity.unitPrice = transfer.unitPrice;
-                        }
-                        
-                        // Include exchange rate if currency conversion was used
-                        if (exchangeRateUsed) {
-                            transferInActivity.exchangeRate = exchangeRateUsed;
-                        }
-                        
-                        // Only include description if it exists
-                        if (transfer.description) {
-                            transferInActivity.description = transfer.description;
-                        }
-                        
-                        activities.push(transferInActivity);
                     }
                 }
             }
