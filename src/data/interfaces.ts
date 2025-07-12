@@ -69,7 +69,7 @@ export interface AssetCurrentValueData {
 export interface AssetActivityData {
     id: string;
     type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'buy' | 'sell' | 'snapshot';
-    amount: number;
+    amount?: number; // Optional - for stock snapshots, this represents shares; for others, it's the monetary amount
     totalValue: number; // Always calculated and required
     date: string;
     description?: string;

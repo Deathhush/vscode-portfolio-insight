@@ -55,7 +55,7 @@ export class Asset {
         const latestSnapshotActivity = activities.find(activity => activity.type === 'snapshot');
         
         if (latestSnapshotActivity) {
-            currentValue = latestSnapshotActivity.amount;
+            currentValue = latestSnapshotActivity.totalValue;
             snapshotDate = latestSnapshotActivity.date;
             lastUpdateDate = latestSnapshotActivity.date;
         }
@@ -193,10 +193,19 @@ export class Asset {
                             const snapshotActivity: AssetActivityData = {
                                 id: `${this.name}-snapshot-${activityId++}`,
                                 type: 'snapshot',
-                                amount: snapshotValue,
                                 totalValue: snapshotValue,
                                 date: eventDate
                             };
+                            
+                            // For stock assets, amount represents shares; for others, it represents the monetary value
+                            if (this.type === 'stock' && event.shares !== undefined) {
+                                snapshotActivity.amount = event.shares;
+                                if (event.price !== undefined) {
+                                    snapshotActivity.unitPrice = event.price;
+                                }
+                            } else {
+                                snapshotActivity.amount = snapshotValue;
+                            }
                             
                             // Only include description if it exists
                             if (event.description) {
@@ -222,11 +231,11 @@ export class Asset {
                         const transferOutActivity: AssetActivityData = {
                             id: `${this.name}-transfer-out-${activityId++}`,
                             type: isSellOperation ? 'sell' : 'transfer_out',
-                            amount: transfer.amount || 0,
+                            amount: transfer.amount,
                             totalValue: transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0),
                             date: transferDate,
                             relatedAsset: transfer.to
-                        };
+                        };                       
                         
                         // Include buy/sell specific data if available
                         if (transfer.unitPrice) {
@@ -249,7 +258,7 @@ export class Asset {
                         const transferInActivity: AssetActivityData = {
                             id: `${this.name}-transfer-in-${activityId++}`,
                             type: isBuyOperation ? 'buy' : 'transfer_in',
-                            amount: transfer.amount || 0,
+                            amount: transfer.amount,
                             totalValue: transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0),
                             date: transferDate,
                             relatedAsset: transfer.from
@@ -301,7 +310,7 @@ export class Asset {
                 
                 return isRecentActivity && isIncomeActivity;
             })
-            .reduce((total, activity) => total + activity.amount, 0);
+            .reduce((total, activity) => total + activity.totalValue, 0);
     }
     
     // Summary generation
