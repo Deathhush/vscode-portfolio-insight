@@ -231,18 +231,20 @@ export class AssetPageView {
                         }
                         
                         // Include buy/sell specific data
-                        if (activity.shareAmount) {
-                            transfer.amount = activity.shareAmount; // Use share amount as base amount
+                        if (activity.amount) {
+                            transfer.amount = activity.amount; // Use amount as base amount for shares
                         }
                         if (activity.unitPrice) {
                             transfer.unitPrice = activity.unitPrice;
                         }
                         if (activity.totalValue) {
                             transfer.totalValue = activity.totalValue;
-                            transfer.amount = activity.totalValue; // Override amount with total value
+                        } else if (activity.amount && activity.unitPrice) {
+                            // Calculate totalValue from amount * unitPrice if not provided
+                            transfer.totalValue = activity.amount * activity.unitPrice;
                         }
-                        if (!transfer.amount && activity.amount) {
-                            transfer.amount = activity.amount; // Fallback to activity amount
+                        if (!transfer.amount && activity.totalValue) {
+                            transfer.amount = activity.totalValue; // Fallback if no amount
                         }
                     } else {
                         // Traditional transfer handling

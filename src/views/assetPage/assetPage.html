@@ -349,8 +349,20 @@
             padding: 4px 8px;
         }
         
-        .activities-table-header .header-amount {
+        .activities-table-header .header-totalvalue {
             flex: 0 0 120px;
+            text-align: right;
+            padding: 4px 8px;
+        }
+        
+        .activities-table-header .header-amount {
+            flex: 0 0 80px;
+            text-align: right;
+            padding: 4px 8px;
+        }
+        
+        .activities-table-header .header-unitprice {
+            flex: 0 0 100px;
             text-align: right;
             padding: 4px 8px;
         }
@@ -450,7 +462,7 @@
             border: 1px solid var(--text-accent);
         }
         
-        .activity-amount-display {
+        .activity-totalvalue-display {
             flex: 0 0 120px;
             font-size: 1em;
             font-weight: 600;
@@ -458,23 +470,41 @@
             padding: 4px 8px;
         }
         
-        .activity-amount-display.income {
+        .activity-amount-display {
+            flex: 0 0 80px;
+            font-size: 0.9em;
+            font-weight: 500;
+            text-align: right;
+            padding: 4px 8px;
+            color: var(--text-primary);
+        }
+        
+        .activity-unitprice-display {
+            flex: 0 0 100px;
+            font-size: 0.9em;
+            font-weight: 500;
+            text-align: right;
+            padding: 4px 8px;
+            color: var(--text-secondary);
+        }
+        
+        .activity-totalvalue-display.income {
             color: var(--success-color);
         }
         
-        .activity-amount-display.expense {
+        .activity-totalvalue-display.expense {
             color: var(--error-color);
         }
         
-        .activity-amount-display.buy {
+        .activity-totalvalue-display.buy {
             color: #4CAF50;
         }
         
-        .activity-amount-display.sell {
+        .activity-totalvalue-display.sell {
             color: #F44336;
         }
         
-        .activity-amount-display.snapshot {
+        .activity-totalvalue-display.snapshot {
             color: var(--text-accent);
         }
         
@@ -763,7 +793,9 @@
             }
             
             .activity-type-badge,
+            .activity-totalvalue-display,
             .activity-amount-display,
+            .activity-unitprice-display,
             .activity-date-display,
             .activity-description-display,
             .activity-related-display {
@@ -772,7 +804,7 @@
                 text-align: left;
             }
             
-            .activity-amount-display {
+            .activity-totalvalue-display {
                 font-size: 1.1em;
             }
             
@@ -1189,16 +1221,33 @@
                 return;
             }
             
-            // Create table header
-            const tableHeader = `
-                <div class="activities-table-header">
-                    <div class="header-type">Type</div>
-                    <div class="header-amount">Amount</div>
-                    <div class="header-date">Date</div>
-                    <div class="header-description">Description</div>
-                    <div class="header-related">Related</div>
-                </div>
-            `;
+            // Create table header based on asset type
+            let tableHeader = '';
+            if (currentAsset && currentAsset.type === 'stock') {
+                // For stock assets, show all columns including shares and unit price
+                tableHeader = `
+                    <div class="activities-table-header">
+                        <div class="header-type">Type</div>
+                        <div class="header-totalvalue">Total Value</div>
+                        <div class="header-amount">Shares</div>
+                        <div class="header-unitprice">Unit Price</div>
+                        <div class="header-date">Date</div>
+                        <div class="header-description">Description</div>
+                        <div class="header-related">Related</div>
+                    </div>
+                `;
+            } else {
+                // For non-stock assets, show only total value column
+                tableHeader = `
+                    <div class="activities-table-header">
+                        <div class="header-type">Type</div>
+                        <div class="header-totalvalue">Total Value</div>
+                        <div class="header-date">Date</div>
+                        <div class="header-description">Description</div>
+                        <div class="header-related">Related</div>
+                    </div>
+                `;
+            }
             
             const activitiesHtml = allActivities.map((activity, index) => {
                 const isPending = index < pendingActivities.length; // Pending activities are now at the beginning
@@ -1207,55 +1256,105 @@
                 
                 // Handle different amount fields based on activity type
                 let activityAmount = activity.amount;
-                if (activity.type === 'snapshot' && activity.currentValue !== undefined) {
-                    activityAmount = activity.currentValue;
-                } else if (activity.amount === undefined) {
-                    activityAmount = 0;
-                }
+                // Get total value for the activity
+                let totalValue = activity.totalValue;
                 
-                // Format amount with correct currency
-                let amountDisplay = '';
+                // Format total value with correct currency
+                let totalValueDisplay = '';
                 if (currentAssetCurrency === 'CNY') {
-                    amountDisplay = '¥' + activityAmount.toLocaleString('zh-CN', { 
+                    totalValueDisplay = '¥' + totalValue.toLocaleString('zh-CN', { 
                         minimumFractionDigits: 2, 
                         maximumFractionDigits: 2 
                     });
                 } else {
-                    amountDisplay = currentAssetCurrency + ' ' + activityAmount.toLocaleString('en-US', { 
+                    totalValueDisplay = currentAssetCurrency + ' ' + totalValue.toLocaleString('en-US', { 
                         minimumFractionDigits: 2, 
                         maximumFractionDigits: 2 
                     });
                 }
                 
-                let amountClass = '';
-                if (activity.type === 'income' || activity.type === 'transfer_in') {
-                    amountClass = 'income';
-                    amountDisplay = '+' + amountDisplay;
-                } else if (activity.type === 'expense' || activity.type === 'transfer_out') {
-                    amountClass = 'expense';
-                    amountDisplay = '-' + amountDisplay;
+                let totalValueClass = '';
+                if (activity.type === 'income' || activity.type === 'transfer_in' || activity.type === 'buy') {
+                    totalValueClass = 'income';
+                    if (activity.type !== 'snapshot') {
+                        totalValueDisplay = '+' + totalValueDisplay;
+                    }
+                } else if (activity.type === 'expense' || activity.type === 'transfer_out' || activity.type === 'sell') {
+                    totalValueClass = 'expense';
+                    if (activity.type !== 'snapshot') {
+                        totalValueDisplay = '-' + totalValueDisplay;
+                    }
                 } else if (activity.type === 'snapshot') {
-                    amountClass = 'snapshot';
+                    totalValueClass = 'snapshot';
                     // For snapshots, the amount is already formatted above without + or -
                 }
                 
                 let relatedAssetDisplay = '';
                 if (activity.relatedAsset) {
-                    const direction = activity.type.includes('in') ? 'from' : 'to';
+                    let direction = '';
+                    if (activity.type === 'buy') {
+                        direction = 'from';
+                    } else if (activity.type === 'sell') {
+                        direction = 'to';
+                    } else {
+                        direction = activity.type.includes('in') ? 'from' : 'to';
+                    }
+                    
                     relatedAssetDisplay = `${direction} ${activity.relatedAsset}`;
+                    
+                    // For non-stock assets, show buy/sell details in related column
+                    if (!currentAsset || currentAsset.type !== 'stock') {
+                        if (activity.type === 'buy' || activity.type === 'sell') {
+                            const detailsArray = [];
+                            if (activity.amount) {
+                                detailsArray.push(`${activity.amount} shares`);
+                            }
+                            if (activity.unitPrice && activity.unitPrice !== 1) {
+                                detailsArray.push(`@ ${activity.unitPrice}`);
+                            }
+                            if (detailsArray.length > 0) {
+                                relatedAssetDisplay += ` (${detailsArray.join(', ')})`;
+                            }
+                        }
+                    }
                 }
                 
                 const itemClass = isPending ? 'activity-item fade-in new-activity-row' : 'activity-item fade-in';
                 
-                return `
-                    <div class="${itemClass}">
+                // Generate activity row based on asset type
+                let activityRowContent = '';
+                if (currentAsset && currentAsset.type === 'stock') {
+                    // For stock assets, show all columns
+                    const amountDisplay = activity.amount ? activity.amount.toString() : '';
+                    const unitPriceDisplay = activity.unitPrice ? activity.unitPrice.toString() : '';
+                    
+                    activityRowContent = `
                         <div class="activity-row">
                             <div class="activity-type-badge ${activity.type}">${typeDisplay}</div>
-                            <div class="activity-amount-display ${amountClass}">${amountDisplay}</div>
+                            <div class="activity-totalvalue-display ${totalValueClass}">${totalValueDisplay}</div>
+                            <div class="activity-amount-display">${amountDisplay}</div>
+                            <div class="activity-unitprice-display">${unitPriceDisplay}</div>
                             <div class="activity-date-display">${new Date(activity.date).toLocaleDateString()}</div>
                             <div class="activity-description-display">${activity.description || ''}</div>
                             <div class="activity-related-display">${relatedAssetDisplay}</div>
                         </div>
+                    `;
+                } else {
+                    // For non-stock assets, show only total value
+                    activityRowContent = `
+                        <div class="activity-row">
+                            <div class="activity-type-badge ${activity.type}">${typeDisplay}</div>
+                            <div class="activity-totalvalue-display ${totalValueClass}">${totalValueDisplay}</div>
+                            <div class="activity-date-display">${new Date(activity.date).toLocaleDateString()}</div>
+                            <div class="activity-description-display">${activity.description || ''}</div>
+                            <div class="activity-related-display">${relatedAssetDisplay}</div>
+                        </div>
+                    `;
+                }
+                
+                return `
+                    <div class="${itemClass}">
+                        ${activityRowContent}
                     </div>
                 `;
             }).join('');
@@ -1672,6 +1771,7 @@
                         }
                         
                         activityData.currentValue = currentValue;
+                        activityData.totalValue = currentValue;  // For snapshots, totalValue equals currentValue
                         
                     } else if (currentAsset.type === 'composite') {
                         const currentValueInput = document.getElementById('snapshotCurrentValue');
@@ -1684,6 +1784,7 @@
                         }
                         
                         activityData.currentValue = currentValue;
+                        activityData.totalValue = currentValue;  // For snapshots, totalValue equals currentValue
                         
                         // Market value is optional for composite assets
                         const marketValueInput = document.getElementById('marketValue');
@@ -1714,6 +1815,7 @@
                         
                         activityData.shares = shares;
                         activityData.price = price;
+                        activityData.totalValue = shares * price;  // For stock snapshots, calculate totalValue
                         // For stock assets, the backend will calculate currentValue as shares * price
                     }
                     
@@ -1727,6 +1829,7 @@
                         return;
                     }
                     activityData.amount = amount;
+                    activityData.totalValue = amount;  // For income/expense, totalValue equals amount
                     
                 } else if (activityType === 'transfer_in' || activityType === 'transfer_out' || activityType === 'buy' || activityType === 'sell') {
                     const relatedAssetSelect = document.getElementById('relatedAsset');
@@ -1762,20 +1865,19 @@
                             return;
                         }
                         
-                        // Set amount based on calculation or input
+                        // Set amount and totalValue based on calculation or input
                         if (totalValue > 0) {
-                            activityData.amount = totalValue;
+                            activityData.amount = shareAmount;  // For UI display of shares
+                            activityData.totalValue = totalValue;
                         } else {
-                            activityData.amount = shareAmount * unitPrice;
+                            activityData.amount = shareAmount;  // For UI display of shares
+                            activityData.totalValue = shareAmount * unitPrice;
                         }
                         
                         // Store additional buy/sell data for backend processing
                         activityData.shareAmount = shareAmount;
                         if (unitPrice > 0) {
                             activityData.unitPrice = unitPrice;
-                        }
-                        if (totalValue > 0) {
-                            activityData.totalValue = totalValue;
                         }
                         
                     } else {
@@ -1790,6 +1892,7 @@
                         }
                         
                         activityData.amount = amount;
+                        activityData.totalValue = amount;  // For transfers, totalValue equals amount
                     }
                 }
                 

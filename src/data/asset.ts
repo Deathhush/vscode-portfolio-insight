@@ -175,6 +175,7 @@ export class Asset {
                                 id: `${this.name}-event-${activityId++}`,
                                 type: event.type,
                                 amount: event.amount || 0,
+                                totalValue: event.amount || 0,
                                 date: eventDate
                             };
                             
@@ -193,6 +194,7 @@ export class Asset {
                                 id: `${this.name}-snapshot-${activityId++}`,
                                 type: 'snapshot',
                                 amount: snapshotValue,
+                                totalValue: snapshotValue,
                                 date: eventDate
                             };
                             
@@ -220,10 +222,16 @@ export class Asset {
                         const transferOutActivity: AssetActivityData = {
                             id: `${this.name}-transfer-out-${activityId++}`,
                             type: isSellOperation ? 'sell' : 'transfer_out',
-                            amount: transfer.amount || (transfer.totalValue || 0),
+                            amount: transfer.amount || 0,
+                            totalValue: transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0),
                             date: transferDate,
                             relatedAsset: transfer.to
                         };
+                        
+                        // Include buy/sell specific data if available
+                        if (transfer.unitPrice) {
+                            transferOutActivity.unitPrice = transfer.unitPrice;
+                        }
                         
                         // Only include description if it exists
                         if (transfer.description) {
@@ -241,10 +249,16 @@ export class Asset {
                         const transferInActivity: AssetActivityData = {
                             id: `${this.name}-transfer-in-${activityId++}`,
                             type: isBuyOperation ? 'buy' : 'transfer_in',
-                            amount: transfer.amount || (transfer.totalValue || 0),
+                            amount: transfer.amount || 0,
+                            totalValue: transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0),
                             date: transferDate,
                             relatedAsset: transfer.from
                         };
+                        
+                        // Include buy/sell specific data if available
+                        if (transfer.unitPrice) {
+                            transferInActivity.unitPrice = transfer.unitPrice;
+                        }
                         
                         // Only include description if it exists
                         if (transfer.description) {

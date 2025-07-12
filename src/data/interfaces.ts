@@ -70,9 +70,11 @@ export interface AssetActivityData {
     id: string;
     type: 'income' | 'expense' | 'transfer_in' | 'transfer_out' | 'buy' | 'sell' | 'snapshot';
     amount: number;
+    totalValue: number; // Always calculated and required
     date: string;
     description?: string;
     relatedAsset?: string; // For transfers
+    unitPrice?: number; // For buy/sell operations
 }
 
 export interface AssetSummaryData {
