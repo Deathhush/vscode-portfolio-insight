@@ -53,12 +53,12 @@ export class Asset {
         // Load updates and extract current value
         const updates = await this.dataAccess.loadAssetUpdates();
         const portfolioData = await this.dataAccess.getPortfolioData();
-        return this.extractCurrentValue(updates, portfolioData.assets);
+        return await this.extractCurrentValue(updates);
     }
 
-    private extractCurrentValue(updates: PortfolioUpdateData[], portfolioAssets?: AssetDefinitionData[]): AssetCurrentValueData {
+    private async extractCurrentValue(updates: PortfolioUpdateData[]): Promise<AssetCurrentValueData> {
         // Extract activities and exchange rates from the updates
-        const activities = this.extractActivities(updates, portfolioAssets);
+        const activities = await this.extractActivities(updates);
         const allExchangeRates = this.extractExchangeRates(updates);
         
         const currency = this.currency;
@@ -90,7 +90,7 @@ export class Asset {
         }
     }
 
-    private calculateAssetValue(event: AssetEventData): number {
+    private calculateSnapshotEventValue(event: AssetEventData): number {
         // For snapshot events, use currentValue if available, otherwise calculate from shares * price
         if (event.currentValue !== undefined) {
             return event.currentValue;
@@ -210,21 +210,12 @@ export class Asset {
         return closestRate?.rate;
     }
 
-    private extractActivities(updates: PortfolioUpdateData[], portfolioAssets?: AssetDefinitionData[]): AssetActivityData[] {
+    private async extractActivities(updates: PortfolioUpdateData[]): Promise<AssetActivityData[]> {
         const activities: AssetActivityData[] = [];
         let activityId = 1;
 
         // Extract exchange rates for currency conversion
         const allExchangeRates = this.extractExchangeRates(updates);
-        
-        // Helper function to get target asset currency
-        const getTargetAssetCurrency = (assetName: string): string => {
-            if (portfolioAssets) {
-                const targetAsset = portfolioAssets.find(asset => asset.name === assetName);
-                return targetAsset?.currency || 'CNY';
-            }
-            return 'CNY'; // Fallback
-        };
 
         // Process updates in chronological order to maintain proper sequence
         for (const update of updates) {
@@ -258,7 +249,7 @@ export class Asset {
                         
                         // Include snapshot events as activities to show asset value changes
                         if (event.type === 'snapshot') {
-                            const snapshotValue = this.calculateAssetValue(event);
+                            const snapshotValue = this.calculateSnapshotEventValue(event);
                             const snapshotActivity: AssetActivityData = {
                                 id: `${this.fullName}-snapshot-${activityId++}`,
                                 type: 'snapshot',
@@ -327,18 +318,19 @@ export class Asset {
                             let exchangeRateUsed: number | undefined;
                             if (transfer.to) {
                                 const sourceCurrency = this.currency;
-                                const targetCurrency = getTargetAssetCurrency(transfer.to);
-                                
                                 try {
+                                    const targetAsset = await this.dataAccess.getAssetByFullName(transfer.to);
+                                    const targetCurrency = targetAsset.currency;
+                                    
                                     const originalValue = totalValue;
-                                    totalValue = this.convertCurrencyForTransfer(totalValue, targetCurrency, sourceCurrency, transferDate, allExchangeRates);
+                                    totalValue = this.convertCurrencyForTransfer(totalValue, sourceCurrency, targetCurrency, transferDate, allExchangeRates);
                                     
                                     // Store exchange rate if conversion occurred
                                     if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
                                         exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
                                     }
                                 } catch (error) {
-                                    console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to} (${targetCurrency}): ${error}`);
+                                    console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to}: ${error}`);
                                     // Continue with original value if conversion fails
                                 }
                             }
@@ -400,10 +392,11 @@ export class Asset {
                             // Convert currency for non-stock assets (i.e., receiving money from stock sale)
                             let exchangeRateUsed: number | undefined;
                             if (transfer.from) {
-                                const sourceCurrency = getTargetAssetCurrency(transfer.from);
-                                const targetCurrency = this.currency;
-                                
                                 try {
+                                    const sourceAsset = await this.dataAccess.getAssetByFullName(transfer.from);
+                                    const sourceCurrency = sourceAsset.currency;
+                                    const targetCurrency = this.currency;
+                                    
                                     const originalValue = totalValue;
                                     totalValue = this.convertCurrencyForTransfer(totalValue, sourceCurrency, targetCurrency, transferDate, allExchangeRates);
                                     
@@ -412,7 +405,7 @@ export class Asset {
                                         exchangeRateUsed = this.findClosestExchangeRate('USD', transferDate, allExchangeRates);
                                     }
                                 } catch (error) {
-                                    console.warn(`Currency conversion failed for transfer from ${transfer.from} (${sourceCurrency}) to ${this.name} (${targetCurrency}): ${error}`);
+                                    console.warn(`Currency conversion failed for transfer from ${transfer.from} to ${this.name} (${this.currency}): ${error}`);
                                     // Continue with original value if conversion fails
                                 }
                             }
@@ -481,11 +474,8 @@ export class Asset {
         // Load updates once and extract all needed data
         const updates = await this.dataAccess.loadAssetUpdates();
         
-        // Load portfolio data to get asset currencies for currency conversion
-        const portfolioData = await this.dataAccess.getPortfolioData();
-        
-        const currentValue = this.extractCurrentValue(updates, portfolioData.assets);
-        const activities = this.extractActivities(updates, portfolioData.assets);
+        const currentValue = await this.extractCurrentValue(updates);
+        const activities = await this.extractActivities(updates);
         
         const summary: AssetSummaryData = {
             definition: this.definitionData,

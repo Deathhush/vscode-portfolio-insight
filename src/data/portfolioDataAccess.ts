@@ -25,17 +25,79 @@ export class PortfolioDataAccess {
     constructor(private dataStore: PortfolioDataStore) {
     }
 
-    // Asset management
-    public async getOrCreateAsset(definition: AssetDefinitionData, account?: string): Promise<Asset> {
-        const fullName = account ? `${account}.${definition.name}` : definition.name;
+    /**
+     * Retrieves an existing asset by name and optional account
+     * @param name The name of the asset to retrieve
+     * @param account The account name (if the asset belongs to an account)
+     * @returns The asset if found
+     * @throws Error if the asset doesn't exist in the specified location
+     */
+    public async getAsset(name: string, account?: string): Promise<Asset> {
+        const fullName = account ? `${account}.${name}` : name;
+        
+        // Check cache first
         const cachedAsset = this.getCachedAsset(fullName);
         if (cachedAsset) {
             return cachedAsset;
         }
 
-        const asset = new Asset(definition, this, account);
+        // Find the asset in portfolio data
+        const portfolioData = await this.getPortfolioData();
+        const assetDefinition = this.findAssetInPortfolio(portfolioData, name, account);
+        
+        if (!assetDefinition) {
+            const location = account ? ` in account "${account}"` : ' as a standalone asset';
+            throw new Error(`Asset "${name}" not found${location} in portfolio data`);
+        }
+
+        // Create and cache the asset
+        const asset = new Asset(assetDefinition, this, account);
         this.assetCache.set(fullName, asset);
         return asset;
+    }
+
+    /**
+     * Retrieves an asset by its full name (account.assetName or assetName)
+     * @param fullName The full name of the asset (account.assetName or assetName for standalone assets)
+     * @returns The asset object
+     * @throws Error if the asset doesn't exist
+     */
+    public async getAssetByFullName(fullName: string): Promise<Asset> {
+        // Parse the full name to extract account and asset name
+        const parts = fullName.split('.');
+        let assetName: string;
+        let accountName: string | undefined;
+
+        if (parts.length === 2) {
+            // Asset belongs to an account: "account.assetName"
+            accountName = parts[0];
+            assetName = parts[1];
+        } else if (parts.length === 1) {
+            // Standalone asset: "assetName"
+            assetName = parts[0];
+            accountName = undefined;
+        } else {
+            throw new Error(`Invalid full name format: "${fullName}". Expected "assetName" or "account.assetName"`);
+        }
+
+        // Get and return the asset
+        return await this.getAsset(assetName, accountName);
+    }
+
+    /**
+     * Validates that an asset exists in the portfolio data
+     * @param assetName The name of the asset to validate
+     * @param accountName The account name (if the asset should belong to an account)
+     * @throws Error if the asset doesn't exist in the specified location
+     */
+    private async validateAssetExists(assetName: string, accountName?: string): Promise<void> {
+        const portfolioData = await this.getPortfolioData();
+        const asset = this.findAssetInPortfolio(portfolioData, assetName, accountName);
+        
+        if (!asset) {
+            const location = accountName ? ` in account "${accountName}"` : ' as a standalone asset';
+            throw new Error(`Asset "${assetName}" not found${location} in portfolio data`);
+        }
     }
 
     private getCachedAsset(fullName: string): Asset | undefined {
@@ -88,7 +150,7 @@ export class PortfolioDataAccess {
         // Add standalone assets
         for (const assetDefinition of portfolioData.assets) {
             try {
-                const asset = await this.getOrCreateAsset(assetDefinition); // No account for standalone assets
+                const asset = await this.getAsset(assetDefinition.name); // No account for standalone assets
                 allAssets.push(asset);
             } catch (error) {
                 console.error(`Error creating standalone asset ${assetDefinition.name}:`, error);
@@ -101,7 +163,7 @@ export class PortfolioDataAccess {
                 if (accountDefinition.assets) {
                     for (const assetDefinition of accountDefinition.assets) {
                         try {
-                            const asset = await this.getOrCreateAsset(assetDefinition, accountDefinition.name);
+                            const asset = await this.getAsset(assetDefinition.name, accountDefinition.name);
                             allAssets.push(asset);
                         } catch (error) {
                             console.error(`Error creating account asset ${accountDefinition.name}.${assetDefinition.name}:`, error);
@@ -122,7 +184,7 @@ export class PortfolioDataAccess {
         // Add standalone assets only
         for (const assetDefinition of portfolioData.assets) {
             try {
-                const asset = await this.getOrCreateAsset(assetDefinition); // No account for standalone assets
+                const asset = await this.getAsset(assetDefinition.name); // No account for standalone assets
                 standaloneAssets.push(asset);
             } catch (error) {
                 console.error(`Error creating standalone asset ${assetDefinition.name}:`, error);
