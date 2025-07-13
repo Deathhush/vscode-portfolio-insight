@@ -271,6 +271,11 @@ export class Asset {
                                 relatedAsset: transfer.to
                             };
 
+                            // Include unit price if available
+                            if (transfer.unitPrice) {
+                                transferOutActivity.unitPrice = transfer.unitPrice;
+                            }
+
                             // Include exchange rate if currency conversion was used
                             if (exchangeRateUsed) {
                                 transferOutActivity.exchangeRate = exchangeRateUsed;
@@ -348,6 +353,11 @@ export class Asset {
                                 date: transferDate,
                                 relatedAsset: transfer.from
                             };
+
+                            // Include unit price if available
+                            if (transfer.unitPrice) {
+                                transferInActivity.unitPrice = transfer.unitPrice;
+                            }
 
                             // Include exchange rate if currency conversion was used
                             if (exchangeRateUsed) {
