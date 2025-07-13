@@ -1224,6 +1224,15 @@
       // Exchange rates data
       let exchangeRates = new Map(); // currency -> rate
 
+      // Compute fullName for an asset based on its account context
+      function getAssetFullName(asset, accountName = null) {
+        if (accountName || asset.account) {
+          const account = accountName || asset.account;
+          return `${account}.${asset.name}`;
+        }
+        return asset.name;
+      }
+
       // Get unique non-default currencies from assets
       function getNonDefaultCurrencies() {
         const currencies = new Set();
@@ -1479,13 +1488,16 @@
         handleIncomeExpenseChange(incomeExpenseId, assetId);
       }
 
-      function generateAssetGroup(asset) {
+      function generateAssetGroup(asset, accountName = null) {
         const currency = asset.currency || "CNY";
         const currencySymbol = currency === "USD" ? "$" : "¥";
         const currencyLabel =
           currency === "USD"
             ? `<span class="currency-label">${currency}</span>`
             : "";
+
+        // Compute fullName for proper identification
+        const assetFullName = getAssetFullName(asset, accountName);
 
         let inputFields = "";
         let summaryText = "";
@@ -1540,9 +1552,7 @@
             break;
         }
         return `
-                <div class="asset-group" data-asset-id="${
-                  asset.id || asset.name
-                }">
+                <div class="asset-group" data-asset-id="${assetFullName}">
                     <div class="asset-header active" onclick="toggleAsset(this)">
                         <div class="asset-info">
                             <span class="asset-type-badge type-${asset.type}">${
@@ -1551,17 +1561,13 @@
                             <span class="asset-name">${asset.name}</span>
                             ${currencyLabel}
                         </div>                        <div class="asset-header-right">
-                            <button type="button" class="transfer-toggle-btn" onclick="toggleTransfers('${
-                              asset.id || asset.name
-                            }', event)" title="Toggle Transfers">
+                            <button type="button" class="transfer-toggle-btn" onclick="toggleTransfers('${assetFullName}', event)" title="Toggle Transfers">
                                 <span>⇄</span>
                             </button>
                             ${
                               asset.type === "simple"
                                 ? `
-                            <button type="button" class="income-expenses-toggle-btn" onclick="toggleIncomeExpenses('${
-                              asset.id || asset.name
-                            }', event)" title="Toggle Income & Expenses">
+                            <button type="button" class="income-expenses-toggle-btn" onclick="toggleIncomeExpenses('${assetFullName}', event)" title="Toggle Income & Expenses">
                                 <span>+/-</span>
                             </button>`
                                 : ""
@@ -1588,14 +1594,10 @@
                                 Transfers
                                 <span class="transfers-help">Auto-paired with destination</span>
                             </div>
-                            <div class="transfers-container" data-asset-id="${
-                              asset.id || asset.name
-                            }">
+                            <div class="transfers-container" data-asset-id="${assetFullName}">
                                 <!-- Transfer items will be added dynamically -->
                             </div>
-                            <button type="button" class="add-transfer-btn" onclick="addTransfer('${
-                              asset.id || asset.name
-                            }')">
+                            <button type="button" class="add-transfer-btn" onclick="addTransfer('${assetFullName}')">
                                 <span>+</span> Add Transfer
                             </button>
                             <div class="transfer-summary">
@@ -1611,14 +1613,10 @@
                                 Income & Expenses
                                 <span class="income-expenses-help">Track cash flows</span>
                             </div>
-                            <div class="income-expenses-container" data-asset-id="${
-                              asset.id || asset.name
-                            }">
+                            <div class="income-expenses-container" data-asset-id="${assetFullName}">
                                 <!-- Income/Expense items will be added dynamically -->
                             </div>
-                            <button type="button" class="add-income-expense-btn" onclick="addIncomeExpense('${
-                              asset.id || asset.name
-                            }')">
+                            <button type="button" class="add-income-expense-btn" onclick="addIncomeExpense('${assetFullName}')">
                               <span>+</span> Add Income/Expense
                             </button>
                             <div class="income-expense-summary">
@@ -1694,16 +1692,6 @@
           }
         });
         
-        // Also include assets directly nested in account definitions
-        accounts.forEach(account => {
-          if (account.assets && account.assets.length > 0) {
-            if (!assetsByAccount.has(account.name)) {
-              assetsByAccount.set(account.name, []);
-            }
-            assetsByAccount.get(account.name).push(...account.assets);
-          }
-        });
-        
         // Create account groups
         assetsByAccount.forEach((assets, accountName) => {
           const accountData = accountMap.get(accountName);
@@ -1721,7 +1709,7 @@
 
       function generateAccountGroup(accountGroup) {
         const { account, assets } = accountGroup;
-        const assetsHtml = assets.map(asset => generateAssetGroup(asset)).join('');
+        const assetsHtml = assets.map(asset => generateAssetGroup(asset, account.name)).join('');
         
         return `
           <div class="account-group">
@@ -1765,15 +1753,15 @@
           const selectedValue = select.value;
 
           // Find the current asset to determine if it's a stock
-          const currentAsset = assets.find(asset => (asset.id || asset.name) === currentAssetId);
+          const currentAsset = assets.find(asset => getAssetFullName(asset) === currentAssetId);
           const isStock = currentAsset && currentAsset.type === 'stock';
 
           // Get list of other assets for the dropdown (exclude current asset and stock assets for traditional transfers)
           const otherAssets = assets.filter(
             (asset) => {
-              const assetId = asset.id || asset.name;
+              const assetFullName = getAssetFullName(asset);
               // Exclude current asset
-              if (assetId === currentAssetId) return false;
+              if (assetFullName === currentAssetId) return false;
               
               // For traditional transfers (non-stock current asset), exclude stock assets
               if (!isStock && asset.type === 'stock') return false;
@@ -1784,21 +1772,18 @@
           const assetOptions =
             '<option value="">Select asset...</option>' +
             otherAssets
-              .map(
-                (asset) =>
-                  `<option value="${asset.id || asset.name}">${
-                    asset.name
-                  }</option>`
-              )
+              .map((asset) => {
+                const assetFullName = getAssetFullName(asset);
+                const displayName = asset.account ? `${asset.account}.${asset.name}` : asset.name;
+                return `<option value="${assetFullName}">${displayName}</option>`;
+              })
               .join("");
 
           select.innerHTML = assetOptions;
           // Restore selected value if it still exists
           if (
             selectedValue &&
-            otherAssets.some(
-              (asset) => (asset.id || asset.name) === selectedValue
-            )
+            otherAssets.some((asset) => getAssetFullName(asset) === selectedValue)
           ) {
             select.value = selectedValue;
           }
@@ -1951,15 +1936,15 @@
         transferDiv.dataset.isPaired = isPaired;
 
         // Find the current asset to determine if it's a stock
-        const currentAsset = assets.find(asset => (asset.id || asset.name) === currentAssetId);
+        const currentAsset = assets.find(asset => getAssetFullName(asset) === currentAssetId);
         const isStock = currentAsset && currentAsset.type === 'stock';
 
         // Get list of other assets for the dropdown (exclude current asset and stock assets for traditional transfers)
         const otherAssets = assets.filter(
           (asset) => {
-            const assetId = asset.id || asset.name;
+            const assetFullName = getAssetFullName(asset);
             // Exclude current asset
-            if (assetId === currentAssetId) return false;
+            if (assetFullName === currentAssetId) return false;
             
             // For traditional transfers (non-stock current asset), exclude stock assets
             if (!isStock && asset.type === 'stock') return false;
@@ -1968,10 +1953,11 @@
           }
         );
         const assetOptions = otherAssets
-          .map(
-            (asset) =>
-              `<option value="${asset.id || asset.name}">${asset.name}</option>`
-          )
+          .map((asset) => {
+            const assetFullName = getAssetFullName(asset);
+            const displayName = asset.account ? `${asset.account}.${asset.name}` : asset.name;
+            return `<option value="${assetFullName}">${displayName}</option>`;
+          })
           .join("");
 
         // Create transfer type options based on whether current asset is stock
@@ -2516,8 +2502,22 @@
         if (event.data.type === "INITIALIZE_PORTFOLIO_DATA" && event.data.portfolioData) {
           console.log("Initializing portfolio data:", event.data.portfolioData);
           const portfolioData = event.data.portfolioData;
-          assets = portfolioData.assets || [];
+          
+          // Collect all assets (standalone + account assets)
+          assets = [...(portfolioData.assets || [])];
           accounts = portfolioData.accounts || [];
+          
+          // Add account assets to the main assets array with account reference
+          accounts.forEach(account => {
+            if (account.assets) {
+              account.assets.forEach(asset => {
+                // Add account reference to the asset for fullName computation
+                const accountAsset = { ...asset, account: account.name };
+                assets.push(accountAsset);
+              });
+            }
+          });
+          
           // Clear overridden dates and transfer pairs when new data is loaded
           overriddenDates.clear();
           overriddenTransferDates.clear();
@@ -2577,18 +2577,21 @@
 
         // Collect asset data
         assets.forEach((asset) => {
+          // Compute fullName for this asset
+          const assetFullName = getAssetFullName(asset);
+          
           const assetData = {
-            name: asset.name,
+            name: assetFullName, // Use fullName for portfolio update files
           };
 
           // Get asset-specific date if overridden
           const assetGroup = document.querySelector(
-            `[data-asset-id="${asset.name}"]`
+            `[data-asset-id="${assetFullName}"]`
           );
           if (assetGroup) {
             const assetDatePicker =
               assetGroup.querySelector(".asset-date-picker");
-            if (assetDatePicker && overriddenDates.has(asset.name)) {
+            if (assetDatePicker && overriddenDates.has(assetFullName)) {
               assetData.date = assetDatePicker.value;
             }
           }
