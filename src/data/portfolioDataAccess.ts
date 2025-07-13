@@ -80,6 +80,40 @@ export class PortfolioDataAccess {
         return accounts;
     }
 
+    // Get all assets (both standalone and account assets)
+    public async getAllAssets(): Promise<Asset[]> {
+        const portfolioData = await this.getPortfolioData();
+        const allAssets: Asset[] = [];
+
+        // Add standalone assets
+        for (const assetDefinition of portfolioData.assets) {
+            try {
+                const asset = await this.getOrCreateAsset(assetDefinition); // No account for standalone assets
+                allAssets.push(asset);
+            } catch (error) {
+                console.error(`Error creating standalone asset ${assetDefinition.name}:`, error);
+            }
+        }
+
+        // Add account assets
+        if (portfolioData.accounts) {
+            for (const accountDefinition of portfolioData.accounts) {
+                if (accountDefinition.assets) {
+                    for (const assetDefinition of accountDefinition.assets) {
+                        try {
+                            const asset = await this.getOrCreateAsset(assetDefinition, accountDefinition.name);
+                            allAssets.push(asset);
+                        } catch (error) {
+                            console.error(`Error creating account asset ${accountDefinition.name}.${assetDefinition.name}:`, error);
+                        }
+                    }
+                }
+            }
+        }
+
+        return allAssets;
+    }
+
     // Tags management
     public async getAllTags(): Promise<string[]> {
         // Return cached tags if available
@@ -94,17 +128,18 @@ export class PortfolioDataAccess {
 
     private async loadAllTagsFromData(): Promise<string[]> {
         try {
-            const portfolioData = await this.getPortfolioData();
-            if (portfolioData.assets.length === 0) {
+            const allAssets = await this.getAllAssets();
+            if (allAssets.length === 0) {
                 return [];
             }
 
-            // Extract all unique tags from all assets
+            // Extract all unique tags from all assets (both standalone and account assets)
             const allTags = new Set<string>();
             
-            for (const asset of portfolioData.assets) {
-                if (asset.tags && Array.isArray(asset.tags)) {
-                    asset.tags.forEach((tag: string) => {
+            for (const asset of allAssets) {
+                const assetDefinition = asset.definitionData;
+                if (assetDefinition.tags && Array.isArray(assetDefinition.tags)) {
+                    assetDefinition.tags.forEach((tag: string) => {
                         if (typeof tag === 'string' && tag.trim()) {
                             allTags.add(tag.trim());
                         }
@@ -230,25 +265,25 @@ export class PortfolioDataAccess {
     }
 
     public async getAssetsByTag(tag: string): Promise<AssetSummaryData[]> {
-        const portfolioData = await this.getPortfolioData();
-        if (portfolioData.assets.length === 0) {
+        const allAssets = await this.getAllAssets();
+        if (allAssets.length === 0) {
             return [];
         }
 
         const matchingAssets: AssetSummaryData[] = [];
         
-        for (const assetDefinition of portfolioData.assets) {
+        for (const asset of allAssets) {
             // Check if asset has the specified tag
+            const assetDefinition = asset.definitionData;
             const assetTags = assetDefinition.tags || [];
             const hasTag = assetTags.includes(tag);
             
             if (hasTag) {
                 try {
-                    const asset = await this.getOrCreateAsset(assetDefinition); // Standalone assets have no account
                     const assetSummary = await asset.generateSummary();
                     matchingAssets.push(assetSummary);
                 } catch (error) {
-                    console.error(`Error creating asset summary for ${assetDefinition.name}:`, error);
+                    console.error(`Error creating asset summary for ${asset.fullName}:`, error);
                 }
             }
         }
