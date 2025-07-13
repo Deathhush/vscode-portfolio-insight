@@ -5,7 +5,7 @@ import { AssetNode } from './assetNode';
 import { AssetCurrentValueData } from '../data/interfaces';
 
 export class AccountNode implements PortfolioExplorerNode {
-    public nodeType: 'assetCollection' = 'assetCollection'; // AccountNode is also an AssetCollectionNode
+    public nodeType: 'account' = 'account'; // AccountNode is also an AssetCollectionNode
     public account: Account;
     
     constructor(account: Account, private provider: PortfolioExplorerProvider) {
@@ -54,7 +54,7 @@ export class AccountNode implements PortfolioExplorerNode {
     /**
      * Calculate the total current value of all assets in this account
      */
-    async calculateTotalValue(): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
         try {
             return await this.account.calculateTotalValue();
         } catch (error) {

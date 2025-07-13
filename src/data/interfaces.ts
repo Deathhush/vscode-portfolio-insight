@@ -111,23 +111,3 @@ export interface CategoryTypeData {
 export interface CategoryDefinitionData {
     categoryTypes: CategoryTypeData[];
 }
-
-// In-memory business logic interfaces for categories
-export interface CategorySummaryData {
-    definition: CategoryData;
-    assets: AssetSummaryData[];
-    totalValue: AssetCurrentValueData;
-}
-
-export interface CategoryTypeSummaryData {
-    definition: CategoryTypeData;
-    categories: CategorySummaryData[];
-    totalValue: AssetCurrentValueData;
-}
-
-// Account-related interfaces
-export interface AccountSummaryData {
-    definition: AccountDefinitionData;
-    assets: AssetSummaryData[];
-    totalValue: AssetCurrentValueData;
-}

@@ -5,7 +5,7 @@ import { AssetNode } from './assetNode';
 import { AssetCurrentValueData } from '../data/interfaces';
 
 export class PortfolioNode implements PortfolioExplorerNode {
-    public nodeType: 'assetCollection' = 'assetCollection';
+    public nodeType: 'portfolio' = 'portfolio';
     
     constructor(private provider: PortfolioExplorerProvider) {
     }
@@ -19,7 +19,7 @@ export class PortfolioNode implements PortfolioExplorerNode {
             
             if (childNodes.length > 0) {
                 // Calculate total value from all child nodes
-                const totalValue = await this.calculateTotalValue(childNodes);
+                const totalValue = await this.calculateCurrentValue(childNodes);
                 description = `Total: ¥${totalValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             }
         } catch (error) {
@@ -40,17 +40,14 @@ export class PortfolioNode implements PortfolioExplorerNode {
             nodes.push(accountNode);
         }
 
-        // Get assets that don't belong to any account (standalone assets)
-        const portfolioData = await this.provider.getPortfolioData();
-        if (portfolioData.assets) {
-            for (const assetDefinition of portfolioData.assets) {
-                try {
-                    const asset = await this.provider.dataAccess.getOrCreateAsset(assetDefinition);
-                    const assetNode = new AssetNode(asset, this.provider);
-                    nodes.push(assetNode);
-                } catch (error) {
-                    console.error(`Error creating asset node for ${assetDefinition.name}:`, error);
-                }
+        // Get standalone assets (assets that don't belong to any account)
+        const standaloneAssets = await this.provider.dataAccess.getStandaloneAssets();
+        for (const asset of standaloneAssets) {
+            try {
+                const assetNode = new AssetNode(asset, this.provider);
+                nodes.push(assetNode);
+            } catch (error) {
+                console.error(`Error creating asset node for ${asset.name}:`, error);
             }
         }
 
@@ -71,7 +68,7 @@ export class PortfolioNode implements PortfolioExplorerNode {
     /**
      * Calculate the total current value of multiple child nodes (AccountNodes and AssetNodes)
      */
-    async calculateTotalValue(childNodes: PortfolioExplorerNode[]): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(childNodes: PortfolioExplorerNode[]): Promise<AssetCurrentValueData> {
         let totalValue = 0;
         let totalValueInCNY = 0;
         let latestUpdateDate: string | undefined;
@@ -81,14 +78,14 @@ export class PortfolioNode implements PortfolioExplorerNode {
                 let nodeValue: AssetCurrentValueData;
                 
                 if (node instanceof AccountNode) {
-                    nodeValue = await node.calculateTotalValue();
+                    nodeValue = await node.calculateCurrentValue();
                 } else if (node instanceof AssetNode) {
-                    nodeValue = await node.calculateCurrentValueInCNY();
+                    nodeValue = await node.asset.calculateCurrentValue();
                 } else {
                     continue; // Skip unknown node types
                 }
 
-                totalValue += nodeValue.currentValue;
+                totalValue += nodeValue.valueInCNY; // Portfolio should always return value in CNY
                 totalValueInCNY += nodeValue.valueInCNY;
                 
                 // Track the latest update date

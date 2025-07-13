@@ -66,7 +66,7 @@ suite('Category Feature Tests', () => {
         
         // Should find the "招行.活期" asset which has the "活期" tag
         assert.ok(assets.length > 0, 'Should find assets with matching tags');
-        const foundAsset = assets.find(asset => asset.definition.name === '招行.活期');
+        const foundAsset = assets.find(asset => asset.name === '招行.活期');
         assert.ok(foundAsset, 'Should find the "招行.活期" asset');
     });
 

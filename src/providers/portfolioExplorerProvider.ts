@@ -3,19 +3,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateView';
 import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitionEditorView';
-import { AssetCollectionNode } from './assetCollectionNode';
 import { CategoryCollectionNode } from './categoryCollectionNode';
 import { TagCollectionNode } from './tagCollectionNode';
-import { AssetNode } from './assetNode';
 import { PortfolioNode } from './portfolioNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { PortfolioDataAccess } from '../data/portfolioDataAccess';
-import { Asset } from '../data/asset';
-import { AssetPageView } from '../views/assetPage/assetPageView';
-import { AssetDefinitionData, PortfolioData, AssetRenameOperationData, AssetDefinitionSubmissionData } from '../data/interfaces';
+import { AssetDefinitionData, PortfolioData, AssetDefinitionSubmissionData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
-    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag' | 'account';
+    nodeType: 'portfolio' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag' | 'account';
     getChildren(): Promise<PortfolioExplorerNode[]>;
     getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem>;
 }

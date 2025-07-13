@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { AssetNode } from './assetNode';
-import { AssetCollectionNode } from './assetCollectionNode';
+import { AssetCollection } from '../data/assetCollection';
 import { AssetCurrentValueData } from '../data/interfaces';
 
 export class TagNode implements PortfolioExplorerNode {
@@ -13,18 +13,18 @@ export class TagNode implements PortfolioExplorerNode {
     }
 
     async getChildAssetNodes(): Promise<AssetNode[]> {
-        const assetsWithTag = await this.provider.dataAccess.getAssetsByTag(this.tag);
-        return await AssetNode.createAssetNodesFromSummaries(assetsWithTag, this.provider);
+        const assets = await this.provider.dataAccess.getAssetsByTag(this.tag);                
+        return assets.map(asset => new AssetNode(asset, this.provider));
     }
 
-    async calculateTotalValue(): Promise<AssetCurrentValueData> {
-        const assetNodes = await this.getChildAssetNodes();
-        return await AssetCollectionNode.calculateTotalValue(assetNodes);
+    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
+        const assetsWithTag = await this.provider.dataAccess.getAssetsByTag(this.tag);
+        return await AssetCollection.calculateCurrentValue(assetsWithTag);
     }
 
     private async getDescription(): Promise<string> {
         try {
-            const tagValue = await this.calculateTotalValue();
+            const tagValue = await this.calculateCurrentValue();
             return `Total: ¥${tagValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         } catch (error) {
             console.error(`Error calculating value for tag ${this.tag}:`, error);
