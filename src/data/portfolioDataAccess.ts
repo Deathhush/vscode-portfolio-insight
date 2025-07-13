@@ -3,7 +3,8 @@ import { PortfolioDataStore } from './portfolioDataStore';
 import { Asset } from './asset';
 import { Account } from './account';
 import { Category, CategoryType } from './category';
-import { AssetDefinitionData, AccountDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData } from './interfaces';
+import { ExchangeRate } from './exchangeRate';
+import { AssetDefinitionData, AccountDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData, ExchangeRateData } from './interfaces';
 
 /**
  * PortfolioDataAccess serves as a bridge between the on-disk store (PortfolioDataStore) 
@@ -13,6 +14,7 @@ import { AssetDefinitionData, AccountDefinitionData, PortfolioData, PortfolioUpd
 export class PortfolioDataAccess {
     private assetCache: Map<string, Asset> = new Map();
     private accountCache: Map<string, Account> = new Map();
+    private exchangeRateCache: Map<string, ExchangeRate> = new Map();
     private tagsCache: string[] | undefined;
     private portfolioDataCache: PortfolioData | undefined;
     private assetUpdatesCache: PortfolioUpdateData[] | undefined;
@@ -267,6 +269,7 @@ export class PortfolioDataAccess {
         this.invalidateAccountCache();
         this.invalidateTagsCache();
         this.invalidateAssetUpdatesCache();
+        this.invalidateExchangeRateCache();
         
         // Fire update event
         this._onDataUpdatedEmitter.fire();
@@ -290,6 +293,7 @@ export class PortfolioDataAccess {
         
         // Invalidate cache to force reload
         this.invalidateAssetUpdatesCache();
+        this.invalidateExchangeRateCache();
         
         // Fire update event
         this._onDataUpdatedEmitter.fire();
@@ -325,6 +329,61 @@ export class PortfolioDataAccess {
         this.categoryDefinitionCache = undefined;
     }
 
+    // Exchange rate operations
+    public async getExchangeRate(currency: string): Promise<ExchangeRate | undefined> {
+        // Return cached data if available
+        if (this.exchangeRateCache.has(currency)) {
+            return this.exchangeRateCache.get(currency);
+        }
+
+        // If cache is empty, load and cache all exchange rates
+        if (this.exchangeRateCache.size === 0) {
+            const allExchangeRates = await this.extractExchangeRates();
+            
+            // Cache all exchange rates
+            for (const [currencyKey, exchangeRate] of allExchangeRates.entries()) {
+                this.exchangeRateCache.set(currencyKey, exchangeRate);
+            }
+        }
+        
+        // Return the requested currency's exchange rate from cache
+        return this.exchangeRateCache.get(currency);
+    }
+
+    private async extractExchangeRates(): Promise<Map<string, ExchangeRate>> {
+        const updates = await this.loadAssetUpdates();
+        const exchangeRatesByDate = new Map<string, ExchangeRateData[]>();
+        
+        // Process updates in chronological order to collect all rates
+        for (const update of updates) {
+            if (update.exchangeRates) {
+                for (const rate of update.exchangeRates) {
+                    const rateWithDate: ExchangeRateData = {
+                        ...rate,
+                        date: rate.date || update.date
+                    };
+                    
+                    if (!exchangeRatesByDate.has(rate.from)) {
+                        exchangeRatesByDate.set(rate.from, []);
+                    }
+                    exchangeRatesByDate.get(rate.from)!.push(rateWithDate);
+                }
+            }
+        }
+
+        // Create ExchangeRate objects for each currency
+        const exchangeRateMap = new Map<string, ExchangeRate>();
+        for (const [currency, rates] of exchangeRatesByDate.entries()) {
+            exchangeRateMap.set(currency, new ExchangeRate(currency, rates));
+        }
+
+        return exchangeRateMap;
+    }
+
+    public invalidateExchangeRateCache(): void {
+        this.exchangeRateCache.clear();
+    }
+
     // Cache management
     public invalidateAllCaches(): void {
         this.invalidateAssetCache();
@@ -333,6 +392,7 @@ export class PortfolioDataAccess {
         this.invalidatePortfolioCache();
         this.invalidateAssetUpdatesCache();
         this.invalidateCategoryCache();
+        this.invalidateExchangeRateCache();
     }
 
     public invalidatePortfolioCache(): void {
