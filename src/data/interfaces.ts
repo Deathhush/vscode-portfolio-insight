@@ -20,8 +20,8 @@ export interface AssetRenameOperationData {
 }
 
 export interface PortfolioData {
-    assets: AssetDefinitionData[];
-    accounts?: AccountDefinitionData[]; // Add accounts array
+    assets: AssetDefinitionData[]; // Standalone assets that don't belong to accounts
+    accounts?: AccountDefinitionData[]; // Accounts can have their own assets
 }
 
 export interface AssetDefinitionSubmissionData {

@@ -191,7 +191,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // Create new view and hook to the event
             this._assetDefinitionEditorView = new AssetDefinitionEditorView(
                 this.context.extensionUri,
-                () => this.getAllTags(),
+                () => this.dataAccess.getAllTags(),
                 () => this.getAllAccounts()
             );
             
@@ -313,11 +313,6 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
 
     public async createAccount(definition: any) {
         return await this.dataAccess.createAccount(definition);
-    }
-
-    // Tags management - new functionality
-    public async getAllTags(): Promise<string[]> {
-        return await this.dataAccess.getAllTags();
     }
 
     // Category management - new functionality

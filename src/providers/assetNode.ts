@@ -137,7 +137,7 @@ export class AssetNode implements PortfolioExplorerNode {
         const assetNodes: AssetNode[] = [];
         for (const assetSummary of summaries) {
             try {
-                const asset = await provider.dataAccess.getAsset(assetSummary.definition, assetSummary.account);
+                const asset = await provider.dataAccess.getOrCreateAsset(assetSummary.definition, assetSummary.account);
                 const assetNode = new AssetNode(asset, provider, displayFullName);
                 assetNodes.push(assetNode);
             } catch (error) {

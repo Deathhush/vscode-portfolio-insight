@@ -26,7 +26,7 @@ export class PortfolioDataAccess {
     }
 
     // Asset management
-    public async getAsset(definition: AssetDefinitionData, account?: string): Promise<Asset> {
+    public async getOrCreateAsset(definition: AssetDefinitionData, account?: string): Promise<Asset> {
         const fullName = account ? `${account}.${definition.name}` : definition.name;
         const cachedAsset = this.getCachedAsset(fullName);
         if (cachedAsset) {
@@ -244,7 +244,7 @@ export class PortfolioDataAccess {
             
             if (hasTag) {
                 try {
-                    const asset = await this.getAsset(assetDefinition); // Standalone assets have no account
+                    const asset = await this.getOrCreateAsset(assetDefinition); // Standalone assets have no account
                     const assetSummary = await asset.generateSummary();
                     matchingAssets.push(assetSummary);
                 } catch (error) {

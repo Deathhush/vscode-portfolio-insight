@@ -60,7 +60,7 @@ export class AssetCollectionNode implements PortfolioExplorerNode {
         const assetNodes: AssetNode[] = [];
         for (const assetDefinition of portfolioData.assets) {
             try {
-                const asset = await this.provider.dataAccess.getAsset(assetDefinition);
+                const asset = await this.provider.dataAccess.getOrCreateAsset(assetDefinition);
                 const assetNode = new AssetNode(asset, this.provider);
                 assetNodes.push(assetNode);
             } catch (error) {

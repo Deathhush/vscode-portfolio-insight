@@ -31,7 +31,7 @@ export class Account {
 
         if (this.definitionData.assets) {
             for (const assetDefinition of this.definitionData.assets) {
-                const asset = await this.dataAccess.getAsset(assetDefinition, this.name);
+                const asset = await this.dataAccess.getOrCreateAsset(assetDefinition, this.name);
                 assets.push(asset);
             }
         }

@@ -45,7 +45,7 @@ export class PortfolioNode implements PortfolioExplorerNode {
         if (portfolioData.assets) {
             for (const assetDefinition of portfolioData.assets) {
                 try {
-                    const asset = await this.provider.dataAccess.getAsset(assetDefinition);
+                    const asset = await this.provider.dataAccess.getOrCreateAsset(assetDefinition);
                     const assetNode = new AssetNode(asset, this.provider);
                     nodes.push(assetNode);
                 } catch (error) {
