@@ -983,14 +983,12 @@
                 return;
             }
             
-            // Check for duplicate names across all assets (standalone and account assets)
-            const duplicateInStandalone = assets.find(a => a.name === newName);
-            const duplicateInAccounts = accounts.find(acc => 
-                acc.assets && acc.assets.some(a => a.id !== assetId && a.name === newName));
+            // Update the asset name first
+            asset.name = newName;
             
-            if (duplicateInStandalone || duplicateInAccounts) {
-                showNotification(`An asset with the name "${newName}" already exists`, 'error');
-                // Revert the change
+            // Validate the new name (this will check for duplicates and show errors)
+            if (!validateAccountAsset(accountId, assetId)) {
+                // If validation fails, revert the change
                 asset.name = oldName;
                 updateDisplay();
                 return;
@@ -1018,11 +1016,7 @@
                     });
                 }
                 
-                // Update the asset
-                asset.name = newName;
-                
                 updateDisplay();
-                validateAccountAsset(accountId, assetId);
                 
                 // Update visual indicators
                 updateRenameIndicators();
@@ -1127,22 +1121,12 @@
                 return;
             }
             
-            // Check for duplicate names
-            const duplicate = assets.find(a => a.id !== assetId && a.name === newName);
-            if (duplicate) {
-                showNotification(`An asset with the name "${newName}" already exists`, 'error');
-                // Revert the change
-                asset.name = oldName;
-                updateDisplay();
-                return;
-            }
+            // Update the asset name first
+            asset.name = newName;
             
-            // Check for duplicates in account assets too
-            const duplicateInAccounts = accounts.find(acc => 
-                acc.assets && acc.assets.some(a => a.name === newName));
-            if (duplicateInAccounts) {
-                showNotification(`An asset with the name "${newName}" already exists in accounts`, 'error');
-                // Revert the change
+            // Validate the new name (this will check for duplicates and show errors)
+            if (!validateAsset(assetId)) {
+                // If validation fails, revert the change
                 asset.name = oldName;
                 updateDisplay();
                 return;
@@ -1165,11 +1149,7 @@
                     });
                 }
                 
-                // Update the asset
-                asset.name = newName;
-                
                 updateDisplay();
-                validateAsset(assetId);
                 
                 // Update visual indicators
                 updateRenameIndicators();
@@ -1202,11 +1182,11 @@
                 hasError = true;
                 errorMessage = 'Asset name is required';
             } else {
-                // Check for duplicate names
+                // Check for duplicate names within standalone assets
                 const duplicates = assets.filter(a => a.id !== id && a.name.trim().toLowerCase() === asset.name.trim().toLowerCase());
                 if (duplicates.length > 0) {
                     hasError = true;
-                    errorMessage = 'Asset name must be unique';
+                    errorMessage = 'Asset name must be unique within standalone assets';
                 }
             }
 
