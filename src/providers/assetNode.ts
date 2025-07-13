@@ -9,10 +9,12 @@ export class AssetNode implements PortfolioExplorerNode {
     public asset: Asset; // Reference to Asset instance
     public provider: PortfolioExplorerProvider; // Reference to the provider
     private assetPageView?: AssetPageView; // Reference to the current webview for this asset
+    private displayFullName: boolean; // Whether to display full name or just asset name
     
-    constructor(asset: Asset, provider: PortfolioExplorerProvider) {
+    constructor(asset: Asset, provider: PortfolioExplorerProvider, displayFullName: boolean = true) {
         this.asset = asset;
         this.provider = provider;
+        this.displayFullName = displayFullName;
     }
 
     private async getDescription(): Promise<string> {
@@ -49,7 +51,17 @@ export class AssetNode implements PortfolioExplorerNode {
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.asset.definitionData.name, vscode.TreeItemCollapsibleState.None);
+        // Determine what name to display based on displayFullName setting
+        let displayName: string;
+        if (this.displayFullName) {
+            // Show full name (accountName.assetName for account assets, just assetName for standalone)
+            displayName = this.asset.fullName;
+        } else {
+            // Show only the asset name (typically when displayed under an account)
+            displayName = this.asset.definitionData.name;
+        }
+
+        const treeItem = new vscode.TreeItem(displayName, vscode.TreeItemCollapsibleState.None);
         
         // Always use package icon for all assets
         treeItem.iconPath = new vscode.ThemeIcon('package');
@@ -117,12 +129,16 @@ export class AssetNode implements PortfolioExplorerNode {
     /**
      * Create AssetNodes from AssetSummaryData array
      */
-    static async createAssetNodesFromSummaries(summaries: AssetSummaryData[], provider: PortfolioExplorerProvider): Promise<AssetNode[]> {
+    static async createAssetNodesFromSummaries(
+        summaries: AssetSummaryData[], 
+        provider: PortfolioExplorerProvider, 
+        displayFullName: boolean = true
+    ): Promise<AssetNode[]> {
         const assetNodes: AssetNode[] = [];
         for (const assetSummary of summaries) {
             try {
-                const asset = await provider.dataAccess.createAsset(assetSummary.definition);
-                const assetNode = new AssetNode(asset, provider);
+                const asset = await provider.dataAccess.getAsset(assetSummary.definition, assetSummary.account);
+                const assetNode = new AssetNode(asset, provider, displayFullName);
                 assetNodes.push(assetNode);
             } catch (error) {
                 console.error(`Error creating asset node for ${assetSummary.definition.name}:`, error);

@@ -1,0 +1,103 @@
+{
+    "date": "2025-06-25",
+    "assets": [
+        {
+            "name": "活期",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "currentValue": 10000
+                }
+            ]
+        },
+        {
+            "name": "招行.沪深300ETF",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "currentValue": 20000
+                }
+            ]
+        },
+        {
+            "name": "国金",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "currentValue": 30000,
+                    "marketValue": 15000
+                }
+            ]
+        },
+        {
+            "name": "国金.贵州茅台",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "shares": 500,
+                    "price": 1500
+                }
+            ]
+        },
+        {
+            "name": "国金#宁德时代",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "shares": 800,
+                    "price": 400
+                }
+            ]
+        },
+        {
+            "name": "StockAward",
+            "events": [
+                {
+                    "type": "snapshot",
+                    "shares": 100,
+                    "price": 200
+                }
+            ]
+        }
+    ],
+    "transfers": [
+        {
+            "from": "招行.活期",
+            "to": "招行.沪深300ETF",            
+            "amount": 5000,
+            "date": "2025-06-25"
+        },
+        {
+            "from": "国金",
+            "to": "招行.活期",
+            "amount": 5000,
+            "date": "2025-06-25"
+        },
+        {
+            "from": "国金.贵州茅台",
+            "to": "招行.活期",            
+            "amount": 100,
+            "unitPrice": 2000,
+            "date": "2025-06-10"
+        },
+        {
+            "from": "招行.活期",
+            "to": "国金#宁德时代",            
+            "amount": 200,
+            "totalValue": 8000
+        },
+        {
+            "from": "招行.活期",
+            "to": "StockAward",            
+            "amount": 100,
+            "unitPrice": 500
+        }
+
+    ],
+    "exchangeRates": [
+        {
+            "from": "USD",
+            "rate": 7.0
+        }
+    ]
+}

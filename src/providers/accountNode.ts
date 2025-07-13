@@ -32,7 +32,7 @@ export class AccountNode implements PortfolioExplorerNode {
         const assetNodes: AssetNode[] = [];
 
         for (const asset of assets) {
-            const assetNode = new AssetNode(asset, this.provider);
+            const assetNode = new AssetNode(asset, this.provider, false);
             assetNodes.push(assetNode);
         }
 

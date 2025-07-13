@@ -40,19 +40,16 @@ export class PortfolioNode implements PortfolioExplorerNode {
             nodes.push(accountNode);
         }
 
-        // Get assets that don't belong to any account
+        // Get assets that don't belong to any account (standalone assets)
         const portfolioData = await this.provider.getPortfolioData();
         if (portfolioData.assets) {
             for (const assetDefinition of portfolioData.assets) {
-                // Only include assets that don't have an account specified
-                if (!assetDefinition.account) {
-                    try {
-                        const asset = await this.provider.createAsset(assetDefinition);
-                        const assetNode = new AssetNode(asset, this.provider);
-                        nodes.push(assetNode);
-                    } catch (error) {
-                        console.error(`Error creating asset node for ${assetDefinition.name}:`, error);
-                    }
+                try {
+                    const asset = await this.provider.dataAccess.getAsset(assetDefinition);
+                    const assetNode = new AssetNode(asset, this.provider);
+                    nodes.push(assetNode);
+                } catch (error) {
+                    console.error(`Error creating asset node for ${assetDefinition.name}:`, error);
                 }
             }
         }

@@ -144,8 +144,8 @@ suite('PortfolioDataAccess Tests', () => {
             tags: ['test', 'asset']
         };
 
-        const asset1 = await portfolioDataAccess.createAsset(assetDef);
-        const asset2 = await portfolioDataAccess.createAsset(assetDef);
+        const asset1 = await portfolioDataAccess.getAsset(assetDef);
+        const asset2 = await portfolioDataAccess.getAsset(assetDef);
 
         // Should return the same cached instance
         assert.strictEqual(asset1, asset2);
@@ -171,7 +171,7 @@ suite('PortfolioDataAccess Tests', () => {
         await portfolioDataAccess.getAllTags();
 
         // Create asset to cache it
-        await portfolioDataAccess.createAsset(portfolioData.assets[0]);
+        await portfolioDataAccess.getAsset(portfolioData.assets[0]);
 
         // Invalidate caches
         portfolioDataAccess.invalidateAllCaches();

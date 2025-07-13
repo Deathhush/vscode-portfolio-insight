@@ -14,12 +14,26 @@ import { PortfolioDataAccess } from './portfolioDataAccess';
 export class Asset {
     constructor(
         private definition: AssetDefinitionData,
-        private dataAccess: PortfolioDataAccess
+        private dataAccess: PortfolioDataAccess,
+        private account?: string // Add account parameter
     ) {}
     
     // Core properties
     get name(): string {
         return this.definition.name;
+    }
+
+    get fullName(): string {
+        // Compute full name as accountName.assetName for assets with accounts
+        // For assets without accounts, just return the asset name
+        if (this.account) {
+            return `${this.account}.${this.definition.name}`;
+        }
+        return this.definition.name;
+    }
+    
+    get accountName(): string | undefined {
+        return this.account;
     }
     
     get type(): string {
@@ -72,7 +86,7 @@ export class Asset {
             };
         } catch (error) {
             // Re-throw with more context about which asset failed
-            throw new Error(`Failed to calculate value for asset "${this.name}": ${error}`);
+            throw new Error(`Failed to calculate value for asset "${this.fullName}": ${error}`);
         }
     }
 
@@ -218,7 +232,7 @@ export class Asset {
             
             // Extract asset events (income, expense, snapshots)
             for (const assetUpdate of update.assets) {
-                if (assetUpdate.name === this.name) {
+                if (assetUpdate.name === this.fullName) {
                     const assetDate = assetUpdate.date || updateDate;
                     
                     for (const event of assetUpdate.events) {
@@ -227,7 +241,7 @@ export class Asset {
                         // Convert income and expense events to activities
                         if (event.type === 'income' || event.type === 'expense') {
                             const activity: AssetActivityData = {
-                                id: `${this.name}-event-${activityId++}`,
+                                id: `${this.fullName}-event-${activityId++}`,
                                 type: event.type,
                                 amount: event.amount || 0,
                                 totalValue: event.amount || 0,
@@ -246,7 +260,7 @@ export class Asset {
                         if (event.type === 'snapshot') {
                             const snapshotValue = this.calculateAssetValue(event);
                             const snapshotActivity: AssetActivityData = {
-                                id: `${this.name}-snapshot-${activityId++}`,
+                                id: `${this.fullName}-snapshot-${activityId++}`,
                                 type: 'snapshot',
                                 totalValue: snapshotValue,
                                 date: eventDate
@@ -279,14 +293,14 @@ export class Asset {
                     const transferDate = transfer.date || updateDate;
                     
                     // Transfer OUT from this asset
-                    if (transfer.from === this.name) {
+                    if (transfer.from === this.fullName) {
                         // For stock assets, only allow sell operations (not regular transfers)
                         if (this.type === 'stock') {
                             // This is a sell operation for stock assets
                             let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
                             
                             const transferOutActivity: AssetActivityData = {
-                                id: `${this.name}-sell-${activityId++}`,
+                                id: `${this.fullName}-sell-${activityId++}`,
                                 type: 'sell',
                                 amount: transfer.amount,
                                 totalValue: totalValue,
@@ -330,7 +344,7 @@ export class Asset {
                             }
                             
                             const transferOutActivity: AssetActivityData = {
-                                id: `${this.name}-transfer-out-${activityId++}`,
+                                id: `${this.fullName}-transfer-out-${activityId++}`,
                                 type: 'transfer_out',
                                 amount: transfer.amount,
                                 totalValue: totalValue,
@@ -353,14 +367,14 @@ export class Asset {
                     }
                     
                     // Transfer IN to this asset
-                    if (transfer.to === this.name) {
+                    if (transfer.to === this.fullName) {
                         // For stock assets, only allow buy operations (not regular transfers)
                         if (this.type === 'stock') {
                             // This is a buy operation for stock assets
                             let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
                             
                             const transferInActivity: AssetActivityData = {
-                                id: `${this.name}-buy-${activityId++}`,
+                                id: `${this.fullName}-buy-${activityId++}`,
                                 type: 'buy',
                                 amount: transfer.amount,
                                 totalValue: totalValue,
@@ -404,7 +418,7 @@ export class Asset {
                             }
                             
                             const transferInActivity: AssetActivityData = {
-                                id: `${this.name}-transfer-in-${activityId++}`,
+                                id: `${this.fullName}-transfer-in-${activityId++}`,
                                 type: 'transfer_in',
                                 amount: transfer.amount,
                                 totalValue: totalValue,
@@ -475,6 +489,7 @@ export class Asset {
         
         const summary: AssetSummaryData = {
             definition: this.definitionData,
+            account: this.account, // Include account information
             currentValue,
             activities
         };

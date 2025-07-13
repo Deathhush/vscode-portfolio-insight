@@ -4,7 +4,6 @@ export interface AssetDefinitionData {
     type: 'simple' | 'investment' | 'composite' | 'stock';
     currency?: string;
     tags?: string[];
-    account?: string; // Add account reference
 }
 
 export interface AccountDefinitionData {
@@ -92,6 +91,7 @@ export interface AssetActivityData {
 
 export interface AssetSummaryData {
     definition: AssetDefinitionData;
+    account?: string; // Add account information for proper Asset creation
     currentValue: AssetCurrentValueData;
     lastMonthIncome?: number; // For simple assets
     activities: AssetActivityData[];

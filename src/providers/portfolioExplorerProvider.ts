@@ -241,8 +241,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
                         });
                         
                         try {
-                            await this.dataAccess.renameAsset(renameOp.oldName, renameOp.newName);
-                            console.log(`Successfully renamed asset: ${renameOp.oldName} -> ${renameOp.newName}`);
+                            await this.dataAccess.renameAsset(renameOp.oldName, renameOp.newName, renameOp.accountName);
+                            console.log(`Successfully renamed asset: ${renameOp.oldName} -> ${renameOp.newName}${renameOp.accountName ? ` (account: ${renameOp.accountName})` : ''}`);
                         } catch (error) {
                             console.error(`Failed to rename asset ${renameOp.oldName} to ${renameOp.newName}:`, error);
                             vscode.window.showErrorMessage(`Failed to rename asset "${renameOp.oldName}" to "${renameOp.newName}": ${error}`);
@@ -299,10 +299,6 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             console.error('Error saving asset definitions:', error);
             vscode.window.showErrorMessage(`Failed to save asset definitions: ${error}`);
         }
-    }    // Asset management
-    // Asset management - delegate to PortfolioDataAccess
-    public async createAsset(definition: AssetDefinitionData): Promise<Asset> {
-        return await this.dataAccess.createAsset(definition);
     }
 
     public invalidateAssetCache(): void {
