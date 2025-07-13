@@ -24,7 +24,7 @@ export class TagCollectionNode implements PortfolioExplorerNode {
                     if (child.nodeType === 'tag') {
                         const tagNode = child as TagNode;
                         try {
-                            const tagValue = await tagNode.calculateTotalValue();
+                            const tagValue = await tagNode.calculateCurrentValue();
                             totalValue += tagValue.valueInCNY;
                         } catch (error) {
                             console.error(`Error calculating value for tag ${tagNode.tag}:`, error);
@@ -48,7 +48,7 @@ export class TagCollectionNode implements PortfolioExplorerNode {
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
-        const tags = await this.provider.getAllTags();
+        const tags = await this.provider.dataAccess.getAllTags();
         
         if (!tags || tags.length === 0) {
             return [];

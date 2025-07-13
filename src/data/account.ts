@@ -1,6 +1,7 @@
-import { AccountDefinitionData, AccountSummaryData, AssetSummaryData, AssetCurrentValueData } from './interfaces';
+import { AccountDefinitionData, AssetCurrentValueData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 import { Asset } from './asset';
+import { AssetCollection } from './assetCollection';
 
 /**
  * Represents an Account in the portfolio
@@ -31,7 +32,7 @@ export class Account {
 
         if (this.definitionData.assets) {
             for (const assetDefinition of this.definitionData.assets) {
-                const asset = await this.dataAccess.getAsset(assetDefinition, this.name);
+                const asset = await this.dataAccess.getOrCreateAsset(assetDefinition, this.name);
                 assets.push(asset);
             }
         }
@@ -44,57 +45,6 @@ export class Account {
      */
     public async calculateTotalValue(): Promise<AssetCurrentValueData> {
         const assets = await this.getAssets();
-        let totalValue = 0;
-        let totalValueInCNY = 0;
-        let latestUpdateDate: string | undefined;
-
-        for (const asset of assets) {
-            try {
-                const assetValue = await asset.calculateCurrentValue();
-                totalValue += assetValue.currentValue;
-                totalValueInCNY += assetValue.valueInCNY;
-                
-                // Track the latest update date
-                if (assetValue.lastUpdateDate) {
-                    if (!latestUpdateDate || assetValue.lastUpdateDate > latestUpdateDate) {
-                        latestUpdateDate = assetValue.lastUpdateDate;
-                    }
-                }
-            } catch (error) {
-                console.error(`Error calculating value for asset ${asset.definitionData.name}:`, error);
-            }
-        }
-
-        return {
-            currentValue: totalValue,
-            currency: 'CNY', // Mixed currencies, so we use CNY as the base
-            valueInCNY: totalValueInCNY,
-            lastUpdateDate: latestUpdateDate
-        };
-    }
-
-    /**
-     * Generate a summary of this account including all assets
-     */
-    public async generateSummary(): Promise<AccountSummaryData> {
-        const assets = await this.getAssets();
-        const assetSummaries: AssetSummaryData[] = [];
-
-        for (const asset of assets) {
-            try {
-                const summary = await asset.generateSummary();
-                assetSummaries.push(summary);
-            } catch (error) {
-                console.error(`Error generating summary for asset ${asset.definitionData.name}:`, error);
-            }
-        }
-
-        const totalValue = await this.calculateTotalValue();
-
-        return {
-            definition: this.definitionData,
-            assets: assetSummaries,
-            totalValue: totalValue
-        };
+        return await AssetCollection.calculateCurrentValue(assets);
     }
 }

@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { Category, CategoryType } from '../data/category';
 import { AssetNode } from './assetNode';
-import { AssetCollectionNode } from './assetCollectionNode';
+import { AssetCollection } from '../data/assetCollection';
 
 export class CategoryNode implements PortfolioExplorerNode {
     public nodeType: 'category' = 'category'; // Using 'assets' as the closest match
@@ -15,13 +15,13 @@ export class CategoryNode implements PortfolioExplorerNode {
 
     async getChildAssetNodes(): Promise<AssetNode[]> {
         const assets = await this.category.getAssets();
-        return await AssetNode.createAssetNodesFromSummaries(assets, this.provider);
+        return assets.map(asset => new AssetNode(asset, this.provider));
     }
 
     private async getDescription(): Promise<string> {
         try {
-            const assetNodes = await this.getChildAssetNodes();
-            const categoryValue = await AssetCollectionNode.calculateTotalValue(assetNodes);
+            const assets = await this.category.getAssets();
+            const categoryValue = await AssetCollection.calculateCurrentValue(assets);
             
             // If we have a parent category type, calculate percentage
             if (this.parentCategoryType) {

@@ -107,43 +107,4 @@ export class AssetNode implements PortfolioExplorerNode {
         // Asset nodes have no children
         return [];
     }
-
-    /**
-     * Calculate the current value of this asset in CNY
-     */
-    async calculateCurrentValueInCNY(): Promise<AssetCurrentValueData> {
-        try {
-            return await this.asset.calculateCurrentValue();
-        } catch (error) {
-            console.error(`Error calculating value for asset ${this.asset.definitionData.name}:`, error);
-            // Return zero values if calculation fails
-            return {
-                currentValue: 0,
-                currency: 'CNY',
-                valueInCNY: 0,
-                lastUpdateDate: undefined
-            };
-        }
-    }
-
-    /**
-     * Create AssetNodes from AssetSummaryData array
-     */
-    static async createAssetNodesFromSummaries(
-        summaries: AssetSummaryData[], 
-        provider: PortfolioExplorerProvider, 
-        displayFullName: boolean = true
-    ): Promise<AssetNode[]> {
-        const assetNodes: AssetNode[] = [];
-        for (const assetSummary of summaries) {
-            try {
-                const asset = await provider.dataAccess.getAsset(assetSummary.definition, assetSummary.account);
-                const assetNode = new AssetNode(asset, provider, displayFullName);
-                assetNodes.push(assetNode);
-            } catch (error) {
-                console.error(`Error creating asset node for ${assetSummary.definition.name}:`, error);
-            }
-        }
-        return assetNodes;
-    }
 }

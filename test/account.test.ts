@@ -102,31 +102,4 @@ describe('Account', () => {
             assert.strictEqual(totalValue.currency, 'CNY');
         });
     });
-
-    describe('Account Summary', () => {
-        it('should generate account summary', async () => {
-            const accountDefinition: AccountDefinitionData = {
-                name: '招行',
-                type: 'bank'
-            };
-
-            // Create a mock data access object
-            const mockDataAccess = {
-                getPortfolioData: async () => ({ assets: [] }),
-                createAsset: async (def: any) => ({ 
-                    definitionData: def, 
-                    calculateCurrentValue: async () => ({ currentValue: 0, currency: 'CNY', valueInCNY: 0 }),
-                    generateSummary: async () => ({ definition: def, currentValue: { currentValue: 0, currency: 'CNY', valueInCNY: 0 }, activities: [] })
-                })
-            } as any;
-
-            const account = new Account(accountDefinition, mockDataAccess);
-            const summary = await account.generateSummary();
-            
-            assert.strictEqual(summary.definition.name, '招行');
-            assert.strictEqual(summary.definition.type, 'bank');
-            assert.strictEqual(Array.isArray(summary.assets), true);
-            assert.strictEqual(typeof summary.totalValue, 'object');
-        });
-    });
 });

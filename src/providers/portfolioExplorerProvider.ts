@@ -3,19 +3,15 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { PortfolioUpdateView } from '../views/portfolioUpdate/portfolioUpdateView';
 import { AssetDefinitionEditorView } from '../views/portfolioEdit/assetDefinitionEditorView';
-import { AssetCollectionNode } from './assetCollectionNode';
 import { CategoryCollectionNode } from './categoryCollectionNode';
 import { TagCollectionNode } from './tagCollectionNode';
-import { AssetNode } from './assetNode';
 import { PortfolioNode } from './portfolioNode';
 import { PortfolioDataStore } from '../data/portfolioDataStore';
 import { PortfolioDataAccess } from '../data/portfolioDataAccess';
-import { Asset } from '../data/asset';
-import { AssetPageView } from '../views/assetPage/assetPageView';
-import { AssetDefinitionData, PortfolioData, AssetRenameOperationData, AssetDefinitionSubmissionData } from '../data/interfaces';
+import { AssetDefinitionData, PortfolioData, AssetDefinitionSubmissionData } from '../data/interfaces';
 
 export interface PortfolioExplorerNode {
-    nodeType: 'assetCollection' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag' | 'account';
+    nodeType: 'portfolio' | 'asset' | 'categoryCollection' | 'categoryType' | 'category' | 'tagCollection' | 'tag' | 'account';
     getChildren(): Promise<PortfolioExplorerNode[]>;
     getTreeItem(): vscode.TreeItem | Promise<vscode.TreeItem>;
 }
@@ -191,7 +187,7 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // Create new view and hook to the event
             this._assetDefinitionEditorView = new AssetDefinitionEditorView(
                 this.context.extensionUri,
-                () => this.getAllTags(),
+                () => this.dataAccess.getAllTags(),
                 () => this.getAllAccounts()
             );
             
@@ -313,11 +309,6 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
 
     public async createAccount(definition: any) {
         return await this.dataAccess.createAccount(definition);
-    }
-
-    // Tags management - new functionality
-    public async getAllTags(): Promise<string[]> {
-        return await this.dataAccess.getAllTags();
     }
 
     // Category management - new functionality

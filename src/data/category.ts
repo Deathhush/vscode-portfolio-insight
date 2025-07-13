@@ -1,4 +1,6 @@
-import { CategoryData, CategoryTypeData, AssetSummaryData, AssetCurrentValueData, CategorySummaryData, CategoryTypeSummaryData } from './interfaces';
+import { Asset } from './asset';
+import { AssetCollection } from './assetCollection';
+import { CategoryData, CategoryTypeData, AssetCurrentValueData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 
 export class Category {
@@ -22,9 +24,8 @@ export class Category {
     /**
      * Get all assets that belong to this category based on tags
      */
-    async getAssets(): Promise<AssetSummaryData[]> {
-        const assetNames = new Set<string>();
-        const matchingAssets: AssetSummaryData[] = [];
+    async getAssets(): Promise<Asset[]> {
+        const matchingAssets: Set<Asset> = new Set();
         
         // Get assets for each tag in this category
         for (const tag of this.definition.tags) {
@@ -32,14 +33,11 @@ export class Category {
             
             // Add assets that aren't already in the set (avoid duplicates)
             for (const asset of assetsWithTag) {
-                if (!assetNames.has(asset.definition.name)) {
-                    assetNames.add(asset.definition.name);
-                    matchingAssets.push(asset);
-                }
+                matchingAssets.add(asset);
             }
         }
 
-        return matchingAssets;
+        return Array.from(matchingAssets);
     }
 
     /**
@@ -47,43 +45,7 @@ export class Category {
      */
     async calculateCurrentValue(): Promise<AssetCurrentValueData> {
         const assets = await this.getAssets();
-        
-        let totalValue = 0;
-        let totalValueInCNY = 0;
-        let latestUpdateDate: string | undefined;
-
-        for (const asset of assets) {
-            totalValue += asset.currentValue.currentValue;
-            totalValueInCNY += asset.currentValue.valueInCNY;
-            
-            // Track the latest update date
-            if (asset.currentValue.lastUpdateDate) {
-                if (!latestUpdateDate || asset.currentValue.lastUpdateDate > latestUpdateDate) {
-                    latestUpdateDate = asset.currentValue.lastUpdateDate;
-                }
-            }
-        }
-
-        return {
-            currentValue: totalValue,
-            currency: 'CNY', // Mixed currencies, so we use CNY as the base
-            valueInCNY: totalValueInCNY,
-            lastUpdateDate: latestUpdateDate
-        };
-    }
-
-    /**
-     * Generate a summary of this category including all assets
-     */
-    async generateSummary(): Promise<CategorySummaryData> {
-        const assets = await this.getAssets();
-        const totalValue = await this.calculateCurrentValue();
-
-        return {
-            definition: this.definitionData,
-            assets,
-            totalValue
-        };
+        return await AssetCollection.calculateCurrentValue(assets);
     }
 }
 
