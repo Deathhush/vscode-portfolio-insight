@@ -22,18 +22,19 @@ export class CategoryNode implements PortfolioExplorerNode {
         try {
             const assets = await this.category.getAssets();
             const categoryValue = await AssetCollection.calculateCurrentValue(assets);
+            const totalValueStr = `¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
-            // If we have a parent category type, calculate percentage
+            // If we have a parent category type, calculate percentage and show both
             if (this.parentCategoryType) {
                 const categoryTypeValue = await this.parentCategoryType.calculateCurrentValue();
                 if (categoryTypeValue.valueInCNY > 0) {
                     const percentage = (categoryValue.valueInCNY / categoryTypeValue.valueInCNY) * 100;
-                    return `${percentage.toFixed(1)}%`;
+                    return `${totalValueStr} • ${percentage.toFixed(1)}%`;
                 }
             }
             
             // Fallback to showing total value if no parent or parent has zero value
-            return `Total: ¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            return `${totalValueStr}`;
         } catch (error) {
             console.error(`Error calculating value for category ${this.category.name}:`, error);
             return 'Calculation failed';
@@ -45,7 +46,7 @@ export class CategoryNode implements PortfolioExplorerNode {
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.category.name, vscode.TreeItemCollapsibleState.Expanded);
+        const treeItem = new vscode.TreeItem(this.category.name, vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.iconPath = new vscode.ThemeIcon('symbol-folder');
         treeItem.contextValue = 'category';
         

@@ -34,7 +34,7 @@
     "viewsWelcome": [
       {
         "view": "portfolioExplorer",
-        "contents": "No folder opened.\n\nTo use Asset Insight, you need to open a folder first.\n\n[Open Folder](command:vscode.openFolder)\n\nYou can also open a workspace:\n\n[Open Workspace](command:workbench.action.openWorkspace)",
+        "contents": "No folder opened.\n\nTo use Portfolio Insight, you need to open a folder first.\n\n[Open Folder](command:vscode.openFolder)\n\nYou can also open a workspace:\n\n[Open Workspace](command:workbench.action.openWorkspace)",
         "when": "workbenchState == empty"
       }
     ],
@@ -69,17 +69,12 @@
         {
           "command": "vscode-portfolio-insight.updateAssets",
           "when": "view == portfolioExplorer",
-          "group": "navigation"
-        },
-        {
-          "command": "vscode-portfolio-insight.editAssetDefinitionFromHeader",
-          "when": "view == portfolioExplorer",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "vscode-portfolio-insight.refresh",
           "when": "view == portfolioExplorer",
-          "group": "navigation"
+          "group": "navigation@2"
         }
       ],
       "view/item/context": [
