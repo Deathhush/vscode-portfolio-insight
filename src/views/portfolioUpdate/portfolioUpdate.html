@@ -2709,7 +2709,9 @@
             assetData.events = events;
             assetUpdateData.assets.push(assetData);
           }
-        });        // Collect transfer data
+        });        
+        
+        // Collect transfer data
         const allAssetGroups = document.querySelectorAll("[data-asset-id]");
 
         allAssetGroups.forEach((assetGroup) => {
@@ -2791,10 +2793,10 @@
                   
                   transfer.amount = parseFloat(amountInput.value);
                   
-                  if (transferType === "from") {
+                  if (transferType === "to") { // "to" means transfer from the current asset to the selected asset
                     transfer.from = currentAssetName;
                     transfer.to = assetSelect.value;
-                  } else { // "to"
+                  } else { // "from"
                     transfer.from = assetSelect.value;
                     transfer.to = currentAssetName;
                   }
