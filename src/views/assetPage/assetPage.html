@@ -1313,9 +1313,9 @@
                             const detailsArray = [];
                             
                             // Add transaction type for clarity first
-                            if (activity.type === 'buy' || activity.type === 'transfer_in') {
+                            if (activity.type === 'buy' || activity.type === 'transfer_out') {
                                 detailsArray.push('bought');
-                            } else if (activity.type === 'sell' || activity.type === 'transfer_out') {
+                            } else if (activity.type === 'sell' || activity.type === 'transfer_in') {
                                 detailsArray.push('sold');
                             }
                             
