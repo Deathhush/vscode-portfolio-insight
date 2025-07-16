@@ -40,7 +40,7 @@ export class AccountNode implements PortfolioExplorerNode {
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.account.name, vscode.TreeItemCollapsibleState.Expanded);
+        const treeItem = new vscode.TreeItem(this.account.name, vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.iconPath = new vscode.ThemeIcon('account');
         treeItem.contextValue = 'account';
         

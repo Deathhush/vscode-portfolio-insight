@@ -34,7 +34,7 @@ export class CategoryTypeNode implements PortfolioExplorerNode {
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem(this.categoryType.name, vscode.TreeItemCollapsibleState.Expanded);
+        const treeItem = new vscode.TreeItem(this.categoryType.name, vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.iconPath = new vscode.ThemeIcon('symbol-class');
         treeItem.contextValue = 'categoryType';
         

@@ -7,45 +7,6 @@ export class TagCollectionNode implements PortfolioExplorerNode {
     
     constructor(private provider: PortfolioExplorerProvider) {
     }
-
-    private async getDescription(): Promise<string> {
-        let description = '';
-        
-        try {
-            // Get child tag nodes
-            const children = await this.getChildren();
-            
-            if (children.length > 0) {
-                // Calculate total value using existing tag nodes
-                let totalValue = 0;
-                let hasErrors = false;
-                
-                for (const child of children) {
-                    if (child.nodeType === 'tag') {
-                        const tagNode = child as TagNode;
-                        try {
-                            const tagValue = await tagNode.calculateCurrentValue();
-                            totalValue += tagValue.valueInCNY;
-                        } catch (error) {
-                            console.error(`Error calculating value for tag ${tagNode.tag}:`, error);
-                            hasErrors = true;
-                        }
-                    }
-                }
-                
-                if (hasErrors) {
-                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} (Some errors)`;
-                } else {
-                    description = `Total: ¥${totalValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-                }
-            }
-        } catch (error) {
-            console.error('Error calculating tags total value:', error);
-            description = 'Total: Calculation failed';
-        }
-        
-        return description;
-    }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
         const tags = await this.provider.dataAccess.getAllTags();
@@ -69,12 +30,9 @@ export class TagCollectionNode implements PortfolioExplorerNode {
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {
-        const treeItem = new vscode.TreeItem('Tags', vscode.TreeItemCollapsibleState.Expanded);
+        const treeItem = new vscode.TreeItem('Tags', vscode.TreeItemCollapsibleState.Collapsed);
         treeItem.iconPath = new vscode.ThemeIcon('tag');
         treeItem.contextValue = 'tags';
-        
-        // Get description with tags total value
-        treeItem.description = await this.getDescription();
         
         return treeItem;
     }

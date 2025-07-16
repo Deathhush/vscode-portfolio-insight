@@ -15,7 +15,8 @@ export function activate(context: vscode.ExtensionContext) {
 	
 	// Register the tree data provider
 	const treeView = vscode.window.createTreeView('portfolioExplorer', {
-		treeDataProvider: portfolioExplorerProvider		
+		treeDataProvider: portfolioExplorerProvider,
+		showCollapseAll: true
 	});
 	
 	// Track the current selection for other commands
