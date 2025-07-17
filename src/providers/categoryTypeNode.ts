@@ -26,7 +26,7 @@ export class CategoryTypeNode implements PortfolioExplorerNode {
         
         const categoryNodes: PortfolioExplorerNode[] = [];
         for (const category of categories) {
-            const categoryNode = new CategoryNode(category, this.provider, this.categoryType);
+            const categoryNode = new CategoryNode(category, this.provider, this.categoryType, undefined);
             categoryNodes.push(categoryNode);
         }
         

@@ -101,6 +101,7 @@ export interface AssetSummaryData {
 export interface CategoryData {
     name: string;
     tags: string[];
+    categories?: CategoryData[]; // Sub-categories
 }
 
 export interface CategoryTypeData {

@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { Category, CategoryType } from '../data/category';
 import { AssetNode } from './assetNode';
-import { AssetCollection } from '../data/assetCollection';
 
 export class CategoryNode implements PortfolioExplorerNode {
     public nodeType: 'category' = 'category'; // Using 'assets' as the closest match
@@ -10,22 +9,37 @@ export class CategoryNode implements PortfolioExplorerNode {
     constructor(
         public category: Category,
         private provider: PortfolioExplorerProvider,
-        private parentCategoryType?: CategoryType
+        private parentCategoryType?: CategoryType,
+        private parentCategory?: Category
     ) {}
 
     async getChildAssetNodes(): Promise<AssetNode[]> {
-        const assets = await this.category.getAssets();
+        const assets = await this.category.getStandaloneAssets();
         return assets.map(asset => new AssetNode(asset, this.provider));
+    }
+
+    async getChildSubCategoryNodes(): Promise<CategoryNode[]> {
+        const subCategories = await this.category.getSubCategories();
+        return subCategories.map(subCategory => 
+            new CategoryNode(subCategory, this.provider, this.parentCategoryType, this.category)
+        );
     }
 
     private async getDescription(): Promise<string> {
         try {
-            const assets = await this.category.getAssets();
-            const categoryValue = await AssetCollection.calculateCurrentValue(assets);
+            const categoryValue = await this.category.calculateCurrentValue();
             const totalValueStr = `¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
-            // If we have a parent category type, calculate percentage and show both
-            if (this.parentCategoryType) {
+            // Calculate percentage based on parent (CategoryType or Category)
+            if (this.parentCategory) {
+                // This is a sub-category, calculate percentage against parent category
+                const parentValue = await this.parentCategory.calculateCurrentValue();
+                if (parentValue.valueInCNY > 0) {
+                    const percentage = (categoryValue.valueInCNY / parentValue.valueInCNY) * 100;
+                    return `${totalValueStr} • ${percentage.toFixed(1)}%`;
+                }
+            } else if (this.parentCategoryType) {
+                // This is a top-level category, calculate percentage against category type
                 const categoryTypeValue = await this.parentCategoryType.calculateCurrentValue();
                 if (categoryTypeValue.valueInCNY > 0) {
                     const percentage = (categoryValue.valueInCNY / categoryTypeValue.valueInCNY) * 100;
@@ -42,7 +56,11 @@ export class CategoryNode implements PortfolioExplorerNode {
     }
 
     async getChildren(): Promise<PortfolioExplorerNode[]> {
-        return await this.getChildAssetNodes();
+        const subCategoryNodes = await this.getChildSubCategoryNodes();
+        const assetNodes = await this.getChildAssetNodes();
+        
+        // Return sub-categories first, then standalone assets
+        return [...subCategoryNodes, ...assetNodes];
     }
 
     async getTreeItem(): Promise<vscode.TreeItem> {

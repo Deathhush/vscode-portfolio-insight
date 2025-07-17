@@ -144,6 +144,12 @@ suite('PortfolioDataAccess Tests', () => {
             tags: ['test', 'asset']
         };
 
+        // First, save the portfolio data with the asset
+        const portfolioData: PortfolioData = {
+            assets: [assetDef]
+        };
+        await dataStore.savePortfolioData(portfolioData);
+
         const asset1 = await portfolioDataAccess.getAsset(assetDef.name);
         const asset2 = await portfolioDataAccess.getAsset(assetDef.name);
 

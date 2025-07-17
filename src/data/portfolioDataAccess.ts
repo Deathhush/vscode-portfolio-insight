@@ -318,7 +318,7 @@ export class PortfolioDataAccess {
     }
 
     public async createCategory(definition: CategoryData): Promise<Category> {
-        return new Category(definition, this);
+        return new Category(definition, this, undefined);
     }
 
     public async createCategoryType(definition: CategoryTypeData): Promise<CategoryType> {
