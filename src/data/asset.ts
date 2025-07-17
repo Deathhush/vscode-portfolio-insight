@@ -45,6 +45,10 @@ export class Asset {
         return this.definition.currency || 'CNY';
     }
 
+    get tags(): string[] {
+        return this.definition.tags || [];
+    }
+
     get definitionData(): AssetDefinitionData {
         return { ...this.definition };
     }

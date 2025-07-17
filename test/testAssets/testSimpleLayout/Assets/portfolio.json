@@ -28,6 +28,12 @@
       "name": "富国信用债",
       "type": "investment",      
       "tags": ["信用债基金"]
+    },
+    {
+      "name": "长期混合基金",
+      "type": "investment",
+      "currency": "CNY",
+      "tags": ["混合基金"]
     }
   ]
 }
