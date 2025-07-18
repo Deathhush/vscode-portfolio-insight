@@ -104,11 +104,6 @@ export interface CategoryData {
     categories?: CategoryData[]; // Sub-categories
 }
 
-export interface CategoryTypeData {
-    name: string;
-    categories: CategoryData[];
-}
-
 export interface CategoryDefinitionData {
-    categoryTypes: CategoryTypeData[];
+    categoryTypes: CategoryData[];
 }
