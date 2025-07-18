@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
-import { Category, CategoryType } from '../data/category';
+import { Category } from '../data/category';
 import { AssetNode } from './assetNode';
 
 export class CategoryNode implements PortfolioExplorerNode {
@@ -9,7 +9,6 @@ export class CategoryNode implements PortfolioExplorerNode {
     constructor(
         public category: Category,
         private provider: PortfolioExplorerProvider,
-        private parentCategoryType?: CategoryType,
         private parentCategory?: Category
     ) {}
 
@@ -21,7 +20,7 @@ export class CategoryNode implements PortfolioExplorerNode {
     async getChildSubCategoryNodes(): Promise<CategoryNode[]> {
         const subCategories = await this.category.getSubCategories();
         return subCategories.map(subCategory => 
-            new CategoryNode(subCategory, this.provider, this.parentCategoryType, this.category)
+            new CategoryNode(subCategory, this.provider, this.category)
         );
     }
 
@@ -30,19 +29,11 @@ export class CategoryNode implements PortfolioExplorerNode {
             const categoryValue = await this.category.calculateCurrentValue();
             const totalValueStr = `¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
-            // Calculate percentage based on parent (CategoryType or Category)
+            // Calculate percentage based on parent Category
             if (this.parentCategory) {
-                // This is a sub-category, calculate percentage against parent category
                 const parentValue = await this.parentCategory.calculateCurrentValue();
                 if (parentValue.valueInCNY > 0) {
                     const percentage = (categoryValue.valueInCNY / parentValue.valueInCNY) * 100;
-                    return `${totalValueStr} • ${percentage.toFixed(1)}%`;
-                }
-            } else if (this.parentCategoryType) {
-                // This is a top-level category, calculate percentage against category type
-                const categoryTypeValue = await this.parentCategoryType.calculateCurrentValue();
-                if (categoryTypeValue.valueInCNY > 0) {
-                    const percentage = (categoryValue.valueInCNY / categoryTypeValue.valueInCNY) * 100;
                     return `${totalValueStr} • ${percentage.toFixed(1)}%`;
                 }
             }

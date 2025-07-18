@@ -168,17 +168,9 @@ export class PortfolioDataStore {
             
             // Validate each category type
             for (const categoryType of rawCategoryData.categoryTypes) {
-                if (!categoryType.name || !categoryType.categories || !Array.isArray(categoryType.categories)) {
+                if (!categoryType.name ) {
                     console.error('Invalid category.json: Each categoryType must have "name" and "categories" fields');
                     return undefined;
-                }
-                
-                // Validate each category
-                for (const category of categoryType.categories) {
-                    if (!category.name || !category.tags || !Array.isArray(category.tags)) {
-                        console.error('Invalid category.json: Each category must have "name" and "tags" fields');
-                        return undefined;
-                    }
                 }
             }
             

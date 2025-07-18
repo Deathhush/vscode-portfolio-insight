@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 import { PortfolioDataStore } from './portfolioDataStore';
 import { Asset } from './asset';
 import { Account } from './account';
-import { Category, CategoryType } from './category';
+import { Category } from './category';
 import { ExchangeRate } from './exchangeRate';
-import { AssetDefinitionData, AccountDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, CategoryTypeData, ExchangeRateData } from './interfaces';
+import { AssetDefinitionData, AccountDefinitionData, PortfolioData, PortfolioUpdateData, CategoryDefinitionData, CategoryData, ExchangeRateData } from './interfaces';
 
 /**
  * PortfolioDataAccess serves as a bridge between the on-disk store (PortfolioDataStore) 
@@ -321,8 +321,8 @@ export class PortfolioDataAccess {
         return new Category(definition, this, undefined);
     }
 
-    public async createCategoryType(definition: CategoryTypeData): Promise<CategoryType> {
-        return new CategoryType(definition, this);
+    public async createCategoryType(definition: CategoryData): Promise<Category> {
+        return new Category(definition, this, undefined);
     }
 
     public invalidateCategoryCache(): void {

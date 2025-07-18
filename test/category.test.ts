@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { PortfolioDataStore } from '../src/data/portfolioDataStore';
 import { PortfolioDataAccess } from '../src/data/portfolioDataAccess';
-import { Category, CategoryType } from '../src/data/category';
+import { Category } from '../src/data/category';
 
 suite('Category Feature Tests', () => {
     let dataStore: PortfolioDataStore;
@@ -30,16 +30,17 @@ suite('Category Feature Tests', () => {
         assert.ok(categoryDefinitions!.categoryTypes, 'Category types should exist');
         assert.strictEqual(categoryDefinitions!.categoryTypes.length, 1, 'Should have one category type');
         assert.strictEqual(categoryDefinitions!.categoryTypes[0].name, '资产配置', 'Category type name should match');
-        assert.strictEqual(categoryDefinitions!.categoryTypes[0].categories.length, 3, 'Should have three categories');
+        assert.ok(categoryDefinitions!.categoryTypes[0].categories, 'Category type should have categories');
+        assert.strictEqual(categoryDefinitions!.categoryTypes[0].categories!.length, 3, 'Should have three categories');
     });
 
-    test('should create CategoryType instances', async () => {
+    test('should create CategoryType instances (now as Category)', async () => {
         const categoryDefinitions = await dataAccess.getCategoryDefinitions();
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
         const categoryType = await dataAccess.createCategoryType(categoryDefinitions!.categoryTypes[0]);
         
-        assert.ok(categoryType instanceof CategoryType, 'Should create CategoryType instance');
+        assert.ok(categoryType instanceof Category, 'Should create Category instance');
         assert.strictEqual(categoryType.name, '资产配置', 'CategoryType name should match');
     });
 
@@ -47,7 +48,9 @@ suite('Category Feature Tests', () => {
         const categoryDefinitions = await dataAccess.getCategoryDefinitions();
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
-        const categoryData = categoryDefinitions!.categoryTypes[0].categories[0];
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories && categories.length > 0, 'Categories should exist');
+        const categoryData = categories[0];
         const category = await dataAccess.createCategory(categoryData);
         
         assert.ok(category instanceof Category, 'Should create Category instance');
@@ -59,7 +62,9 @@ suite('Category Feature Tests', () => {
         const categoryDefinitions = await dataAccess.getCategoryDefinitions();
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
-        const categoryData = categoryDefinitions!.categoryTypes[0].categories[0]; // "活钱" category
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories && categories.length > 0, 'Categories should exist');
+        const categoryData = categories[0]; // "活钱" category
         const category = await dataAccess.createCategory(categoryData);
         
         const assets = await category.getAssets();
@@ -74,7 +79,9 @@ suite('Category Feature Tests', () => {
         const categoryDefinitions = await dataAccess.getCategoryDefinitions();
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
-        const categoryData = categoryDefinitions!.categoryTypes[0].categories[0]; // "活钱" category
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories && categories.length > 0, 'Categories should exist');
+        const categoryData = categories[0]; // "活钱" category
         const category = await dataAccess.createCategory(categoryData);
         
         const currentValue = await category.calculateCurrentValue();
@@ -102,7 +109,9 @@ suite('Category Feature Tests', () => {
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
         // Find the "长期" category which has sub-categories
-        const longTermCategoryData = categoryDefinitions!.categoryTypes[0].categories.find(c => c.name === '长期');
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories, 'Categories should exist');
+        const longTermCategoryData = categories.find(c => c.name === '长期');
         assert.ok(longTermCategoryData, 'Should find "长期" category');
         
         const category = await dataAccess.createCategory(longTermCategoryData!);
@@ -118,7 +127,9 @@ suite('Category Feature Tests', () => {
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
         // Find the "长期" category which has sub-categories
-        const longTermCategoryData = categoryDefinitions!.categoryTypes[0].categories.find(c => c.name === '长期');
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories, 'Categories should exist');
+        const longTermCategoryData = categories.find(c => c.name === '长期');
         assert.ok(longTermCategoryData, 'Should find "长期" category');
         
         const category = await dataAccess.createCategory(longTermCategoryData!);
@@ -141,7 +152,9 @@ suite('Category Feature Tests', () => {
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
         // Find the "长期" category which has sub-categories
-        const longTermCategoryData = categoryDefinitions!.categoryTypes[0].categories.find(c => c.name === '长期');
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories, 'Categories should exist');
+        const longTermCategoryData = categories.find(c => c.name === '长期');
         assert.ok(longTermCategoryData, 'Should find "长期" category');
         
         const category = await dataAccess.createCategory(longTermCategoryData!);
@@ -162,7 +175,9 @@ suite('Category Feature Tests', () => {
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
         // Find the "活钱" category which has no sub-categories
-        const categoryData = categoryDefinitions!.categoryTypes[0].categories.find(c => c.name === '活钱');
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories, 'Categories should exist');
+        const categoryData = categories.find(c => c.name === '活钱');
         assert.ok(categoryData, 'Should find "活钱" category');
         
         const category = await dataAccess.createCategory(categoryData!);
@@ -176,7 +191,9 @@ suite('Category Feature Tests', () => {
         assert.ok(categoryDefinitions, 'Category definitions should be loaded');
         
         // Find the "长期" category which has sub-categories
-        const longTermCategoryData = categoryDefinitions!.categoryTypes[0].categories.find(c => c.name === '长期');
+        const categories = categoryDefinitions!.categoryTypes[0].categories;
+        assert.ok(categories, 'Categories should exist');
+        const longTermCategoryData = categories.find(c => c.name === '长期');
         assert.ok(longTermCategoryData, 'Should find "长期" category');
         
         const longTermCategory = await dataAccess.createCategory(longTermCategoryData!);
@@ -221,7 +238,9 @@ suite('Category Feature Tests', () => {
             assert.ok(assetWithMixedTags.tags.includes("混合基金"), 'Test asset should have "混合基金" tag');
             
             // Find the "长期" category which should include this asset
-            const longTermCategoryData = categoryDefinitions!.categoryTypes[0].categories.find(c => c.name === '长期');
+            const categories = categoryDefinitions!.categoryTypes[0].categories;
+            assert.ok(categories, 'Categories should exist');
+            const longTermCategoryData = categories.find(c => c.name === '长期');
             assert.ok(longTermCategoryData, 'Should find "长期" category');
             
             const longTermCategory = await dataAccess.createCategory(longTermCategoryData!);

@@ -1,13 +1,14 @@
 import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
-import { CategoryType } from '../data/category';
+import { Category } from '../data/category';
 import { CategoryNode } from './categoryNode';
+import { AssetNode } from './assetNode';
 
 export class CategoryTypeNode implements PortfolioExplorerNode {
     public nodeType: 'categoryType' = 'categoryType'; 
     
     constructor(
-        public categoryType: CategoryType,
+        public categoryType: Category,
         private provider: PortfolioExplorerProvider
     ) {}
 
@@ -22,12 +23,21 @@ export class CategoryTypeNode implements PortfolioExplorerNode {
     }
 
     async getChildren(): Promise<PortfolioExplorerNode[]> {
-        const categories = await this.categoryType.getCategories();
+        const categories = await this.categoryType.getSubCategories();
+        const standaloneAssets = await this.categoryType.getStandaloneAssets();
         
         const categoryNodes: PortfolioExplorerNode[] = [];
+        
+        // Add sub-category nodes
         for (const category of categories) {
-            const categoryNode = new CategoryNode(category, this.provider, this.categoryType, undefined);
+            const categoryNode = new CategoryNode(category, this.provider, this.categoryType);
             categoryNodes.push(categoryNode);
+        }
+        
+        // Add standalone asset nodes (assets that don't belong to any sub-category)
+        for (const asset of standaloneAssets) {
+            const assetNode = new AssetNode(asset, this.provider);
+            categoryNodes.push(assetNode);
         }
         
         return categoryNodes;

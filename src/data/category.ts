@@ -1,6 +1,6 @@
 import { Asset } from './asset';
 import { AssetCollection } from './assetCollection';
-import { CategoryData, CategoryTypeData, AssetCurrentValueData } from './interfaces';
+import { CategoryData, AssetCurrentValueData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 
 export class Category {
@@ -53,10 +53,16 @@ export class Category {
         // Filter candidate assets by this category's tags
         for (const asset of candidateAssets) {
             const assetTags = asset.tags;
-            const hasMatchingTag = this.definition.tags.some((tag: string) => assetTags.includes(tag));
             
-            if (hasMatchingTag) {
+            // If this category has no tags, include all assets (like the old CategoryType behavior)
+            if (!this.definition.tags || this.definition.tags.length === 0) {
                 matchingAssets.add(asset);
+            } else {
+                // Filter by tags if tags are defined
+                const hasMatchingTag = this.definition.tags.some((tag: string) => assetTags.includes(tag));
+                if (hasMatchingTag) {
+                    matchingAssets.add(asset);
+                }
             }
         }
 
@@ -122,59 +128,6 @@ export class Category {
         }
 
         const totalValueInCNY = standaloneValue.valueInCNY + subCategoriesValueInCNY;
-
-        return {
-            currentValue: totalValueInCNY,
-            currency: 'CNY',
-            valueInCNY: totalValueInCNY,
-            lastUpdateDate: latestUpdateDate
-        };
-    }
-}
-
-export class CategoryType {
-    constructor(
-        private definition: CategoryTypeData,
-        private dataAccess: PortfolioDataAccess
-    ) {}
-
-    get name(): string {
-        return this.definition.name;
-    }
-
-    get definitionData(): CategoryTypeData {
-        return { ...this.definition };
-    }
-
-    /**
-     * Get all categories under this category type
-     */
-    async getCategories(): Promise<Category[]> {
-        return this.definition.categories.map(categoryDef => 
-            new Category(categoryDef, this.dataAccess, undefined)
-        );
-    }
-
-    /**
-     * Calculate the total current value of all categories in this category type
-     */
-    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
-        const categories = await this.getCategories();
-        
-        let totalValueInCNY = 0;
-        let latestUpdateDate: string | undefined;
-
-        for (const category of categories) {
-            const categoryValue = await category.calculateCurrentValue();
-            totalValueInCNY += categoryValue.valueInCNY;
-            
-            // Track the latest update date
-            if (categoryValue.lastUpdateDate) {
-                if (!latestUpdateDate || categoryValue.lastUpdateDate > latestUpdateDate) {
-                    latestUpdateDate = categoryValue.lastUpdateDate;
-                }
-            }
-        }
 
         return {
             currentValue: totalValueInCNY,
