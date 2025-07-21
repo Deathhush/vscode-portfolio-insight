@@ -102,6 +102,7 @@ export interface CategoryData {
     name: string;
     tags: string[];
     categories?: CategoryData[]; // Sub-categories
+    targetValue?: number; // Target value for this category in CNY
 }
 
 export interface CategoryDefinitionData {

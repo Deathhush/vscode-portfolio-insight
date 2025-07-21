@@ -29,17 +29,26 @@ export class CategoryNode implements PortfolioExplorerNode {
             const categoryValue = await this.category.calculateCurrentValue();
             const totalValueStr = `¥${categoryValue.valueInCNY.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
             
+            let descriptionParts: string[] = [totalValueStr];
+            
             // Calculate percentage based on parent Category
             if (this.parentCategory) {
                 const parentValue = await this.parentCategory.calculateCurrentValue();
                 if (parentValue.valueInCNY > 0) {
                     const percentage = (categoryValue.valueInCNY / parentValue.valueInCNY) * 100;
-                    return `${totalValueStr} • ${percentage.toFixed(1)}%`;
+                    descriptionParts.push(`${percentage.toFixed(1)}%`);
                 }
             }
             
-            // Fallback to showing total value if no parent or parent has zero value
-            return `${totalValueStr}`;
+            // Add target value if defined
+            const targetValue = this.category.targetValue;
+            if (targetValue !== undefined) {
+                const targetValueStr = `¥${targetValue.toLocaleString('zh-CN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+                const progressPercentage = targetValue > 0 ? (categoryValue.valueInCNY / targetValue) * 100 : 0;
+                descriptionParts.push(`Target: ${targetValueStr} (${progressPercentage.toFixed(1)}%)`);
+            }
+            
+            return descriptionParts.join(' • ');
         } catch (error) {
             console.error(`Error calculating value for category ${this.category.name}:`, error);
             return 'Calculation failed';

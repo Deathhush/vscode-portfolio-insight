@@ -18,6 +18,10 @@ export class Category {
         return [...this.definition.tags];
     }
 
+    get targetValue(): number | undefined {
+        return this.definition.targetValue;
+    }
+
     get definitionData(): CategoryData {
         return { ...this.definition };
     }
