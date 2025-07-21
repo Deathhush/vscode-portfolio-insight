@@ -197,42 +197,35 @@ export class PortfolioDataAccess {
     }
 
     // Tags management
-    public async getAllTags(): Promise<string[]> {
+    public async getUserTags(): Promise<string[]> {
         // Return cached tags if available
         if (this.tagsCache !== undefined) {
             return this.tagsCache;
         }
 
-        // Load tags from portfolio data
-        this.tagsCache = await this.loadAllTagsFromData();
+        // Load user tags from portfolio data - virtual tags are computed at the Asset level
+        this.tagsCache = await this.loadUserTagsFromData();
         return this.tagsCache;
     }
 
-    private async loadAllTagsFromData(): Promise<string[]> {
+    private async loadUserTagsFromData(): Promise<string[]> {
         try {
             const allAssets = await this.getAllAssets();
-            if (allAssets.length === 0) {
-                return [];
-            }
-
-            // Extract all unique tags from all assets (both standalone and account assets)
-            const allTags = new Set<string>();
+            const userTags = new Set<string>();
             
+            // Extract user tags from all assets (excluding virtual tags like account names)
             for (const asset of allAssets) {
-                const assetDefinition = asset.definitionData;
-                if (assetDefinition.tags && Array.isArray(assetDefinition.tags)) {
-                    assetDefinition.tags.forEach((tag: string) => {
-                        if (typeof tag === 'string' && tag.trim()) {
-                            allTags.add(tag.trim());
-                        }
-                    });
-                }
+                const assetUserTags = asset.userTags;
+                assetUserTags.forEach(tag => {
+                    if (tag && tag.trim()) {
+                        userTags.add(tag.trim());
+                    }
+                });
             }
-
-            // Return sorted array of unique tags
-            return Array.from(allTags).sort();
+            
+            return Array.from(userTags).sort();
         } catch (error) {
-            console.error('Error loading tags from portfolio data:', error);
+            console.error('Error loading user tags from assets:', error);
             return [];
         }
     }
@@ -413,9 +406,8 @@ export class PortfolioDataAccess {
         const matchingAssets: Asset[] = [];
         
         for (const asset of allAssets) {
-            // Check if asset has the specified tag
-            const assetDefinition = asset.definitionData;
-            const assetTags = assetDefinition.tags || [];
+            // Check if asset has the specified tag (using allTags for category selection)
+            const assetTags = asset.allTags;
             const hasTag = assetTags.includes(tag);
             
             if (hasTag) {

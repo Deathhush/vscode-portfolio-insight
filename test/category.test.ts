@@ -141,8 +141,8 @@ suite('Category Feature Tests', () => {
         
         // Standalone assets should not have any sub-category tags
         for (const asset of standaloneAssets) {
-            const hasStockTag = asset.tags.includes('股票');
-            const hasIndexFundTag = asset.tags.includes('指数基金');
+            const hasStockTag = asset.allTags.includes('股票');
+            const hasIndexFundTag = asset.allTags.includes('指数基金');
             assert.ok(!hasStockTag && !hasIndexFundTag, `Asset ${asset.name} should not have sub-category tags`);
         }
     });
@@ -235,7 +235,7 @@ suite('Category Feature Tests', () => {
         
         if (assetWithMixedTags) {
             // Verify this asset has the "混合基金" tag
-            assert.ok(assetWithMixedTags.tags.includes("混合基金"), 'Test asset should have "混合基金" tag');
+            assert.ok(assetWithMixedTags.allTags.includes("混合基金"), 'Test asset should have "混合基金" tag');
             
             // Find the "长期" category which should include this asset
             const categories = categoryDefinitions!.categoryTypes[0].categories;

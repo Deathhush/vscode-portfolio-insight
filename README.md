@@ -39,10 +39,12 @@ A Visual Studio Code extension for managing and tracking investment portfolios w
 
 ### Tagging and Categorization
 - **Asset Tags**: Add multiple tags to assets for flexible organization and filtering
-- **Category Definitions**: Define category types and categories based on asset tags
+- **Virtual Tags**: Account names automatically become virtual tags for category selection
+- **Category Definitions**: Define category types and categories based on asset tags (including account names)
 - **Category View**: View assets organized by categories in the Portfolio Explorer
 - **Value Analysis**: See total values for category types and percentage allocation for categories
 - **Tag-Based Grouping**: Automatically group assets into categories based on their tags
+- **Account-Based Categories**: Create categories that include all assets from specific accounts
 
 ## Getting Started
 
@@ -147,15 +149,28 @@ Create an `Assets/category.json` file to define categories:
           "tags": ["股票", "指数基金"]
         }
       ]
-    }
+    },
+    {
+      "name": "账户分组",
+      "categories": [
+        {
+          "name": "退休账户",
+          "tags": ["401k", "Roth IRA"]
+        },
+        {
+          "name": "银行账户",
+          "tags": ["Main Bank", "Savings Account"]
+        }
   ]
 }
 ```
 
+**Note**: The "账户分组" example shows how account names like "401k" and "Main Bank" automatically work as virtual tags for category selection, without needing to manually tag assets.
+
 The Portfolio Explorer will show a "Categories" section with:
-- Category types showing total values
+- Category types showing total values  
 - Categories showing percentage allocation
-- Assets grouped by their tag matches
+- Assets grouped by their tag matches (including account-based grouping)
 
 ## Documentation
 

@@ -9,7 +9,7 @@ export class TagCollectionNode implements PortfolioExplorerNode {
     }
     
     async getChildren(): Promise<PortfolioExplorerNode[]> {
-        const tags = await this.provider.dataAccess.getAllTags();
+        const tags = await this.provider.dataAccess.getUserTags();
         
         if (!tags || tags.length === 0) {
             return [];

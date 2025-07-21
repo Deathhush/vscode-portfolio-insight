@@ -45,12 +45,12 @@ suite('PortfolioDataAccess Tests', () => {
         }
     });
 
-    test('getAllTags should return empty array when no portfolio data', async () => {
-        const tags = await portfolioDataAccess.getAllTags();
+    test('getUserTags should return empty array when no portfolio data', async () => {
+        const tags = await portfolioDataAccess.getUserTags();
         assert.strictEqual(tags.length, 0);
     });
 
-    test('getAllTags should return unique sorted tags from portfolio data', async () => {
+    test('getUserTags should return unique sorted tags from portfolio data', async () => {
         // Create test portfolio data with tags
         const portfolioData: PortfolioData = {
             assets: [
@@ -78,14 +78,14 @@ suite('PortfolioDataAccess Tests', () => {
         await dataStore.savePortfolioData(portfolioData);
 
         // Get all tags
-        const tags = await portfolioDataAccess.getAllTags();
+        const tags = await portfolioDataAccess.getUserTags();
 
         // Should return unique, sorted tags
         const expectedTags = ['活钱', '现金', '美股', '股票', '长钱'];
         assert.deepStrictEqual(tags, expectedTags);
     });
 
-    test('getAllTags should handle assets without tags', async () => {
+    test('getUserTags should handle assets without tags', async () => {
         const portfolioData: PortfolioData = {
             assets: [
                 {
@@ -107,12 +107,12 @@ suite('PortfolioDataAccess Tests', () => {
         };
 
         await dataStore.savePortfolioData(portfolioData);
-        const tags = await portfolioDataAccess.getAllTags();
+        const tags = await portfolioDataAccess.getUserTags();
 
         assert.deepStrictEqual(tags, ['tag1', 'tag2']);
     });
 
-    test('getAllTags should cache results', async () => {
+    test('getUserTags should cache results', async () => {
         const portfolioData: PortfolioData = {
             assets: [
                 {
@@ -126,11 +126,11 @@ suite('PortfolioDataAccess Tests', () => {
         await dataStore.savePortfolioData(portfolioData);
 
         // First call should load from data
-        const tags1 = await portfolioDataAccess.getAllTags();
+        const tags1 = await portfolioDataAccess.getUserTags();
         
         // Second call should return cached data (we can't easily test this without mocking,
         // but at least verify it returns the same result)
-        const tags2 = await portfolioDataAccess.getAllTags();
+        const tags2 = await portfolioDataAccess.getUserTags();
 
         assert.deepStrictEqual(tags1, tags2);
         assert.deepStrictEqual(tags1, ['tag1', 'tag2']);
@@ -174,7 +174,7 @@ suite('PortfolioDataAccess Tests', () => {
         await dataStore.savePortfolioData(portfolioData);
         
         // Load tags to cache them
-        await portfolioDataAccess.getAllTags();
+        await portfolioDataAccess.getUserTags();
 
         // Create asset to cache it
         await portfolioDataAccess.getAsset(portfolioData.assets[0].name);
@@ -183,7 +183,7 @@ suite('PortfolioDataAccess Tests', () => {
         portfolioDataAccess.invalidateAllCaches();
 
         // Verify we can still get data (should reload from disk)
-        const tags = await portfolioDataAccess.getAllTags();
+        const tags = await portfolioDataAccess.getUserTags();
         assert.deepStrictEqual(tags, ['tag1']);
     });
 });
