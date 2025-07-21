@@ -100,7 +100,8 @@ export interface AssetSummaryData {
 // Category-related interfaces
 export interface CategoryData {
     name: string;
-    tags: string[];
+    tags?: string[];
+    excludeTags?: string[];
     categories?: CategoryData[]; // Sub-categories
     targetValue?: number; // Target value for this category in CNY
 }

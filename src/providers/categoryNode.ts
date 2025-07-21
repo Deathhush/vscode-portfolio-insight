@@ -71,12 +71,6 @@ export class CategoryNode implements PortfolioExplorerNode {
         // Get description with total value
         treeItem.description = await this.getDescription();
         
-        // Show tags as tooltip
-        const tags = this.category.tags;
-        if (tags.length > 0) {
-            treeItem.tooltip = `Tags: ${tags.join(', ')}`;
-        }
-        
         return treeItem;
     }
 }

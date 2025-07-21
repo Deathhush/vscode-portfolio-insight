@@ -8,14 +8,10 @@ export class Category {
         private definition: CategoryData,
         private dataAccess: PortfolioDataAccess,
         private parentCategory?: Category
-    ) {}
+    ) { }
 
     get name(): string {
         return this.definition.name;
-    }
-
-    get tags(): string[] {
-        return [...this.definition.tags];
     }
 
     get targetValue(): number | undefined {
@@ -33,8 +29,8 @@ export class Category {
         if (!this.definition.categories) {
             return [];
         }
-        
-        return this.definition.categories.map(categoryDef => 
+
+        return this.definition.categories.map(categoryDef =>
             new Category(categoryDef, this.dataAccess, this)
         );
     }
@@ -53,23 +49,27 @@ export class Category {
         }
 
         const matchingAssets: Set<Asset> = new Set();
-        
-        // Filter candidate assets by this category's tags
-        for (const asset of candidateAssets) {
-            const assetTags = asset.allTags;
-            
-            // If this category has no tags, include all assets (like the old CategoryType behavior)
-            if (!this.definition.tags || this.definition.tags.length === 0) {
-                matchingAssets.add(asset);
-            } else {
-                // Filter by tags if tags are defined
+
+        if (this.definition.tags && this.definition.tags.length > 0) { // filter by tags
+            for (const asset of candidateAssets) {
+                const assetTags = asset.allTags;
                 const hasMatchingTag = this.definition.tags.some((tag: string) => assetTags.includes(tag));
                 if (hasMatchingTag) {
                     matchingAssets.add(asset);
                 }
             }
-        }
+        } else if (this.definition.excludeTags && this.definition.excludeTags.length > 0) { // filter by excludeTags
+            for (const asset of candidateAssets) {
+                const assetTags = asset.allTags;
+                const hasExcludedTag = this.definition.excludeTags.some((tag: string) => assetTags.includes(tag));
+                if (!hasExcludedTag) {
+                    matchingAssets.add(asset);
+                }
+            }
 
+        } else { // no tags or excludeTags, return all candidate assets
+            return candidateAssets;
+        }
         return Array.from(matchingAssets);
     }
 
@@ -77,30 +77,46 @@ export class Category {
      * Get standalone assets within this category (assets that don't match any sub-category tags)
      */
     async getStandaloneAssets(): Promise<Asset[]> {
-        const allCategoryAssets = await this.getAssets();
-        
+        const allAssets = await this.getAssets();
+
         // If no sub-categories, all assets are standalone
         if (!this.definition.categories || this.definition.categories.length === 0) {
-            return allCategoryAssets;
+            return allAssets;
         }
 
-        // Get all sub-category tags
-        const subCategoryTags = new Set<string>();
-        for (const subCategory of this.definition.categories) {
-            for (const tag of subCategory.tags) {
-                subCategoryTags.add(tag);
-            }
+        // if any sub category is without tags and exludeTags, return 0 assets
+        if (this.definition.categories.some(cat => !cat.tags && !cat.excludeTags)) {
+            return [];
         }
 
-        // Filter assets that don't have any sub-category tags
-        const standaloneAssets: Asset[] = [];
-        for (const asset of allCategoryAssets) {
-            const assetTags = asset.allTags;
-            const hasSubCategoryTag = assetTags.some((tag: string) => subCategoryTags.has(tag));
-            
-            if (!hasSubCategoryTag) {
-                standaloneAssets.push(asset);
-            }
+        const subCategoryIncludeTags: string[] =
+            this.definition.categories
+                .filter(cat => cat.tags && cat.tags.length > 0)
+                .flatMap(cat => cat.tags || []);
+
+        const subCategoryExcludeTags: string[] =
+            this.definition.categories
+                .filter(cat => cat.excludeTags && cat.excludeTags.length > 0)
+                .flatMap(cat => cat.excludeTags || []);
+
+        let standaloneAssets = allAssets;
+
+        // Filter out assets that match any sub-category include tags
+        if (subCategoryIncludeTags.length > 0) {
+            standaloneAssets = allAssets.filter(asset => {
+                const assetTags = asset.allTags;
+                const matchesIncludeTag = assetTags.some(tag => subCategoryIncludeTags.includes(tag));
+                return !matchesIncludeTag;
+            });
+        }
+
+        // Filter out any asset that doesn't match any sub-category exclude tags
+        if (subCategoryExcludeTags.length > 0) {
+            standaloneAssets = standaloneAssets.filter(asset => {
+                const assetTags = asset.allTags;
+                const matchesExcludeTag = assetTags.some(tag => subCategoryExcludeTags.includes(tag));
+                return matchesExcludeTag;
+            });
         }
 
         return standaloneAssets;
@@ -113,7 +129,7 @@ export class Category {
         // Get standalone assets value
         const standaloneAssets = await this.getStandaloneAssets();
         const standaloneValue = await AssetCollection.calculateCurrentValue(standaloneAssets);
-        
+
         // Get sub-categories value
         const subCategories = await this.getSubCategories();
         let subCategoriesValueInCNY = 0;
@@ -122,7 +138,7 @@ export class Category {
         for (const subCategory of subCategories) {
             const subCategoryValue = await subCategory.calculateCurrentValue();
             subCategoriesValueInCNY += subCategoryValue.valueInCNY;
-            
+
             // Track the latest update date
             if (subCategoryValue.lastUpdateDate) {
                 if (!latestUpdateDate || subCategoryValue.lastUpdateDate > latestUpdateDate) {
