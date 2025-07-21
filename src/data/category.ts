@@ -52,7 +52,7 @@ export class Category {
         
         // Filter candidate assets by this category's tags
         for (const asset of candidateAssets) {
-            const assetTags = asset.tags;
+            const assetTags = asset.allTags;
             
             // If this category has no tags, include all assets (like the old CategoryType behavior)
             if (!this.definition.tags || this.definition.tags.length === 0) {
@@ -91,7 +91,7 @@ export class Category {
         // Filter assets that don't have any sub-category tags
         const standaloneAssets: Asset[] = [];
         for (const asset of allCategoryAssets) {
-            const assetTags = asset.tags;
+            const assetTags = asset.allTags;
             const hasSubCategoryTag = assetTags.some((tag: string) => subCategoryTags.has(tag));
             
             if (!hasSubCategoryTag) {

@@ -45,8 +45,26 @@ export class Asset {
         return this.definition.currency || 'CNY';
     }
 
-    get tags(): string[] {
+    get userTags(): string[] {
         return this.definition.tags || [];
+    }
+
+    get virtualTags(): string[] {
+        const virtualTags: string[] = [];
+        
+        // Add account name as virtual tag if asset belongs to an account
+        if (this.account) {
+            virtualTags.push(this.account);
+        }
+        
+        return virtualTags;
+    }
+
+    get allTags(): string[] {
+        // Union of user tags and virtual tags
+        const combinedTags = [...this.userTags, ...this.virtualTags];
+        // Remove duplicates and return sorted array
+        return [...new Set(combinedTags)].sort();
     }
 
     get definitionData(): AssetDefinitionData {

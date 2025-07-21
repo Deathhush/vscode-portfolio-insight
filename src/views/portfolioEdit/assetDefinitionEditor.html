@@ -801,7 +801,7 @@
         let nextAssetId = 1;
         let nextAccountId = 1;
         let nextAccountAssetId = 1000; // Start from 1000 to avoid conflicts
-        let allTags = []; // Cache for all available tags
+        let userTags = []; // Cache for user tags (for asset editor interface)
         let renameOperations = []; // Track asset rename operations
 
         // Asset types
@@ -813,8 +813,8 @@
 
         // Initialize
         function initialize() {            
-            // Request all tags from backend
-            sendMessage({ type: 'GET_ALL_TAGS' });
+            // Request user tags from backend (for asset editor interface)
+            sendMessage({ type: 'GET_USER_TAGS' });
             
             // Request all accounts from backend
             sendMessage({ type: 'GET_ALL_ACCOUNTS' });
@@ -836,9 +836,9 @@
                 case 'INITIALIZE_ACCOUNTS':
                     initializeAccounts(message.accounts || []);
                     break;
-                case 'ALL_TAGS':
-                    allTags = message.data || [];
-                    console.log('Received all tags:', allTags);
+                case 'USER_TAGS':
+                    userTags = message.data || [];
+                    console.log('Received user tags:', userTags);
                     break;
             }
         });        function initializeAssets(existingAssets) {
@@ -1839,10 +1839,10 @@
             asset.tags.push(trimmedTag);
             renderTagsForAsset(assetId);
             
-            // Update global tags list if it's a new tag
-            if (!allTags.includes(trimmedTag)) {
-                allTags.push(trimmedTag);
-                allTags.sort();
+            // Update global user tags list if it's a new tag
+            if (!userTags.includes(trimmedTag)) {
+                userTags.push(trimmedTag);
+                userTags.sort();
             }
         }
         
@@ -1896,15 +1896,15 @@
             const asset = assets.find(a => a.id === assetId);
             const existingTags = asset?.tags || [];
             
-            // Filter available tags
-            const suggestions = allTags.filter(tag => 
+            // Filter available user tags
+            const suggestions = userTags.filter(tag => 
                 !existingTags.includes(tag) && 
                 tag.toLowerCase().includes(searchTerm.toLowerCase())
             );
             
             if (suggestions.length === 0 && searchTerm === '') {
-                // Show all available tags when input is empty
-                const availableTags = allTags.filter(tag => !existingTags.includes(tag));
+                // Show all available user tags when input is empty
+                const availableTags = userTags.filter(tag => !existingTags.includes(tag));
                 dropdown.innerHTML = availableTags.map(tag => 
                     `<div class="tag-option" onclick="selectTagSuggestion(${assetId}, '${tag.replace(/'/g, "\\'")}')">
                         ${tag}
@@ -1993,10 +1993,10 @@
             targetAsset.tags.push(trimmedTag);
             renderAccountAssetTags(assetId);
             
-            // Update global tags list if it's a new tag
-            if (!allTags.includes(trimmedTag)) {
-                allTags.push(trimmedTag);
-                allTags.sort();
+            // Update global user tags list if it's a new tag
+            if (!userTags.includes(trimmedTag)) {
+                userTags.push(trimmedTag);
+                userTags.sort();
             }
         }
 
@@ -2054,15 +2054,15 @@
             }
             const existingTags = targetAsset?.tags || [];
             
-            // Filter suggestions
-            const suggestions = allTags.filter(tag => 
+            // Filter user tag suggestions
+            const suggestions = userTags.filter(tag => 
                 !existingTags.includes(tag) && 
                 tag.toLowerCase().includes(searchTerm.toLowerCase())
             );
             
             if (suggestions.length === 0 && searchTerm === '') {
-                // Show all available tags when input is empty
-                const availableTags = allTags.filter(tag => !existingTags.includes(tag));
+                // Show all available user tags when input is empty
+                const availableTags = userTags.filter(tag => !existingTags.includes(tag));
                 dropdown.innerHTML = availableTags.map(tag => 
                     `<div class="tag-option" onclick="selectAccountAssetTagSuggestion(${assetId}, '${tag.replace(/'/g, "\\'")}')">
                         ${tag}

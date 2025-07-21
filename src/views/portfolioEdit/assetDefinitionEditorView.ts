@@ -8,15 +8,15 @@ export class AssetDefinitionEditorView {
     private readonly _extensionUri: vscode.Uri;
     private _disposables: vscode.Disposable[] = [];
     private _onAssetDefinitionSubmitEmitter = new vscode.EventEmitter<AssetDefinitionSubmissionData>();
-    private _getAllTagsCallback?: () => Promise<string[]>;
+    private _getAllUserTagsCallback?: () => Promise<string[]>;
     private _getAllAccountsCallback?: () => Promise<any[]>;
     
     // Event that fires when asset definition is received
     public readonly onAssetDefinitionSubmit: vscode.Event<AssetDefinitionSubmissionData> = this._onAssetDefinitionSubmitEmitter.event;
 
-    public constructor(extensionUri: vscode.Uri, getAllTagsCallback?: () => Promise<string[]>, getAllAccountsCallback?: () => Promise<any[]>) {
+    public constructor(extensionUri: vscode.Uri, getAllAccountsCallback?: () => Promise<any[]>, getAllUserTagsCallback?: () => Promise<string[]>) {
         this._extensionUri = extensionUri;
-        this._getAllTagsCallback = getAllTagsCallback;
+        this._getAllUserTagsCallback = getAllUserTagsCallback;
         this._getAllAccountsCallback = getAllAccountsCallback;
         
         const column = vscode.window.activeTextEditor
@@ -54,8 +54,8 @@ export class AssetDefinitionEditorView {
                     case 'ASSET_RENAME':
                         this._handleAssetRename(message.data);
                         return;
-                    case 'GET_ALL_TAGS':
-                        this._handleGetAllTags();
+                    case 'GET_USER_TAGS':
+                        this._handleGetUserTags();
                         return;
                     case 'GET_ALL_ACCOUNTS':
                         this._handleGetAllAccounts();
@@ -117,17 +117,17 @@ export class AssetDefinitionEditorView {
         }
     }
 
-    private async _handleGetAllTags() {
+    private async _handleGetUserTags() {
         try {
-            const tags = this._getAllTagsCallback ? await this._getAllTagsCallback() : [];
+            const userTags = this._getAllUserTagsCallback ? await this._getAllUserTagsCallback() : [];
             this._panel.webview.postMessage({
-                type: 'ALL_TAGS',
-                data: tags
+                type: 'USER_TAGS',
+                data: userTags
             });
         } catch (error) {
-            console.error('Error getting all tags:', error);
+            console.error('Error getting user tags:', error);
             this._panel.webview.postMessage({
-                type: 'ALL_TAGS',
+                type: 'USER_TAGS',
                 data: []
             });
         }

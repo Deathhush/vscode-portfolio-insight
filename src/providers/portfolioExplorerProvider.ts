@@ -187,8 +187,8 @@ export class PortfolioExplorerProvider implements vscode.TreeDataProvider<Portfo
             // Create new view and hook to the event
             this._assetDefinitionEditorView = new AssetDefinitionEditorView(
                 this.context.extensionUri,
-                () => this.dataAccess.getAllTags(),
-                () => this.getAllAccounts()
+                () => this.getAllAccounts(),
+                () => this.dataAccess.getUserTags()
             );
             
             // Subscribe to asset definition submit events

@@ -11,6 +11,13 @@ A VS Code extension for managing investment portfolios with multi-currency suppo
 
 ## Key Conventions
 
+### Code Struction
+- /src/ for source code
+- /test/ for test code, you need to compile the test code as well after code changes.
+- /prd/ for Product Requirements Documents
+- /doc/ for user-facing documentation
+- /design/ for design and implementation summaries
+
 ### File Structure
 - Portfolio data lives in `Assets/portfolio.json` (asset definitions, accounts, tags)
 - Updates stored in `AssetUpdates/*.json` (time-series value tracking)
