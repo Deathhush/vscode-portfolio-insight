@@ -435,7 +435,7 @@ export class Asset {
     }
 
     private sortActivities(activities: AssetActivityData[]): AssetActivityData[] {
-        // Sort activities by date (most recent first), then by activity ID for consistent ordering
+        // Sort activities by date (most recent first), then by type (snapshots first), then by activity ID
         return activities.sort((a, b) => {
             const dateA = new Date(a.date).getTime();
             const dateB = new Date(b.date).getTime();
@@ -445,7 +445,15 @@ export class Asset {
                 return dateB - dateA;
             }
 
-            // Secondary sort: by ID for consistent ordering of same-date activities
+            // Secondary sort: for same day, snapshots come first
+            if (a.type === 'snapshot' && b.type !== 'snapshot') {
+                return -1; // a (snapshot) comes before b
+            }
+            if (b.type === 'snapshot' && a.type !== 'snapshot') {
+                return 1; // b (snapshot) comes before a
+            }
+
+            // Tertiary sort: by activity ID for consistent ordering of same-date, same-priority activities
             return a.id.localeCompare(b.id);
         });
     }
