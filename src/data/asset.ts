@@ -169,239 +169,274 @@ export class Asset {
         for (const update of updates) {
             const updateDate = update.date;
 
-            // Extract asset events (income, expense, snapshots)
-            for (const assetUpdate of update.assets) {
-                if (assetUpdate.name === this.fullName) {
-                    const assetDate = assetUpdate.date || updateDate;
+            // Extract activities from asset events
+            const assetEventActivities = await this.extractActivitiesFromAssetEvents(update.assets, updateDate, activityId);
+            activities.push(...assetEventActivities);
+            activityId += assetEventActivities.length;
 
-                    for (const event of assetUpdate.events) {
-                        const eventDate = event.date || assetDate;
-
-                        // Convert income and expense events to activities
-                        if (event.type === 'income' || event.type === 'expense') {
-                            const activity: AssetActivityData = {
-                                id: `${this.fullName}-event-${activityId++}`,
-                                type: event.type,
-                                amount: event.amount || 0,
-                                totalValue: event.amount || 0,
-                                date: eventDate
-                            };
-
-                            // Only include description if it exists
-                            if (event.description) {
-                                activity.description = event.description;
-                            }
-
-                            activities.push(activity);
-                        }
-
-                        // Include snapshot events as activities to show asset value changes
-                        if (event.type === 'snapshot') {
-                            const snapshotValue = this.calculateSnapshotEventValue(event);
-                            const snapshotActivity: AssetActivityData = {
-                                id: `${this.fullName}-snapshot-${activityId++}`,
-                                type: 'snapshot',
-                                totalValue: snapshotValue,
-                                date: eventDate
-                            };
-
-                            // For stock assets, amount represents shares; for others, it represents the monetary value
-                            if (this.type === 'stock' && event.shares !== undefined) {
-                                snapshotActivity.amount = event.shares;
-                                if (event.price !== undefined) {
-                                    snapshotActivity.unitPrice = event.price;
-                                }
-                            } else {
-                                snapshotActivity.amount = snapshotValue;
-                            }
-
-                            // Only include description if it exists
-                            if (event.description) {
-                                snapshotActivity.description = event.description;
-                            }
-
-                            activities.push(snapshotActivity);
-                        }
-                    }
-                }
-            }
-
-            // Extract and merge transfer activities
+            // Extract activities from transfers
             if (update.transfers) {
-                for (const transfer of update.transfers) {
-                    const transferDate = transfer.date || updateDate;
+                const transferActivities = await this.extractActivitiesFromTransfers(update.transfers, updateDate, activityId);
+                activities.push(...transferActivities);
+                activityId += transferActivities.length;
+            }
+        }
 
-                    // Transfer OUT from this asset
-                    if (transfer.from === this.fullName) {
-                        // For stock assets, only allow sell operations (not regular transfers)
-                        if (this.type === 'stock') {
-                            // This is a sell operation for stock assets
-                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+        return this.sortActivities(activities);
+    }
 
-                            const transferOutActivity: AssetActivityData = {
-                                id: `${this.fullName}-sell-${activityId++}`,
-                                type: 'sell',
-                                amount: transfer.amount,
-                                totalValue: totalValue,
-                                date: transferDate,
-                                relatedAsset: transfer.to
-                            };
+    private async extractActivitiesFromAssetEvents(
+        assetUpdates: AssetUpdateData[],
+        updateDate: string,
+        startingActivityId: number
+    ): Promise<AssetActivityData[]> {
+        const activities: AssetActivityData[] = [];
+        let activityId = startingActivityId;
 
-                            // Include buy/sell specific data if available
-                            if (transfer.unitPrice) {
-                                transferOutActivity.unitPrice = transfer.unitPrice;
-                            }
+        // Extract asset events (income, expense, snapshots)
+        for (const assetUpdate of assetUpdates) {
+            if (assetUpdate.name === this.fullName) {
+                const assetDate = assetUpdate.date || updateDate;
 
-                            // Only include description if it exists
-                            if (transfer.description) {
-                                transferOutActivity.description = transfer.description;
-                            }
+                for (const event of assetUpdate.events) {
+                    const eventDate = event.date || assetDate;
 
-                            activities.push(transferOutActivity);
-                        } else {
-                            // For non-stock assets, create regular transfer_out activities
-                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+                    // Convert income and expense events to activities
+                    if (event.type === 'income' || event.type === 'expense') {
+                        const activity: AssetActivityData = {
+                            id: `${this.fullName}-event-${activityId++}`,
+                            type: event.type,
+                            amount: event.amount || 0,
+                            totalValue: event.amount || 0,
+                            date: eventDate
+                        };
 
-                            // Convert currency for non-stock assets (i.e., paying for stock purchase)
-                            let exchangeRateUsed: number | undefined;
-                            if (transfer.to) {
-                                const sourceCurrency = this.currency;
-                                try {
-                                    const targetAsset = await this.dataAccess.getAssetByFullName(transfer.to);
-                                    const targetCurrency = targetAsset.currency;
-
-                                    if (targetCurrency !== 'CNY') {
-                                        const originalValue = totalValue;
-                                        const conversionResult = await this.convertCurrency(totalValue, targetCurrency, sourceCurrency, transferDate);
-                                        totalValue = conversionResult.convertedValue;
-
-                                        // Store exchange rate if conversion occurred
-                                        if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
-                                            exchangeRateUsed = conversionResult.exchangeRate;
-                                        }
-                                    }
-                                } catch (error) {
-                                    console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to}: ${error}`);
-                                    // Continue with original value if conversion fails
-                                }
-                            }
-
-                            const transferOutActivity: AssetActivityData = {
-                                id: `${this.fullName}-transfer-out-${activityId++}`,
-                                type: 'transfer_out',
-                                amount: transfer.amount,
-                                totalValue: totalValue,
-                                date: transferDate,
-                                relatedAsset: transfer.to
-                            };
-
-                            // Include unit price if available
-                            if (transfer.unitPrice) {
-                                transferOutActivity.unitPrice = transfer.unitPrice;
-                            }
-
-                            // Include exchange rate if currency conversion was used
-                            if (exchangeRateUsed) {
-                                transferOutActivity.exchangeRate = exchangeRateUsed;
-                            }
-
-                            // Only include description if it exists
-                            if (transfer.description) {
-                                transferOutActivity.description = transfer.description;
-                            }
-
-                            activities.push(transferOutActivity);
+                        // Only include description if it exists
+                        if (event.description) {
+                            activity.description = event.description;
                         }
+
+                        activities.push(activity);
                     }
 
-                    // Transfer IN to this asset
-                    if (transfer.to === this.fullName) {
-                        // For stock assets, only allow buy operations (not regular transfers)
-                        if (this.type === 'stock') {
-                            // This is a buy operation for stock assets
-                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+                    // Include snapshot events as activities to show asset value changes
+                    if (event.type === 'snapshot') {
+                        const snapshotValue = this.calculateSnapshotEventValue(event);
+                        const snapshotActivity: AssetActivityData = {
+                            id: `${this.fullName}-snapshot-${activityId++}`,
+                            type: 'snapshot',
+                            totalValue: snapshotValue,
+                            date: eventDate
+                        };
 
-                            const transferInActivity: AssetActivityData = {
-                                id: `${this.fullName}-buy-${activityId++}`,
-                                type: 'buy',
-                                amount: transfer.amount,
-                                totalValue: totalValue,
-                                date: transferDate,
-                                relatedAsset: transfer.from
-                            };
-
-                            // Include buy/sell specific data if available
-                            if (transfer.unitPrice) {
-                                transferInActivity.unitPrice = transfer.unitPrice;
+                        // For stock assets, amount represents shares; for others, it represents the monetary value
+                        if (this.type === 'stock' && event.shares !== undefined) {
+                            snapshotActivity.amount = event.shares;
+                            if (event.price !== undefined) {
+                                snapshotActivity.unitPrice = event.price;
                             }
-
-                            // Only include description if it exists
-                            if (transfer.description) {
-                                transferInActivity.description = transfer.description;
-                            }
-
-                            activities.push(transferInActivity);
                         } else {
-                            // For non-stock assets, create regular transfer_in activities
-                            let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
-
-                            // Convert currency for non-stock assets (i.e., receiving money from stock sale)
-                            let exchangeRateUsed: number | undefined;
-                            if (transfer.from) {
-                                try {
-                                    const sourceAsset = await this.dataAccess.getAssetByFullName(transfer.from);
-                                    const sourceCurrency = sourceAsset.currency;
-                                    const targetCurrency = this.currency;
-
-                                    if (sourceCurrency !== 'CNY') {
-                                        const originalValue = totalValue;
-                                        const conversionResult = await this.convertCurrency(totalValue, sourceCurrency, targetCurrency, transferDate);
-                                        totalValue = conversionResult.convertedValue;
-
-                                        // Store exchange rate if conversion occurred
-                                        if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
-                                            exchangeRateUsed = conversionResult.exchangeRate;
-                                        }
-                                    }
-                                } catch (error) {
-                                    console.warn(`Currency conversion failed for transfer from ${transfer.from} to ${this.name} (${this.currency}): ${error}`);
-                                    // Continue with original value if conversion fails
-                                }
-                            }
-
-                            const transferInActivity: AssetActivityData = {
-                                id: `${this.fullName}-transfer-in-${activityId++}`,
-                                type: 'transfer_in',
-                                amount: transfer.amount,
-                                totalValue: totalValue,
-                                date: transferDate,
-                                relatedAsset: transfer.from
-                            };
-
-                            // Include unit price if available
-                            if (transfer.unitPrice) {
-                                transferInActivity.unitPrice = transfer.unitPrice;
-                            }
-
-                            // Include exchange rate if currency conversion was used
-                            if (exchangeRateUsed) {
-                                transferInActivity.exchangeRate = exchangeRateUsed;
-                            }
-
-                            // Only include description if it exists
-                            if (transfer.description) {
-                                transferInActivity.description = transfer.description;
-                            }
-
-                            activities.push(transferInActivity);
+                            snapshotActivity.amount = snapshotValue;
                         }
+
+                        // Only include description if it exists
+                        if (event.description) {
+                            snapshotActivity.description = event.description;
+                        }
+
+                        activities.push(snapshotActivity);
                     }
                 }
             }
         }
 
+        return activities;
+    }
+
+    private async extractActivitiesFromTransfers(
+        transfers: TransferData[],
+        updateDate: string,
+        startingActivityId: number
+    ): Promise<AssetActivityData[]> {
+        const activities: AssetActivityData[] = [];
+        let activityId = startingActivityId;
+
+        for (const transfer of transfers) {
+            const transferDate = transfer.date || updateDate;
+
+            // Transfer OUT from this asset
+            if (transfer.from === this.fullName) {
+                // For stock assets, only allow sell operations (not regular transfers)
+                if (this.type === 'stock') {
+                    // This is a sell operation for stock assets
+                    let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+
+                    const transferOutActivity: AssetActivityData = {
+                        id: `${this.fullName}-sell-${activityId++}`,
+                        type: 'sell',
+                        amount: transfer.amount,
+                        totalValue: totalValue,
+                        date: transferDate,
+                        relatedAsset: transfer.to
+                    };
+
+                    // Include buy/sell specific data if available
+                    if (transfer.unitPrice) {
+                        transferOutActivity.unitPrice = transfer.unitPrice;
+                    }
+
+                    // Only include description if it exists
+                    if (transfer.description) {
+                        transferOutActivity.description = transfer.description;
+                    }
+
+                    activities.push(transferOutActivity);
+                } else {
+                    // For non-stock assets, create regular transfer_out activities
+                    let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+
+                    // Convert currency for non-stock assets (i.e., paying for stock purchase)
+                    let exchangeRateUsed: number | undefined;
+                    if (transfer.to) {
+                        const sourceCurrency = this.currency;
+                        try {
+                            const targetAsset = await this.dataAccess.getAssetByFullName(transfer.to);
+                            const targetCurrency = targetAsset.currency;
+
+                            if (targetCurrency !== 'CNY') {
+                                const originalValue = totalValue;
+                                const conversionResult = await this.convertCurrency(totalValue, targetCurrency, sourceCurrency, transferDate);
+                                totalValue = conversionResult.convertedValue;
+
+                                // Store exchange rate if conversion occurred
+                                if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
+                                    exchangeRateUsed = conversionResult.exchangeRate;
+                                }
+                            }
+                        } catch (error) {
+                            console.warn(`Currency conversion failed for transfer from ${this.name} (${sourceCurrency}) to ${transfer.to}: ${error}`);
+                            // Continue with original value if conversion fails
+                        }
+                    }
+
+                    const transferOutActivity: AssetActivityData = {
+                        id: `${this.fullName}-transfer-out-${activityId++}`,
+                        type: 'transfer_out',
+                        amount: transfer.amount,
+                        totalValue: totalValue,
+                        date: transferDate,
+                        relatedAsset: transfer.to
+                    };
+
+                    // Include unit price if available
+                    if (transfer.unitPrice) {
+                        transferOutActivity.unitPrice = transfer.unitPrice;
+                    }
+
+                    // Include exchange rate if currency conversion was used
+                    if (exchangeRateUsed) {
+                        transferOutActivity.exchangeRate = exchangeRateUsed;
+                    }
+
+                    // Only include description if it exists
+                    if (transfer.description) {
+                        transferOutActivity.description = transfer.description;
+                    }
+
+                    activities.push(transferOutActivity);
+                }
+            }
+
+            // Transfer IN to this asset
+            if (transfer.to === this.fullName) {
+                // For stock assets, only allow buy operations (not regular transfers)
+                if (this.type === 'stock') {
+                    // This is a buy operation for stock assets
+                    let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+
+                    const transferInActivity: AssetActivityData = {
+                        id: `${this.fullName}-buy-${activityId++}`,
+                        type: 'buy',
+                        amount: transfer.amount,
+                        totalValue: totalValue,
+                        date: transferDate,
+                        relatedAsset: transfer.from
+                    };
+
+                    // Include buy/sell specific data if available
+                    if (transfer.unitPrice) {
+                        transferInActivity.unitPrice = transfer.unitPrice;
+                    }
+
+                    // Only include description if it exists
+                    if (transfer.description) {
+                        transferInActivity.description = transfer.description;
+                    }
+
+                    activities.push(transferInActivity);
+                } else {
+                    // For non-stock assets, create regular transfer_in activities
+                    let totalValue = transfer.totalValue || (transfer.amount && transfer.unitPrice ? transfer.amount * transfer.unitPrice : transfer.amount || 0);
+
+                    // Convert currency for non-stock assets (i.e., receiving money from stock sale)
+                    let exchangeRateUsed: number | undefined;
+                    if (transfer.from) {
+                        try {
+                            const sourceAsset = await this.dataAccess.getAssetByFullName(transfer.from);
+                            const sourceCurrency = sourceAsset.currency;
+                            const targetCurrency = this.currency;
+
+                            if (sourceCurrency !== 'CNY') {
+                                const originalValue = totalValue;
+                                const conversionResult = await this.convertCurrency(totalValue, sourceCurrency, targetCurrency, transferDate);
+                                totalValue = conversionResult.convertedValue;
+
+                                // Store exchange rate if conversion occurred
+                                if (originalValue !== totalValue && sourceCurrency !== targetCurrency) {
+                                    exchangeRateUsed = conversionResult.exchangeRate;
+                                }
+                            }
+                        } catch (error) {
+                            console.warn(`Currency conversion failed for transfer from ${transfer.from} to ${this.name} (${this.currency}): ${error}`);
+                            // Continue with original value if conversion fails
+                        }
+                    }
+
+                    const transferInActivity: AssetActivityData = {
+                        id: `${this.fullName}-transfer-in-${activityId++}`,
+                        type: 'transfer_in',
+                        amount: transfer.amount,
+                        totalValue: totalValue,
+                        date: transferDate,
+                        relatedAsset: transfer.from
+                    };
+
+                    // Include unit price if available
+                    if (transfer.unitPrice) {
+                        transferInActivity.unitPrice = transfer.unitPrice;
+                    }
+
+                    // Include exchange rate if currency conversion was used
+                    if (exchangeRateUsed) {
+                        transferInActivity.exchangeRate = exchangeRateUsed;
+                    }
+
+                    // Only include description if it exists
+                    if (transfer.description) {
+                        transferInActivity.description = transfer.description;
+                    }
+
+                    activities.push(transferInActivity);
+                }
+            }
+        }
+
+        return activities;
+    }
+
+    private sortActivities(activities: AssetActivityData[]): AssetActivityData[] {
         // Sort activities by date (most recent first), then by activity ID for consistent ordering
-        activities.sort((a, b) => {
+        return activities.sort((a, b) => {
             const dateA = new Date(a.date).getTime();
             const dateB = new Date(b.date).getTime();
 
@@ -413,8 +448,6 @@ export class Asset {
             // Secondary sort: by ID for consistent ordering of same-date activities
             return a.id.localeCompare(b.id);
         });
-
-        return activities;
     }
 
     extractLastMonthIncome(activities: AssetActivityData[]): number {
