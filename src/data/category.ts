@@ -50,7 +50,10 @@ export class Category {
 
         const matchingAssets: Set<Asset> = new Set();
 
-        if (this.definition.tags && this.definition.tags.length > 0) { // filter by tags
+        if (this.definition.tags) { // filter by tags
+            if (this.definition.tags.length === 0) {
+                return []; // If no tags defined, return empty array
+            }
             for (const asset of candidateAssets) {
                 const assetTags = asset.allTags;
                 const hasMatchingTag = this.definition.tags.some((tag: string) => assetTags.includes(tag));
@@ -85,7 +88,9 @@ export class Category {
         }
 
         // if any sub category is without tags and exludeTags, return 0 assets
-        if (this.definition.categories.some(cat => !cat.tags && !cat.excludeTags)) {
+        if (this.definition.categories.some(cat => (
+            !cat.tags && !cat.excludeTags) ||
+            (!cat.tags && cat.excludeTags && cat.excludeTags.length === 0))) {
             return [];
         }
 
