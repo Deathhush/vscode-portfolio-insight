@@ -56,6 +56,8 @@ export class Asset {
         if (this.account) {
             virtualTags.push(this.account);
         }
+
+        virtualTags.push(this.fullName);
         
         return virtualTags;
     }
