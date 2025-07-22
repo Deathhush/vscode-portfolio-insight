@@ -88,13 +88,45 @@ export class Asset {
         let snapshotDate = new Date().toISOString(); // Default to today if no snapshot
         let lastUpdateDate: string | undefined;
 
-        // Find the latest snapshot activity (activities are already sorted with most recent first)
-        const latestSnapshotActivity = activities.find(activity => activity.type === 'snapshot');
+        // Find the index of the latest snapshot activity (activities are already sorted with most recent first)
+        let latestSnapshotIndex = activities.findIndex(activity => activity.type === 'snapshot');
 
-        if (latestSnapshotActivity) {
+        if (latestSnapshotIndex !== -1) {
+            const latestSnapshotActivity = activities[latestSnapshotIndex];
             currentValue = latestSnapshotActivity.totalValue;
             snapshotDate = latestSnapshotActivity.date;
             lastUpdateDate = latestSnapshotActivity.date;
+        } else {
+            // No snapshot found, start from 0 and process all activities
+            currentValue = 0;
+            latestSnapshotIndex = activities.length; // Set to process all activities
+        }
+
+        // Apply delta changes from activities that occurred after the snapshot
+        // Process activities in chronological order (from snapshot backwards to most recent)
+        
+        for (let i = latestSnapshotIndex - 1; i >= 0; i--) {
+            const activity = activities[i];
+
+            // Apply delta changes based on activity type
+            switch (activity.type) {
+                case 'income':
+                case 'transfer_in':
+                case 'buy':
+                    currentValue += activity.totalValue;
+                    break;
+                case 'expense':
+                case 'transfer_out':
+                case 'sell':
+                    currentValue -= activity.totalValue;
+                    break;
+                // Note: 'snapshot' activities are not processed here as we use the latest one as baseline
+            }
+
+            // Update lastUpdateDate to the most recent activity date
+            if (!lastUpdateDate || activity.date > lastUpdateDate) {
+                lastUpdateDate = activity.date;
+            }
         }
 
         try {
