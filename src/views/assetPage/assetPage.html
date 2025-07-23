@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Asset Details</title>
+    <!-- Chart.js Local Files -->
+    <script src="./libs/chart.umd.js"></script>
     <style>
         /* VS Code theme detection classes */
         .vscode-light {
@@ -264,6 +266,72 @@
             font-size: 0.9em;
             color: var(--text-secondary);
             margin-top: 4px;
+        }
+        
+        /* Chart Styles */
+        .chart-container {
+            margin: 30px 0 40px 0;
+            padding: 25px;
+            background-color: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-primary);
+            transition: box-shadow 0.2s ease;
+        }
+        
+        .chart-container:hover {
+            box-shadow: 0 4px 8px var(--shadow-primary);
+        }
+        
+        .chart-title {
+            font-size: 1.2em;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--text-primary);
+        }
+        
+        .chart-wrapper {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            margin-top: 15px;
+        }
+        
+        .chart-controls {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .chart-period-btn {
+            padding: 6px 12px;
+            border: 1px solid var(--border-primary);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .chart-period-btn.active {
+            background: var(--button-bg);
+            color: var(--button-text);
+            border-color: var(--button-bg);
+        }
+        
+        .chart-period-btn:hover {
+            background: var(--bg-tertiary);
+            border-color: var(--text-accent);
+        }
+        
+        .chart-period-btn.active:hover {
+            background: var(--button-hover-bg);
+            border-color: var(--button-hover-bg);
         }
         
         .asset-activities {
@@ -981,6 +1049,21 @@
         </div>
     </div>
     
+    <!-- Chart Section -->
+    <div class="chart-container">
+        <div class="chart-title">Value Over Time</div>
+        <div class="chart-controls">
+            <button class="chart-period-btn active" data-period="all">All Time</button>
+            <button class="chart-period-btn" data-period="1y">1 Year</button>
+            <button class="chart-period-btn" data-period="6m">6 Months</button>
+            <button class="chart-period-btn" data-period="3m">3 Months</button>
+            <button class="chart-period-btn" data-period="1m">1 Month</button>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="valueChart"></canvas>
+        </div>
+    </div>
+    
     <div class="asset-activities">
         <div class="activities-header">
             <h2>Recent Activities</h2>
@@ -1096,6 +1179,11 @@
     <script>
         const vscode = acquireVsCodeApi();
         
+        // Chart variables
+        let valueChart = null;
+        let chartData = [];
+        let currentPeriod = 'all';
+        
         // Function to manually set theme (used by host.html if embedded)
         function setTheme(themeClass) {
             document.body.className = themeClass;
@@ -1108,7 +1196,14 @@
             
             switch (message.type) {
                 case 'ASSET_DATA':
+                    // Store chart data
+                    chartData = message.data.activities || [];
+                    
+                    // Update asset display
                     updateAssetDisplay(message.data);
+                    
+                    // Update chart with new data
+                    updateChart(chartData);
                     break;
                 case 'ERROR':
                     showError(message.data);
@@ -1761,9 +1856,471 @@
             vscode.postMessage(dataToSend);
         }
         
+        // Chart functionality
+        const chartConfig = {
+            type: 'line',
+            data: {
+                datasets: [{
+                    label: 'Asset Value',
+                    data: [],
+                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4',
+                    backgroundColor: 'rgba(0, 120, 212, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.2,
+                    fill: false,
+                    pointBackgroundColor: function(context) {
+                        // Make snapshot points more prominent
+                        const point = context.raw;
+                        return point && point.isSnapshot ? 
+                            (getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4') :
+                            (getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4');
+                    },
+                    pointBorderColor: function(context) {
+                        // White border for better contrast
+                        return '#ffffff';
+                    },
+                    pointBorderWidth: function(context) {
+                        const point = context.raw;
+                        return point && point.isSnapshot ? 2 : 1;
+                    },
+                    pointRadius: function(context) {
+                        // Even smaller, more refined points
+                        const point = context.raw;
+                        return point && point.isSnapshot ? 3 : 2;
+                    },
+                    pointHoverRadius: function(context) {
+                        // Smaller hover increase
+                        const point = context.raw;
+                        return point && point.isSnapshot ? 5 : 4;
+                    },
+                    pointHoverBorderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    intersect: false,
+                    mode: 'nearest',
+                    axis: 'x'
+                },
+                animation: {
+                    duration: 750,
+                    easing: 'easeInOutQuart'
+                },
+                plugins: {
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleColor: '#ffffff',
+                        bodyColor: '#ffffff',
+                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4',
+                        borderWidth: 1,
+                        cornerRadius: 6,
+                        displayColors: false,
+                        padding: 12,
+                        callbacks: {
+                            label: function(context) {
+                                const value = context.parsed.y;
+                                const currency = currentAssetCurrency || 'CNY';
+                                const point = context.raw;
+                                const prefix = point && point.isSnapshot ? 'Snapshot: ' : 'Value: ';
+                                return prefix + formatCurrency(value, currency);
+                            },
+                            title: function(context) {
+                                // Format the date for display
+                                const date = new Date(context[0].parsed.x);
+                                return date.toLocaleDateString('en-US', { 
+                                    weekday: 'short',
+                                    year: 'numeric', 
+                                    month: 'short', 
+                                    day: 'numeric' 
+                                });
+                            }
+                        }
+                    },
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    x: {
+                        type: 'linear',
+                        position: 'bottom',
+                        min: undefined, // Will be set dynamically
+                        max: undefined, // Will be set dynamically
+                        grace: 0, // No padding beyond min/max
+                        offset: false, // Don't offset the axis
+                        grid: {
+                            display: true,
+                            color: function(context) {
+                                // More subtle grid lines
+                                const baseColor = getComputedStyle(document.documentElement).getPropertyValue('--border-secondary') || '#e5e5e5';
+                                return context.tick.major ? baseColor : 'rgba(229, 229, 229, 0.3)';
+                            },
+                            lineWidth: function(context) {
+                                return context.tick.major ? 1 : 0.5;
+                            },
+                            drawOnChartArea: true,
+                            drawTicks: true
+                        },
+                        border: {
+                            display: true,
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-primary') || '#d1d1d1',
+                            width: 1
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#666666',
+                            maxTicksLimit: 6,
+                            padding: 8,
+                            font: {
+                                size: 11
+                            },
+                            callback: function(value, index, values) {
+                                // Convert timestamp back to readable date
+                                const date = new Date(value);
+                                const now = new Date();
+                                const diffDays = (now - date) / (1000 * 60 * 60 * 24);
+                                
+                                if (diffDays < 30) {
+                                    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                                } else if (diffDays < 365) {
+                                    return date.toLocaleDateString(undefined, { month: 'short' });
+                                } else {
+                                    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+                                }
+                            }
+                        }
+                    },
+                    y: {
+                        beginAtZero: false,
+                        grid: {
+                            display: true,
+                            color: function(context) {
+                                // More subtle horizontal grid lines
+                                const baseColor = getComputedStyle(document.documentElement).getPropertyValue('--border-secondary') || '#e5e5e5';
+                                return context.tick.major ? baseColor : 'rgba(229, 229, 229, 0.2)';
+                            },
+                            lineWidth: function(context) {
+                                return context.tick.major ? 1 : 0.5;
+                            },
+                            drawOnChartArea: true,
+                            drawTicks: true
+                        },
+                        border: {
+                            display: true,
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-primary') || '#d1d1d1',
+                            width: 1
+                        },
+                        ticks: {
+                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#666666',
+                            maxTicksLimit: 6,
+                            padding: 8,
+                            font: {
+                                size: 11
+                            },
+                            callback: function(value) {
+                                const currency = currentAssetCurrency || 'CNY';
+                                return formatCurrency(value, currency);
+                            }
+                        }
+                    }
+                }
+            }
+        };
+        
+        // Initialize chart
+        function initChart() {
+            try {
+                // Check if Chart.js is available
+                if (typeof Chart === 'undefined') {
+                    console.error('Chart.js is not loaded');
+                    showChartError('Chart.js library failed to load');
+                    return;
+                }
+                
+                const canvas = document.getElementById('valueChart');
+                if (!canvas) {
+                    console.error('Chart canvas not found');
+                    showChartError('Chart canvas element not found');
+                    return;
+                }
+                
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('Could not get 2D context');
+                    showChartError('Could not get canvas 2D context');
+                    return;
+                }
+                
+                console.log('Initializing chart...');
+                valueChart = new Chart(ctx, chartConfig);
+                console.log('Chart initialized successfully');
+            } catch (error) {
+                console.error('Error initializing chart:', error);
+                showChartError('Failed to initialize chart: ' + error.message);
+            }
+        }
+        
+        // Show chart error
+        function showChartError(message) {
+            const chartWrapper = document.querySelector('.chart-wrapper');
+            if (chartWrapper) {
+                chartWrapper.innerHTML = `
+                    <div style="display: flex; align-items: center; justify-content: center; height: 300px; background: var(--bg-tertiary); border-radius: 8px; border: 2px dashed var(--border-primary);">
+                        <div style="text-align: center; color: var(--text-secondary);">
+                            <div style="font-size: 2em; margin-bottom: 10px;">📊</div>
+                            <div>Chart not available</div>
+                            <div style="font-size: 0.8em; margin-top: 5px;">${message}</div>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+        
+        // Update chart with new data
+        function updateChart(activities) {
+            if (!valueChart) {
+                console.log('Chart not initialized yet');
+                return;
+            }
+            
+            console.log('Updating chart with activities:', activities.length);
+            
+            // Process activities to create chart data points
+            const dataPoints = processActivitiesForChart(activities);
+            
+            // Filter data based on selected period
+            const filteredData = filterDataByPeriod(dataPoints, currentPeriod);
+            
+            console.log('Filtered data points for period', currentPeriod, ':', filteredData);
+            
+            // Update chart data
+            valueChart.data.datasets[0].data = filteredData;
+            
+            // Calculate exact x-axis range based on the selected period
+            const now = new Date();
+            let xAxisMin, xAxisMax;
+            
+            if (currentPeriod === 'all') {
+                // For 'all', use the actual data range
+                if (filteredData.length > 0) {
+                    const xValues = filteredData.map(point => point.x);
+                    xAxisMin = Math.min(...xValues);
+                    xAxisMax = Math.max(...xValues);
+                } else {
+                    xAxisMin = undefined;
+                    xAxisMax = undefined;
+                }
+            } else {
+                // For specific periods, set exact range boundaries
+                let cutoffDate;
+                switch (currentPeriod) {
+                    case '1m':
+                        cutoffDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                        break;
+                    case '3m':
+                        cutoffDate = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+                        break;
+                    case '6m':
+                        cutoffDate = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000));
+                        break;
+                    case '1y':
+                        cutoffDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000));
+                        break;
+                    default:
+                        cutoffDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
+                }
+                
+                xAxisMin = cutoffDate.getTime();
+                xAxisMax = now.getTime();
+            }
+            
+            // Set the calculated x-axis range
+            valueChart.options.scales.x.min = xAxisMin;
+            valueChart.options.scales.x.max = xAxisMax;
+            
+            // Reset y-axis to auto-scale
+            valueChart.options.scales.y.min = undefined;
+            valueChart.options.scales.y.max = undefined;
+            
+            console.log('Setting x-axis range:', xAxisMin ? new Date(xAxisMin).toISOString() : 'undefined', 'to', xAxisMax ? new Date(xAxisMax).toISOString() : 'undefined');
+            
+            // Update chart display with animation
+            valueChart.update('active');
+            
+            console.log('Chart updated with', filteredData.length, 'data points');
+        }
+        
+        // Process activities into chart data points
+        function processActivitiesForChart(activities) {
+            if (!activities || activities.length === 0) return [];
+            
+            console.log('Processing activities for chart:', activities.length, 'activities');
+            const dataPoints = [];
+            
+            // Extract all snapshots and sort them by date
+            const snapshots = activities.filter(a => a.type === 'snapshot')
+                .sort((a, b) => new Date(a.date) - new Date(b.date));
+            
+            console.log('Found snapshots:', snapshots.length);
+            
+            if (snapshots.length === 0) {
+                console.log('No snapshots found, no chart data to display');
+                return dataPoints;
+            }
+            
+            // Add all snapshots as data points
+            snapshots.forEach(snapshot => {
+                const snapshotDate = new Date(snapshot.date);
+                const value = snapshot.totalValue || snapshot.currentValue || 0;
+                
+                dataPoints.push({
+                    x: snapshotDate.getTime(),
+                    y: value,
+                    isSnapshot: true, // Mark this as a snapshot point
+                    activity: snapshot // Store the original activity for tooltip
+                });
+                
+                console.log(`Added snapshot point: ${snapshotDate.toISOString()} = ${value}`);
+            });
+
+            console.log('Final data points:', dataPoints.length, 'points');
+            return dataPoints;
+        }
+        
+        // Filter data by time period
+        function filterDataByPeriod(dataPoints, period) {
+            if (period === 'all' || dataPoints.length === 0) {
+                console.log('No filtering applied, period:', period, 'data points:', dataPoints.length);
+                return dataPoints;
+            }
+            
+            const now = new Date();
+            let cutoffDate;
+            
+            switch (period) {
+                case '1m':
+                    cutoffDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); // 30 days ago
+                    break;
+                case '3m':
+                    cutoffDate = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000)); // 90 days ago
+                    break;
+                case '6m':
+                    cutoffDate = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000)); // 180 days ago
+                    break;
+                case '1y':
+                    cutoffDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)); // 365 days ago
+                    break;
+                default:
+                    console.log('Unknown period:', period);
+                    return dataPoints;
+            }
+            
+            const cutoffTimestamp = cutoffDate.getTime();
+            const filteredPoints = dataPoints.filter(point => point.x >= cutoffTimestamp);
+            
+            console.log(`Filtered from ${dataPoints.length} to ${filteredPoints.length} points for period ${period}`);
+            console.log('Cutoff date:', cutoffDate.toISOString());
+            
+            // If filtering removes all points, include the most recent point from before the cutoff
+            if (filteredPoints.length === 0 && dataPoints.length > 0) {
+                // Find the most recent point before the cutoff to provide context
+                const pointsBeforeCutoff = dataPoints.filter(point => point.x < cutoffTimestamp);
+                if (pointsBeforeCutoff.length > 0) {
+                    const mostRecentBeforeCutoff = pointsBeforeCutoff[pointsBeforeCutoff.length - 1];
+                    // Create a synthetic point at the cutoff date with the same value
+                    const syntheticPoint = {
+                        x: cutoffTimestamp,
+                        y: mostRecentBeforeCutoff.y,
+                        synthetic: true,
+                        isSnapshot: false
+                    };
+                    console.log('No points in range, adding synthetic point at cutoff:', syntheticPoint);
+                    return [syntheticPoint];
+                } else {
+                    console.log('No points in range and no points before cutoff');
+                    return [];
+                }
+            }
+            
+            // If we have filtered points, add a connecting point at the cutoff if needed
+            if (filteredPoints.length > 0 && dataPoints.length > filteredPoints.length) {
+                const firstFilteredPoint = filteredPoints[0];
+                
+                // If the first filtered point is not exactly at the cutoff, 
+                // add a synthetic point at the cutoff for better visualization
+                if (firstFilteredPoint.x > cutoffTimestamp) {
+                    const pointsBeforeCutoff = dataPoints.filter(point => point.x < cutoffTimestamp);
+                    if (pointsBeforeCutoff.length > 0) {
+                        const lastBeforeCutoff = pointsBeforeCutoff[pointsBeforeCutoff.length - 1];
+                        const syntheticPoint = {
+                            x: cutoffTimestamp,
+                            y: lastBeforeCutoff.y,
+                            synthetic: true,
+                            isSnapshot: false
+                        };
+                        filteredPoints.unshift(syntheticPoint);
+                        console.log('Added synthetic connecting point at cutoff');
+                    }
+                }
+            }
+            
+            return filteredPoints;
+        }
+        
+        // Format currency for display
+        function formatCurrency(value, currency) {
+            try {
+                return new Intl.NumberFormat('en-US', {
+                    style: 'currency',
+                    currency: currency,
+                    minimumFractionDigits: 0,
+                    maximumFractionDigits: 0
+                }).format(value);
+            } catch (e) {
+                // Fallback if currency is not supported
+                return `${currency} ${value.toLocaleString()}`;
+            }
+        }
+        
+        // Period selection handlers
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('chart-period-btn')) {
+                console.log('Period button clicked:', e.target.dataset.period);
+                
+                // Update active button
+                document.querySelectorAll('.chart-period-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                e.target.classList.add('active');
+                
+                // Update chart
+                const newPeriod = e.target.dataset.period;
+                console.log('Changing period from', currentPeriod, 'to', newPeriod);
+                currentPeriod = newPeriod;
+                
+                if (chartData.length > 0) {
+                    console.log('Updating chart with new period');
+                    updateChart(chartData);
+                } else {
+                    console.log('No chart data available');
+                }
+            }
+        });
+        
         // Initialize the page
         document.addEventListener('DOMContentLoaded', function() {
             console.log('Asset page loaded');
+            
+            // Check if Chart.js is available
+            if (typeof Chart !== 'undefined') {
+                console.log('Chart.js is available, version:', Chart.version);
+            } else {
+                console.error('Chart.js is NOT available');
+            }
+            
+            // Initialize chart
+            initChart();
             
             // Handle form submission
             document.getElementById('addActivityForm').addEventListener('submit', function(e) {
