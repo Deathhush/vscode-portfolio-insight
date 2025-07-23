@@ -2107,12 +2107,6 @@
                     const xValues = filteredData.map(point => point.x);
                     xAxisMin = Math.min(...xValues);
                     xAxisMax = Math.max(...xValues);
-                    
-                    // Add small padding (2% of range) for visual breathing room
-                    const range = xAxisMax - xAxisMin;
-                    const padding = range * 0.02;
-                    xAxisMin -= padding;
-                    xAxisMax += padding;
                 } else {
                     xAxisMin = undefined;
                     xAxisMax = undefined;
@@ -2162,10 +2156,6 @@
             if (!activities || activities.length === 0) return [];
             
             console.log('Processing activities for chart:', activities.length, 'activities');
-            
-            // Sort activities by date (oldest first)
-            const sortedActivities = [...activities].sort((a, b) => new Date(a.date) - new Date(b.date));
-            
             const dataPoints = [];
             
             // Extract all snapshots and sort them by date
@@ -2193,25 +2183,7 @@
                 
                 console.log(`Added snapshot point: ${snapshotDate.toISOString()} = ${value}`);
             });
-            
-            // If we have multiple snapshots, we can also add interpolated lines between them
-            // For now, we'll just show the snapshot points
-            
-            // If there's only one snapshot, create a synthetic earlier point to show context
-            if (dataPoints.length === 1) {
-                const singlePoint = dataPoints[0];
-                const earlierDate = new Date(singlePoint.x - (30 * 24 * 60 * 60 * 1000)); // 30 days earlier
-                
-                dataPoints.unshift({
-                    x: earlierDate.getTime(),
-                    y: singlePoint.y, // Same value to show stable line
-                    isSnapshot: false,
-                    synthetic: true
-                });
-                
-                console.log('Added synthetic earlier point for single snapshot');
-            }
-            
+
             console.log('Final data points:', dataPoints.length, 'points');
             return dataPoints;
         }
