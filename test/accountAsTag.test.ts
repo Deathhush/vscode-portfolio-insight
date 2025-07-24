@@ -51,13 +51,13 @@ suite('Account as Tag Feature', () => {
 
             // Test standalone asset tags
             assert.deepStrictEqual(standaloneAsset.userTags, ['personal', 'savings']);
-            assert.deepStrictEqual(standaloneAsset.virtualTags, []);
-            assert.deepStrictEqual(standaloneAsset.allTags, ['personal', 'savings']);
+            assert.deepStrictEqual(standaloneAsset.virtualTags, ['StandaloneAsset']); // fullName as virtual tag
+            assert.deepStrictEqual(standaloneAsset.allTags, ['StandaloneAsset', 'personal', 'savings']); // Sorted combined tags
 
             // Test account asset tags
             assert.deepStrictEqual(accountAsset.userTags, ['investment']);
-            assert.deepStrictEqual(accountAsset.virtualTags, ['TestAccount']); // Account name as virtual tag
-            assert.deepStrictEqual(accountAsset.allTags, ['TestAccount', 'investment']); // Sorted combined tags
+            assert.deepStrictEqual(accountAsset.virtualTags, ['TestAccount', 'TestAccount.AccountAsset']); // Account name and fullName as virtual tags
+            assert.deepStrictEqual(accountAsset.allTags, ['TestAccount', 'TestAccount.AccountAsset', 'investment']); // Sorted combined tags
         });
 
         test('should use allTags for category selection', async () => {
@@ -115,8 +115,8 @@ suite('Account as Tag Feature', () => {
             // userTags should only include explicitly defined tags, not virtual ones
             assert.deepStrictEqual(asset.userTags, ['userTag1', 'userTag2']);
             
-            // allTags should include both user tags and virtual tags (account name)
-            assert.deepStrictEqual(asset.allTags, ['TestAccount', 'userTag1', 'userTag2']);
+            // allTags should include both user tags and virtual tags (account name and fullName)
+            assert.deepStrictEqual(asset.allTags, ['TestAccount', 'TestAccount.TestAsset', 'userTag1', 'userTag2']);
             
             // Asset definition should only contain user tags
             assert.deepStrictEqual(asset.definitionData.tags, ['userTag1', 'userTag2']);
