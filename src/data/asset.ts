@@ -57,6 +57,7 @@ export class Asset {
             virtualTags.push(this.account);
         }
 
+        // Add full name as virtual tag for all assets
         virtualTags.push(this.fullName);
         
         return virtualTags;
