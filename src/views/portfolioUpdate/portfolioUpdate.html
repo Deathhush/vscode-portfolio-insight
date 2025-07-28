@@ -602,17 +602,34 @@
         transition: background-color 0.3s ease, border-color 0.3s ease;
       }
 
-      .transfer-item[data-is-paired="true"] {
+      .transfer-item.paired-transfer {
         background: var(--header-active-bg);
         border-color: var(--input-focus);
-      }      .transfer-item[data-is-paired="true"]::before {
-        content: "↔";
+        opacity: 0.8;
+        padding-top: 28px; /* Make room for the label */
+      }
+
+      .paired-transfer-label {
         position: absolute;
         top: 4px;
         left: 4px;
         color: var(--text-accent);
-        font-size: 0.8em;
+        font-size: 0.7em;
         font-weight: bold;
+        background: var(--bg-primary);
+        padding: 2px 6px;
+        border-radius: 3px;
+        border: 1px solid var(--border-primary);
+        z-index: 10;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+      }
+
+      .transfer-item.paired-transfer input[readonly],
+      .transfer-item.paired-transfer select[disabled] {
+        background: var(--input-disabled-bg, var(--input-bg));
+        color: var(--text-disabled, var(--text-secondary));
+        cursor: not-allowed;
+        opacity: 0.7;
       }
 
       .transfer-row {
@@ -1419,6 +1436,11 @@
 
       // Handle transfer date changes
       function handleTransferDateChange(transferId, assetId, dateInput) {
+        // Don't process changes for auto-paired transfers
+        const transferItem = dateInput.closest('.transfer-item');
+        const isPaired = transferItem && transferItem.dataset.isPaired === "true";
+        if (isPaired) return;
+
         const assetGroup = document.querySelector(
           `[data-asset-id="${assetId}"]`
         );
@@ -1935,6 +1957,11 @@
         transferDiv.dataset.transferId = transferId;
         transferDiv.dataset.isPaired = isPaired;
 
+        // Add paired class for styling
+        if (isPaired) {
+          transferDiv.classList.add("paired-transfer");
+        }
+
         // Find the current asset to determine if it's a stock
         const currentAsset = assets.find(asset => getAssetFullName(asset) === currentAssetId);
         const isStock = currentAsset && currentAsset.type === 'stock';
@@ -1974,32 +2001,41 @@
           `;
         }
 
+        // Determine if fields should be readonly/disabled
+        const readonlyAttr = isPaired ? 'readonly' : '';
+        const disabledAttr = isPaired ? 'disabled' : '';
+        const onchangeAttr = isPaired ? '' : `onchange="handleTransferChange('${transferId}', '${currentAssetId}')"`;
+        const oninputAttr = isPaired ? '' : `oninput="handleTransferChange('${transferId}', '${currentAssetId}')"`;
+        const dateOnchangeAttr = isPaired ? '' : `onchange="handleTransferDateChange('${transferId}', '${currentAssetId}', this)"`;
+        const descriptionOninputAttr = isPaired ? '' : `oninput="handleDescriptionChange('${transferId}', '${currentAssetId}')"`;
+
         transferDiv.innerHTML = `
-          <button type="button" class="remove-transfer-btn" onclick="removeTransfer('${transferId}', '${currentAssetId}')" title="Remove transfer">×</button>
+          ${isPaired ? '' : `<button type="button" class="remove-transfer-btn" onclick="removeTransfer('${transferId}', '${currentAssetId}')" title="Remove transfer">×</button>`}
+          ${isPaired ? '<div class="paired-transfer-label">Auto-paired</div>' : ''}
           <div class="transfer-row">
-            <select class="transfer-type-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
+            <select class="transfer-type-select" ${disabledAttr} ${onchangeAttr}>
               ${transferTypeOptions}
             </select>
-            <select class="transfer-asset-select" onchange="handleTransferChange('${transferId}', '${currentAssetId}')">
+            <select class="transfer-asset-select" ${disabledAttr} ${onchangeAttr}>
               <option value="">Select asset...</option>
               ${assetOptions}
             </select>
-            <input type="date" class="transfer-date-input" 
-                   onchange="handleTransferDateChange('${transferId}', '${currentAssetId}', this)" />
-            <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" 
-                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+            <input type="date" class="transfer-date-input" ${readonlyAttr} 
+                   ${dateOnchangeAttr} />
+            <input type="number" class="transfer-amount-input" placeholder="Amount" step="0.01" min="0" ${readonlyAttr}
+                   ${oninputAttr} />
           </div>
           <div class="transfer-row" id="buySellRow-${transferId}" style="display: none;">
-            <input type="number" class="transfer-shares-input" placeholder="Shares" step="0.01" min="0" 
-                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
-            <input type="number" class="transfer-unitprice-input" placeholder="Unit Price" step="0.01" min="0" 
-                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
-            <input type="number" class="transfer-totalvalue-input" placeholder="Total Value" step="0.01" min="0" 
-                   oninput="handleTransferChange('${transferId}', '${currentAssetId}')" />
+            <input type="number" class="transfer-shares-input" placeholder="Shares" step="0.01" min="0" ${readonlyAttr}
+                   ${oninputAttr} />
+            <input type="number" class="transfer-unitprice-input" placeholder="Unit Price" step="0.01" min="0" ${readonlyAttr}
+                   ${oninputAttr} />
+            <input type="number" class="transfer-totalvalue-input" placeholder="Total Value" step="0.01" min="0" ${readonlyAttr}
+                   ${oninputAttr} />
           </div>
           <div class="transfer-row">
-            <input type="text" class="transfer-description-input" placeholder="Description (optional)" 
-                   oninput="handleDescriptionChange('${transferId}', '${currentAssetId}')" />
+            <input type="text" class="transfer-description-input" placeholder="Description (optional)" ${readonlyAttr}
+                   ${descriptionOninputAttr} />
           </div>
         `;
 
@@ -2038,6 +2074,10 @@
           `[data-transfer-id="${transferId}"]`
         );
         if (!transferItem) return;
+
+        // Don't process changes for auto-paired transfers
+        const isPaired = transferItem.dataset.isPaired === "true";
+        if (isPaired) return;
 
         const type = transferItem.querySelector(".transfer-type-select").value;
         const targetAssetId = transferItem.querySelector(
@@ -2109,6 +2149,10 @@
           `[data-transfer-id="${transferId}"]`
         );
         if (!transferItem) return;
+
+        // Don't process changes for auto-paired transfers
+        const isPaired = transferItem.dataset.isPaired === "true";
+        if (isPaired) return;
 
         const description = transferItem.querySelector(
           ".transfer-description-input"
