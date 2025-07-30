@@ -251,8 +251,8 @@ export class PortfolioDataAccess {
         return this.portfolioDataCache;
     }
 
-    public async savePortfolioData(data: PortfolioData): Promise<void> {
-        await this.dataStore.savePortfolioData(data);
+    public async savePortfolioData(data: PortfolioData, customBackupFolder?: string): Promise<void> {
+        await this.dataStore.savePortfolioData(data, customBackupFolder);
         
         // Update cache with saved data
         this.portfolioDataCache = data;
@@ -504,14 +504,15 @@ export class PortfolioDataAccess {
             
             // Step 3: Rename asset in all portfolio update files using fullNames
             // Portfolio update files use fullName for asset identification
-            await this.dataStore.renameAssetInAllFiles(oldFullName, newFullName);
+            const renameBackupFolder = await this.dataStore.renameAssetInAllFiles(oldFullName, newFullName);
             
             // Step 4: Update the asset name in portfolio data
             // Only update the asset name part, not the full name
             asset.name = newName;
             
             // Step 5: Save the updated portfolio data
-            await this.savePortfolioData(portfolioData);            
+            // If there was a rename backup folder created, save the portfolio.json backup there too
+            await this.savePortfolioData(portfolioData, renameBackupFolder);            
             console.log(`Asset rename completed successfully: "${oldFullName}" -> "${newFullName}"`);
             
         } catch (error) {
