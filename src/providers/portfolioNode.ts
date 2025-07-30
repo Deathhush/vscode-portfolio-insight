@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { AccountNode } from './accountNode';
 import { AssetNode } from './assetNode';
-import { AssetCurrentValueData } from '../data/interfaces';
+import { AssetNetValueData } from '../data/interfaces';
 
 export class PortfolioNode implements PortfolioExplorerNode {
     public nodeType: 'portfolio' = 'portfolio';
@@ -68,14 +68,14 @@ export class PortfolioNode implements PortfolioExplorerNode {
     /**
      * Calculate the total current value of multiple child nodes (AccountNodes and AssetNodes)
      */
-    async calculateCurrentValue(childNodes: PortfolioExplorerNode[]): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(childNodes: PortfolioExplorerNode[]): Promise<AssetNetValueData> {
         let totalValue = 0;
         let totalValueInCNY = 0;
         let latestUpdateDate: string | undefined;
 
         for (const node of childNodes) {
             try {
-                let nodeValue: AssetCurrentValueData;
+                let nodeValue: AssetNetValueData;
                 
                 if (node instanceof AccountNode) {
                     nodeValue = await node.calculateCurrentValue();

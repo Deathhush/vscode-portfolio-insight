@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { Account } from '../data/account';
 import { AssetNode } from './assetNode';
-import { AssetCurrentValueData } from '../data/interfaces';
+import { AssetNetValueData } from '../data/interfaces';
 
 export class AccountNode implements PortfolioExplorerNode {
     public nodeType: 'account' = 'account'; // AccountNode is also an AssetCollectionNode
@@ -54,7 +54,7 @@ export class AccountNode implements PortfolioExplorerNode {
     /**
      * Calculate the total current value of all assets in this account
      */
-    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(): Promise<AssetNetValueData> {
         try {
             return await this.account.calculateTotalValue();
         } catch (error) {

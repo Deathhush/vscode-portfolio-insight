@@ -1,4 +1,4 @@
-import { AssetCurrentValueData } from './interfaces';
+import { AssetNetValueData } from './interfaces';
 import { AssetNode } from '../providers/assetNode';
 import { Asset } from './asset';
 
@@ -6,7 +6,7 @@ export class AssetCollection {
     /**
      * Calculate the total current value of multiple assets
      */
-    static async calculateCurrentValue(assets: Asset[]): Promise<AssetCurrentValueData> {
+    static async calculateCurrentValue(assets: Asset[]): Promise<AssetNetValueData> {
         let totalValue = 0;
         let totalValueInCNY = 0;
         let latestUpdateDate: string | undefined;

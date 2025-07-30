@@ -70,7 +70,7 @@ export interface PortfolioUpdateData {
 }
 
 // In-memory business logic interfaces
-export interface AssetCurrentValueData {
+export interface AssetNetValueData {
     currentValue: number;
     currency: string;
     valueInCNY: number;
@@ -89,12 +89,19 @@ export interface AssetActivityData {
     exchangeRate?: number; // Exchange rate used for currency conversion in this activity
 }
 
+export interface AssetDailyRecordData {
+    date: string;
+    currentValue: AssetNetValueData;
+    activities: AssetActivityData[];
+}
+
 export interface AssetSummaryData {
     definition: AssetDefinitionData;
     account?: string; // Add account information for proper Asset creation
-    currentValue: AssetCurrentValueData;
+    currentValue: AssetNetValueData;
     lastMonthIncome?: number; // For simple assets
     activities: AssetActivityData[];
+    valueHistory: AssetDailyRecordData[];
 }
 
 // Category-related interfaces
