@@ -1,0 +1,35 @@
+{
+  "date": "2025-06-20",
+  "assets": [
+    {
+      "name": "富国信用债",
+      "events": [
+        {
+          "type": "snapshot",
+          "currentValue": 8000
+        }
+      ]
+    },
+    {
+      "name": "StockAward",
+      "events": [
+        {
+          "type": "snapshot",
+          "shares": 100,
+          "price": 140
+        }
+      ]
+    }
+  ],
+  "transfers": [],
+  "exchangeRates": [
+    {
+      "from": "USD",
+      "rate": 7.1
+    },
+    {
+      "from": "EUR", 
+      "rate": 7.8
+    }
+  ]
+}
