@@ -1196,8 +1196,8 @@
             
             switch (message.type) {
                 case 'ASSET_DATA':
-                    // Store chart data
-                    chartData = message.data.activities || [];
+                    // Store chart data from value history
+                    chartData = message.data.valueHistory || [];
                     
                     // Update asset display
                     updateAssetDisplay(message.data);
@@ -1910,21 +1910,104 @@
                 },
                 plugins: {
                     tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
                         titleColor: '#ffffff',
                         bodyColor: '#ffffff',
                         borderColor: getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4',
                         borderWidth: 1,
-                        cornerRadius: 6,
+                        cornerRadius: 8,
                         displayColors: false,
-                        padding: 12,
+                        padding: 16,
+                        titleFont: {
+                            size: 14,
+                            weight: 'bold'
+                        },
+                        bodyFont: {
+                            size: 12
+                        },
+                        footerFont: {
+                            size: 11
+                        },
+                        multiKeyBackground: 'transparent',
+                        maxWidth: 400,
                         callbacks: {
                             label: function(context) {
                                 const value = context.parsed.y;
                                 const currency = currentAssetCurrency || 'CNY';
                                 const point = context.raw;
-                                const prefix = point && point.isSnapshot ? 'Snapshot: ' : 'Value: ';
-                                return prefix + formatCurrency(value, currency);
+                                const entry = point.entry;
+                                
+                                const labels = [];
+                                
+                                // Main value label
+                                if (point && point.isSnapshot) {
+                                    labels.push('Snapshot: ' + formatCurrency(value, currency));
+                                } else {
+                                    labels.push('Value: ' + formatCurrency(value, currency));
+                                }
+                                
+                                return labels;
+                            },
+                            afterLabel: function(context) {
+                                const point = context.raw;
+                                const entry = point.entry;
+                                
+                                if (!entry || !entry.activities || entry.activities.length === 0) {
+                                    return [];
+                                }
+                                
+                                const afterLabels = [];
+                                afterLabels.push(''); // Empty line for spacing
+                                afterLabels.push('Activities on this date:');
+                                
+                                // Show up to 5 activities to avoid overwhelming tooltip
+                                const activitiesToShow = entry.activities.slice(0, 5);
+                                
+                                activitiesToShow.forEach(activity => {
+                                    let activityLabel = '';
+                                    
+                                    // Format activity type
+                                    const typeDisplay = activity.type.replace('_', ' ');
+                                    
+                                    // Format activity value
+                                    const activityValue = formatCurrency(activity.totalValue, currentAssetCurrency || 'CNY');
+                                    
+                                    // Create activity description
+                                    if (activity.type === 'snapshot') {
+                                        activityLabel = `• ${typeDisplay}: ${activityValue}`;
+                                    } else if (activity.type === 'income' || activity.type === 'transfer_in' || activity.type === 'buy') {
+                                        activityLabel = `• ${typeDisplay}: +${activityValue}`;
+                                    } else if (activity.type === 'expense' || activity.type === 'transfer_out' || activity.type === 'sell') {
+                                        activityLabel = `• ${typeDisplay}: -${activityValue}`;
+                                    }
+                                    
+                                    // Add related asset info if available
+                                    if (activity.relatedAsset) {
+                                        let direction = '';
+                                        if (activity.type === 'buy' || activity.type === 'transfer_in') {
+                                            direction = 'from';
+                                        } else if (activity.type === 'sell' || activity.type === 'transfer_out') {
+                                            direction = 'to';
+                                        }
+                                        if (direction) {
+                                            activityLabel += ` (${direction} ${activity.relatedAsset})`;
+                                        }
+                                    }
+                                    
+                                    // Add description if available
+                                    if (activity.description) {
+                                        activityLabel += ` - ${activity.description}`;
+                                    }
+                                    
+                                    afterLabels.push(activityLabel);
+                                });
+                                
+                                // Show count if there are more activities
+                                if (entry.activities.length > 5) {
+                                    afterLabels.push(`• ... and ${entry.activities.length - 5} more activities`);
+                                }
+                                
+                                return afterLabels;
                             },
                             title: function(context) {
                                 // Format the date for display
@@ -2078,16 +2161,16 @@
         }
         
         // Update chart with new data
-        function updateChart(activities) {
+        function updateChart(valueHistory) {
             if (!valueChart) {
                 console.log('Chart not initialized yet');
                 return;
             }
             
-            console.log('Updating chart with activities:', activities.length);
+            console.log('Updating chart with value history:', valueHistory.length);
             
-            // Process activities to create chart data points
-            const dataPoints = processActivitiesForChart(activities);
+            // Process value history to create chart data points
+            const dataPoints = processValueHistoryForChart(valueHistory);
             
             // Filter data based on selected period
             const filteredData = filterDataByPeriod(dataPoints, currentPeriod);
@@ -2151,7 +2234,33 @@
             console.log('Chart updated with', filteredData.length, 'data points');
         }
         
-        // Process activities into chart data points
+        // Process value history into chart data points
+        function processValueHistoryForChart(valueHistory) {
+            if (!valueHistory || valueHistory.length === 0) return [];
+            
+            console.log('Processing value history for chart:', valueHistory.length, 'entries');
+            const dataPoints = [];
+            
+            // Each value history entry represents the asset value at the end of a specific date
+            valueHistory.forEach(entry => {
+                const entryDate = new Date(entry.date);
+                const value = entry.currentValue.currentValue;
+                
+                dataPoints.push({
+                    x: entryDate.getTime(),
+                    y: value,
+                    isValueHistory: true,
+                    entry: entry // Store the original entry for tooltip
+                });
+                
+                console.log(`Added value history point: ${entryDate.toISOString()} = ${value}`);
+            });
+
+            console.log('Final data points:', dataPoints.length, 'points');
+            return dataPoints;
+        }
+
+        // Legacy function for backwards compatibility (in case it's still called)
         function processActivitiesForChart(activities) {
             if (!activities || activities.length === 0) return [];
             

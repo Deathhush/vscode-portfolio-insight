@@ -3,6 +3,7 @@ import {
     AssetCurrentValueData,
     AssetActivityData,
     AssetSummaryData,
+    AssetValueHistoryData,
     AssetEventData,
     AssetUpdateData,
     TransferData,
@@ -78,75 +79,136 @@ export class Asset {
     async calculateCurrentValue(): Promise<AssetCurrentValueData> {
         const updates = await this.dataAccess.loadAssetUpdates();
         const activities = await this.extractActivities(updates);
-        const currentValue = await this.extractCurrentValue(activities);
-
-        return currentValue;
+        const valueHistory = await this.calculateValueHistory(activities);
+        
+        // Return the current value from the last entry in value history
+        if (valueHistory.length > 0) {
+            return valueHistory[valueHistory.length - 1].currentValue;
+        }
+        
+        // Fallback for assets with no activities
+        const currency = this.currency;
+        return {
+            currentValue: 0,
+            currency,
+            valueInCNY: 0,
+            lastUpdateDate: undefined
+        };
     }
 
-    private async extractCurrentValue(activities: AssetActivityData[]): Promise<AssetCurrentValueData> {
+    private async calculateValueHistory(activities: AssetActivityData[]): Promise<AssetValueHistoryData[]> {
+        const valueHistory: AssetValueHistoryData[] = [];
         const currency = this.currency;
-        let currentValue = 0;
-        let snapshotDate = new Date().toISOString(); // Default to today if no snapshot
-        let lastUpdateDate: string | undefined;
-
-        // Find the index of the latest snapshot activity (activities are already sorted with most recent first)
-        let latestSnapshotIndex = activities.findIndex(activity => activity.type === 'snapshot');
-
-        if (latestSnapshotIndex !== -1) {
-            const latestSnapshotActivity = activities[latestSnapshotIndex];
-            currentValue = latestSnapshotActivity.totalValue;
-            snapshotDate = latestSnapshotActivity.date;
-            lastUpdateDate = latestSnapshotActivity.date;
-        } else {
-            // No snapshot found, start from 0 and process all activities
-            currentValue = 0;
-            latestSnapshotIndex = activities.length; // Set to process all activities
+        
+        if (activities.length === 0) {
+            return valueHistory;
         }
 
-        // Apply delta changes from activities that occurred after the snapshot
-        // Process activities in chronological order (from snapshot backwards to most recent)
+        // Activities are already sorted by date (most recent first), so reverse for chronological processing
+        const chronologicalActivities = [...activities].reverse();
         
-        for (let i = latestSnapshotIndex - 1; i >= 0; i--) {
-            const activity = activities[i];
+        let runningValue = 0;
+        let currentDate: string | null = null;
+        let currentDayActivities: AssetActivityData[] = [];
+        let lastUpdateDate: string | undefined;
 
-            // Apply delta changes based on activity type
+        for (let i = 0; i < chronologicalActivities.length; i++) {
+            const activity = chronologicalActivities[i];
+            const activityDate = activity.date.split('T')[0]; // Get date part only
+            
+            // Check if we've moved to a new date
+            if (currentDate !== null && currentDate !== activityDate) {
+                // Save the value history entry for the previous date
+                await this.saveValueHistoryEntry(
+                    valueHistory, 
+                    currentDate, 
+                    runningValue, 
+                    currency, 
+                    currentDayActivities, 
+                    lastUpdateDate
+                );
+                
+                // Reset for the new date
+                currentDayActivities = [];
+            }
+            
+            // Update current date
+            currentDate = activityDate;
+            currentDayActivities.push(activity);
+            
+            // Apply the activity's effect on the running value
             switch (activity.type) {
+                case 'snapshot':
+                    // Snapshot sets the absolute value
+                    runningValue = activity.totalValue;
+                    break;
                 case 'income':
                 case 'transfer_in':
                 case 'buy':
-                    currentValue += activity.totalValue;
+                    runningValue += activity.totalValue;
                     break;
                 case 'expense':
                 case 'transfer_out':
                 case 'sell':
-                    currentValue -= activity.totalValue;
+                    runningValue -= activity.totalValue;
                     break;
-                // Note: 'snapshot' activities are not processed here as we use the latest one as baseline
             }
-
-            // Update lastUpdateDate to the most recent activity date
+            
+            // Update last update date
             if (!lastUpdateDate || activity.date > lastUpdateDate) {
                 lastUpdateDate = activity.date;
             }
         }
 
-        try {
-            let valueInCNY = currentValue;
-            if (currency !== 'CNY') {
-                const conversionResult = await this.convertCurrency(currentValue, currency, 'CNY', snapshotDate);
-                valueInCNY = conversionResult.convertedValue;
-            }
+        // Don't forget to save the last date's entry
+        if (currentDate !== null) {
+            await this.saveValueHistoryEntry(
+                valueHistory, 
+                currentDate, 
+                runningValue, 
+                currency, 
+                currentDayActivities, 
+                lastUpdateDate
+            );
+        }
 
-            return {
-                currentValue,
+        return valueHistory;
+    }
+
+    private async saveValueHistoryEntry(
+        valueHistory: AssetValueHistoryData[],
+        date: string,
+        runningValue: number,
+        currency: string,
+        dayActivities: AssetActivityData[],
+        lastUpdateDate: string | undefined
+    ): Promise<void> {
+        // Calculate value in CNY
+        let valueInCNY = runningValue;
+        if (currency !== 'CNY') {
+            try {
+                const conversionResult = await this.convertCurrency(runningValue, currency, 'CNY', date);
+                valueInCNY = conversionResult.convertedValue;
+            } catch (error) {
+                console.warn(`Currency conversion failed for ${this.fullName} on ${date}: ${error}`);
+                // Use the raw value if conversion fails
+                valueInCNY = runningValue;
+            }
+        }
+
+        // Create value history entry for this date
+        const valueHistoryEntry: AssetValueHistoryData = {
+            date,
+            currentValue: {
+                currentValue: runningValue,
                 currency,
                 valueInCNY,
                 lastUpdateDate
-            };
-        } catch (error) {
-            // Re-throw with more context about which asset failed
-            throw new Error(`Failed to calculate value for asset "${this.fullName}": ${error}`);
-        }
+            },
+            activities: [...dayActivities] // Copy activities for this date
+        };
+
+        valueHistory.push(valueHistoryEntry);
     }
 
     private calculateSnapshotEventValue(event: AssetEventData): number {
@@ -512,13 +574,24 @@ export class Asset {
         // Load updates once and extract all needed data
         const updates = await this.dataAccess.loadAssetUpdates();
         const activities = await this.extractActivities(updates);
-        const currentValue = await this.extractCurrentValue(activities);
+        const valueHistory = await this.calculateValueHistory(activities);
+        
+        // Get current value from value history
+        const currentValue = valueHistory.length > 0 
+            ? valueHistory[valueHistory.length - 1].currentValue
+            : {
+                currentValue: 0,
+                currency: this.currency,
+                valueInCNY: 0,
+                lastUpdateDate: undefined
+            };
 
         const summary: AssetSummaryData = {
             definition: this.definitionData,
             account: this.account, // Include account information
             currentValue,
-            activities
+            activities,
+            valueHistory
         };
 
         // Add last month income for simple assets
