@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { Asset } from '../data/asset';
 import { AssetPageView } from '../views/assetPage/assetPageView';
-import { AssetCurrentValueData, AssetSummaryData } from '../data/interfaces';
+import { AssetNetValueData, AssetSummaryData } from '../data/interfaces';
 
 export class AssetNode implements PortfolioExplorerNode {
     public nodeType: 'asset' = 'asset';

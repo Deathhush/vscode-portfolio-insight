@@ -1,6 +1,6 @@
 import { Asset } from './asset';
 import { AssetCollection } from './assetCollection';
-import { CategoryData, AssetCurrentValueData } from './interfaces';
+import { CategoryData, AssetNetValueData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 
 export class Category {
@@ -130,7 +130,7 @@ export class Category {
     /**
      * Calculate the total current value of all assets in this category
      */
-    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(): Promise<AssetNetValueData> {
         // Get standalone assets value
         const standaloneAssets = await this.getStandaloneAssets();
         const standaloneValue = await AssetCollection.calculateCurrentValue(standaloneAssets);

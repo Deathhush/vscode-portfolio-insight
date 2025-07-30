@@ -11,7 +11,7 @@ This document details the implementation of the Asset Value in Range feature, wh
 ```typescript
 export interface AssetDailyRecordData {
     date: string;
-    currentValue: AssetCurrentValueData;
+    currentValue: AssetNetValueData;
     activities: AssetActivityData[];
 }
 ```
@@ -21,7 +21,7 @@ export interface AssetDailyRecordData {
 export interface AssetSummaryData {
     definition: AssetDefinitionData;
     account?: string;
-    currentValue: AssetCurrentValueData;
+    currentValue: AssetNetValueData;
     lastMonthIncome?: number;
     activities: AssetActivityData[];
     valueHistory: AssetDailyRecordData[]; // ✅ New field

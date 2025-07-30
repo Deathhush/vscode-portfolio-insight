@@ -1,6 +1,6 @@
 import {
     AssetDefinitionData,
-    AssetCurrentValueData,
+    AssetNetValueData,
     AssetActivityData,
     AssetSummaryData,
     AssetDailyRecordData,
@@ -76,7 +76,7 @@ export class Asset {
     }
 
     // Value calculations
-    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(): Promise<AssetNetValueData> {
         const updates = await this.dataAccess.loadAssetUpdates();
         const activities = await this.extractActivities(updates);
         const valueHistory = await this.calculateValueHistory(activities);

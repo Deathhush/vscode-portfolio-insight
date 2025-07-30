@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { PortfolioExplorerNode, PortfolioExplorerProvider } from './portfolioExplorerProvider';
 import { AssetNode } from './assetNode';
 import { AssetCollection } from '../data/assetCollection';
-import { AssetCurrentValueData } from '../data/interfaces';
+import { AssetNetValueData } from '../data/interfaces';
 
 export class TagNode implements PortfolioExplorerNode {
     public nodeType: 'tag' = 'tag';
@@ -17,7 +17,7 @@ export class TagNode implements PortfolioExplorerNode {
         return assets.map(asset => new AssetNode(asset, this.provider));
     }
 
-    async calculateCurrentValue(): Promise<AssetCurrentValueData> {
+    async calculateCurrentValue(): Promise<AssetNetValueData> {
         const assetsWithTag = await this.provider.dataAccess.getAssetsByTag(this.tag);
         return await AssetCollection.calculateCurrentValue(assetsWithTag);
     }

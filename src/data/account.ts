@@ -1,4 +1,4 @@
-import { AccountDefinitionData, AssetCurrentValueData } from './interfaces';
+import { AccountDefinitionData, AssetNetValueData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 import { Asset } from './asset';
 import { AssetCollection } from './assetCollection';
@@ -43,7 +43,7 @@ export class Account {
     /**
      * Calculate the total current value of all assets in this account
      */
-    public async calculateTotalValue(): Promise<AssetCurrentValueData> {
+    public async calculateTotalValue(): Promise<AssetNetValueData> {
         const assets = await this.getAssets();
         return await AssetCollection.calculateCurrentValue(assets);
     }

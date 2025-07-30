@@ -52,7 +52,7 @@ Key methods:
 ```typescript
 class Account {
     public async getAssets(): Promise<Asset[]>
-    public async calculateTotalValue(): Promise<AssetCurrentValueData>
+    public async calculateTotalValue(): Promise<AssetNetValueData>
     public async generateSummary(): Promise<AccountSummaryData>
 }
 ```
