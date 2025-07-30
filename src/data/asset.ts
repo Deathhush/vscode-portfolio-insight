@@ -3,7 +3,7 @@ import {
     AssetCurrentValueData,
     AssetActivityData,
     AssetSummaryData,
-    AssetValueHistoryData,
+    AssetDailyRecordData,
     AssetEventData,
     AssetUpdateData,
     TransferData,
@@ -96,8 +96,8 @@ export class Asset {
         };
     }
 
-    private async calculateValueHistory(activities: AssetActivityData[]): Promise<AssetValueHistoryData[]> {
-        const valueHistory: AssetValueHistoryData[] = [];
+    private async calculateValueHistory(activities: AssetActivityData[]): Promise<AssetDailyRecordData[]> {
+        const valueHistory: AssetDailyRecordData[] = [];
         const currency = this.currency;
         
         if (activities.length === 0) {
@@ -176,7 +176,7 @@ export class Asset {
     }
 
     private async saveValueHistoryEntry(
-        valueHistory: AssetValueHistoryData[],
+        valueHistory: AssetDailyRecordData[],
         date: string,
         runningValue: number,
         currency: string,
@@ -197,7 +197,7 @@ export class Asset {
         }
 
         // Create value history entry for this date
-        const valueHistoryEntry: AssetValueHistoryData = {
+        const valueHistoryEntry: AssetDailyRecordData = {
             date,
             currentValue: {
                 currentValue: runningValue,

@@ -7,9 +7,9 @@ This document details the implementation of the Asset Value in Range feature, wh
 
 ### New Data Structures
 
-#### AssetValueHistoryData Interface
+#### AssetDailyRecordData Interface
 ```typescript
-export interface AssetValueHistoryData {
+export interface AssetDailyRecordData {
     date: string;
     currentValue: AssetCurrentValueData;
     activities: AssetActivityData[];
@@ -24,7 +24,7 @@ export interface AssetSummaryData {
     currentValue: AssetCurrentValueData;
     lastMonthIncome?: number;
     activities: AssetActivityData[];
-    valueHistory: AssetValueHistoryData[]; // ✅ New field
+    valueHistory: AssetDailyRecordData[]; // ✅ New field
 }
 ```
 

@@ -89,7 +89,7 @@ export interface AssetActivityData {
     exchangeRate?: number; // Exchange rate used for currency conversion in this activity
 }
 
-export interface AssetValueHistoryData {
+export interface AssetDailyRecordData {
     date: string;
     currentValue: AssetCurrentValueData;
     activities: AssetActivityData[];
@@ -101,7 +101,7 @@ export interface AssetSummaryData {
     currentValue: AssetCurrentValueData;
     lastMonthIncome?: number; // For simple assets
     activities: AssetActivityData[];
-    valueHistory: AssetValueHistoryData[];
+    valueHistory: AssetDailyRecordData[];
 }
 
 // Category-related interfaces
