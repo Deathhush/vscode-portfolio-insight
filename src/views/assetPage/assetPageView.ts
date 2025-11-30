@@ -389,10 +389,21 @@ export class AssetPageView {
                 
                 // Replace resource URIs
                 htmlContent = htmlContent.replace(
-                    /src="([^"]+)"/g,
+                    /src="\.\/([^"]+)"/g,
                     (match, src) => {
                         const resourceUri = webview.asWebviewUri(
                             vscode.Uri.joinPath(this._extensionUri, 'src', 'views', 'assetPage', src)
+                        );
+                        return `src="${resourceUri}"`;
+                    }
+                );
+
+                // Replace shared script URIs
+                htmlContent = htmlContent.replace(
+                    /src="\.\.\/shared\/([^"]+)"/g,
+                    (match, filename) => {
+                        const resourceUri = webview.asWebviewUri(
+                            vscode.Uri.joinPath(this._extensionUri, 'src', 'views', 'shared', filename)
                         );
                         return `src="${resourceUri}"`;
                     }

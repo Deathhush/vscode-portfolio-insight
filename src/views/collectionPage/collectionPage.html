@@ -6,8 +6,10 @@
     <title>Collection Details</title>
     <!-- Chart.js Local Files -->
     <script src="./libs/chart.umd.js"></script>
+    <!-- Shared Chart Module -->
+    <script src="../shared/valueChart.js"></script>
     <style>
-        /* VS Code theme detection classes - copied from assetPage.html */
+        /* VS Code theme detection classes */
         .vscode-light {
             --bg-primary: #ffffff;
             --bg-secondary: #f3f3f3;
@@ -136,7 +138,7 @@
             margin-top: 4px;
         }
 
-        /* Chart Styles - copied from assetPage.html */
+        /* Chart Styles */
         .chart-container {
             margin: 30px 0 40px 0;
             padding: 25px;
@@ -278,11 +280,26 @@
     <script>
         const vscode = acquireVsCodeApi();
 
-        // Chart variables
-        let valueChart = null;
-        let chartData = [];
-        let currentPeriod = 'all';
+        // Initialize the chart manager using the shared module
+        let chartManager = null;
         let currentCollectionCurrency = 'CNY';
+
+        // Initialize chart on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Collection page loaded');
+
+            // Create chart manager instance
+            chartManager = new ValueChartManager('valueChart', {
+                currency: currentCollectionCurrency,
+                chartType: 'collection'
+            });
+
+            // Initialize chart
+            chartManager.initChart();
+
+            // Setup period button handlers
+            chartManager.setupPeriodButtons();
+        });
 
         // Listen for messages from the extension
         window.addEventListener('message', event => {
@@ -291,14 +308,7 @@
 
             switch (message.type) {
                 case 'COLLECTION_DATA':
-                    // Store chart data from value history
-                    chartData = message.data.valueHistory || [];
-
-                    // Update collection display
                     updateCollectionDisplay(message.data);
-
-                    // Update chart with new data
-                    updateChart(chartData);
                     break;
                 case 'ERROR':
                     showError(message.data);
@@ -312,19 +322,23 @@
             // Store currency information
             currentCollectionCurrency = collectionData.currentValue.currency || 'CNY';
 
+            // Update currency in chart manager if it changed
+            if (chartManager) {
+                chartManager.currentCurrency = currentCollectionCurrency;
+            }
+
             // Update collection header
-            const collectionNameEl = document.getElementById('collectionName');
-            collectionNameEl.textContent = collectionData.name;
+            document.getElementById('collectionName').textContent = collectionData.name;
 
             // Update collection type badge
             const collectionTypeEl = document.getElementById('collectionType');
-            const typeLabel = collectionData.type ? collectionData.type.charAt(0).toUpperCase() + collectionData.type.slice(1) : 'Category';
+            const typeLabel = collectionData.type ?
+                collectionData.type.charAt(0).toUpperCase() + collectionData.type.slice(1) :
+                'Category';
             collectionTypeEl.textContent = typeLabel;
 
             // Update current value
             const currentValue = collectionData.currentValue.currentValue;
-            const valueInCNY = collectionData.currentValue.valueInCNY;
-
             let valueDisplay = '¥' + currentValue.toLocaleString('zh-CN', {
                 minimumFractionDigits: 2,
                 maximumFractionDigits: 2
@@ -348,404 +362,17 @@
             } else {
                 assetCountLabel.textContent = 'in this ' + (collectionData.type || 'collection');
             }
+
+            // Update chart with value history using shared module
+            if (chartManager && collectionData.valueHistory) {
+                chartManager.updateChart(collectionData.valueHistory);
+            }
         }
 
         function showError(errorData) {
             document.getElementById('collectionName').textContent = errorData.collectionName || 'Error';
             document.getElementById('currentValue').textContent = 'Error loading';
         }
-
-        // Chart functionality - copied and adapted from assetPage.html
-        const chartConfig = {
-            type: 'line',
-            data: {
-                datasets: [{
-                    label: 'Collection Value',
-                    data: [],
-                    borderColor: getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4',
-                    backgroundColor: 'rgba(0, 120, 212, 0.1)',
-                    borderWidth: 2,
-                    tension: 0.2,
-                    fill: false,
-                    pointBackgroundColor: getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4',
-                    pointBorderColor: '#ffffff',
-                    pointBorderWidth: 1,
-                    pointRadius: 2,
-                    pointHoverRadius: 4,
-                    pointHoverBorderWidth: 2
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {
-                    intersect: false,
-                    mode: 'nearest',
-                    axis: 'x'
-                },
-                animation: {
-                    duration: 750,
-                    easing: 'easeInOutQuart'
-                },
-                plugins: {
-                    tooltip: {
-                        backgroundColor: 'rgba(0, 0, 0, 0.9)',
-                        titleColor: '#ffffff',
-                        bodyColor: '#ffffff',
-                        borderColor: getComputedStyle(document.documentElement).getPropertyValue('--text-accent') || '#0078d4',
-                        borderWidth: 1,
-                        cornerRadius: 8,
-                        displayColors: false,
-                        padding: 16,
-                        titleFont: {
-                            size: 14,
-                            weight: 'bold'
-                        },
-                        bodyFont: {
-                            size: 12
-                        },
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.parsed.y;
-                                return 'Value: ' + formatCurrency(value, 'CNY');
-                            },
-                            afterLabel: function(context) {
-                                const point = context.raw;
-                                const entry = point.entry;
-
-                                if (!entry || !entry.activities || entry.activities.length === 0) {
-                                    return [];
-                                }
-
-                                const afterLabels = [];
-                                afterLabels.push('');
-                                afterLabels.push('Activities:');
-
-                                // Show up to 10 activities
-                                const activitiesToShow = entry.activities.slice(0, 10);
-
-                                activitiesToShow.forEach(activity => {
-                                    const typeDisplay = activity.type.replace('_', ' ');
-                                    const activityValue = formatCurrency(activity.totalValue, 'CNY');
-
-                                    let activityLabel = '';
-                                    if (activity.type === 'snapshot') {
-                                        activityLabel = `• ${typeDisplay}: ${activityValue}`;
-                                    } else if (activity.type === 'income' || activity.type === 'transfer_in' || activity.type === 'buy') {
-                                        activityLabel = `• ${typeDisplay}: +${activityValue}`;
-                                    } else {
-                                        activityLabel = `• ${typeDisplay}: -${activityValue}`;
-                                    }
-
-                                    if (activity.description) {
-                                        activityLabel += ` ${activity.description}`;
-                                    }
-
-                                    afterLabels.push(activityLabel);
-                                });
-
-                                if (entry.activities.length > 10) {
-                                    afterLabels.push(`• ... and ${entry.activities.length - 10} more`);
-                                }
-
-                                return afterLabels;
-                            },
-                            title: function(context) {
-                                const date = new Date(context[0].parsed.x);
-                                return date.toLocaleDateString('en-US', {
-                                    weekday: 'short',
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                });
-                            }
-                        }
-                    },
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    x: {
-                        type: 'linear',
-                        position: 'bottom',
-                        min: undefined,
-                        max: undefined,
-                        grace: 0,
-                        offset: false,
-                        grid: {
-                            display: true,
-                            color: function(context) {
-                                // More subtle grid lines
-                                const baseColor = getComputedStyle(document.documentElement).getPropertyValue('--border-secondary') || '#e5e5e5';
-                                return context.tick.major ? baseColor : 'rgba(229, 229, 229, 0.3)';
-                            },
-                            lineWidth: function(context) {
-                                return context.tick.major ? 1 : 0.5;
-                            },
-                            drawOnChartArea: true,
-                            drawTicks: true
-                        },
-                        border: {
-                            display: true,
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-primary') || '#d1d1d1',
-                            width: 1
-                        },
-                        ticks: {
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#666666',
-                            maxTicksLimit: 6,
-                            padding: 8,
-                            font: {
-                                size: 11
-                            },
-                            callback: function(value) {
-                                const date = new Date(value);
-                                const now = new Date();
-                                const diffDays = (now - date) / (1000 * 60 * 60 * 24);
-
-                                if (diffDays < 30) {
-                                    return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-                                } else if (diffDays < 365) {
-                                    return date.toLocaleDateString(undefined, { month: 'short' });
-                                } else {
-                                    return date.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
-                                }
-                            }
-                        }
-                    },
-                    y: {
-                        beginAtZero: false,
-                        grid: {
-                            display: true,
-                            color: function(context) {
-                                // More subtle horizontal grid lines
-                                const baseColor = getComputedStyle(document.documentElement).getPropertyValue('--border-secondary') || '#e5e5e5';
-                                return context.tick.major ? baseColor : 'rgba(229, 229, 229, 0.2)';
-                            },
-                            lineWidth: function(context) {
-                                return context.tick.major ? 1 : 0.5;
-                            },
-                            drawOnChartArea: true,
-                            drawTicks: true
-                        },
-                        border: {
-                            display: true,
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--border-primary') || '#d1d1d1',
-                            width: 1
-                        },
-                        ticks: {
-                            color: getComputedStyle(document.documentElement).getPropertyValue('--text-secondary') || '#666666',
-                            maxTicksLimit: 6,
-                            padding: 8,
-                            font: {
-                                size: 11
-                            },
-                            callback: function(value) {
-                                return formatCurrency(value, 'CNY');
-                            }
-                        }
-                    }
-                }
-            }
-        };
-
-        // Initialize chart
-        function initChart() {
-            try {
-                if (typeof Chart === 'undefined') {
-                    console.error('Chart.js is not loaded');
-                    return;
-                }
-
-                const canvas = document.getElementById('valueChart');
-                const ctx = canvas.getContext('2d');
-
-                console.log('Initializing chart...');
-                valueChart = new Chart(ctx, chartConfig);
-                console.log('Chart initialized successfully');
-            } catch (error) {
-                console.error('Error initializing chart:', error);
-            }
-        }
-
-        // Update chart with new data
-        function updateChart(valueHistory) {
-            if (!valueChart) {
-                console.log('Chart not initialized yet');
-                return;
-            }
-
-            console.log('Updating chart with value history:', valueHistory.length);
-
-            const dataPoints = processValueHistoryForChart(valueHistory);
-            const filteredData = filterDataByPeriod(dataPoints, currentPeriod);
-
-            valueChart.data.datasets[0].data = filteredData;
-
-            // Calculate x-axis range
-            const now = new Date();
-            let xAxisMin, xAxisMax;
-
-            if (currentPeriod === 'all') {
-                if (filteredData.length > 0) {
-                    const xValues = filteredData.map(point => point.x);
-                    xAxisMin = Math.min(...xValues);
-                    xAxisMax = Math.max(...xValues);
-                } else {
-                    xAxisMin = undefined;
-                    xAxisMax = undefined;
-                }
-            } else {
-                // For specific periods, use actual data range if available
-                if (filteredData.length > 0) {
-                    const xValues = filteredData.map(point => point.x);
-                    xAxisMin = Math.min(...xValues);
-                    xAxisMax = Math.max(...xValues);
-                } else {
-                    // Fallback to period boundaries if no data
-                    let cutoffDate;
-                    switch (currentPeriod) {
-                        case '1m': cutoffDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); break;
-                        case '3m': cutoffDate = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000)); break;
-                        case '6m': cutoffDate = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000)); break;
-                        case '1y': cutoffDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)); break;
-                        default: cutoffDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000));
-                    }
-                    xAxisMin = cutoffDate.getTime();
-                    xAxisMax = now.getTime();
-                }
-            }
-
-            valueChart.options.scales.x.min = xAxisMin;
-            valueChart.options.scales.x.max = xAxisMax;
-            valueChart.options.scales.y.min = undefined;
-            valueChart.options.scales.y.max = undefined;
-
-            console.log('Setting x-axis range:', xAxisMin ? new Date(xAxisMin).toISOString() : 'undefined', 'to', xAxisMax ? new Date(xAxisMax).toISOString() : 'undefined');
-
-            valueChart.update('active');
-            console.log('Chart updated with', filteredData.length, 'data points');
-        }
-
-        function processValueHistoryForChart(valueHistory) {
-            if (!valueHistory || valueHistory.length === 0) return [];
-
-            const dataPoints = [];
-            valueHistory.forEach(entry => {
-                const entryDate = new Date(entry.date);
-                const value = entry.currentValue.currentValue;
-
-                dataPoints.push({
-                    x: entryDate.getTime(),
-                    y: value,
-                    entry: entry
-                });
-            });
-
-            return dataPoints;
-        }
-
-        function filterDataByPeriod(dataPoints, period) {
-            if (period === 'all' || dataPoints.length === 0) {
-                return dataPoints;
-            }
-
-            const now = new Date();
-            let cutoffDate;
-
-            switch (period) {
-                case '1m': cutoffDate = new Date(now.getTime() - (30 * 24 * 60 * 60 * 1000)); break;
-                case '3m': cutoffDate = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000)); break;
-                case '6m': cutoffDate = new Date(now.getTime() - (180 * 24 * 60 * 60 * 1000)); break;
-                case '1y': cutoffDate = new Date(now.getTime() - (365 * 24 * 60 * 60 * 1000)); break;
-                default: return dataPoints;
-            }
-
-            const cutoffTimestamp = cutoffDate.getTime();
-            const filteredPoints = dataPoints.filter(point => point.x >= cutoffTimestamp);
-
-            console.log(`Filtered from ${dataPoints.length} to ${filteredPoints.length} points for period ${period}`);
-            console.log('Cutoff date:', cutoffDate.toISOString());
-
-            // If filtering removes all points, include the most recent point from before the cutoff
-            if (filteredPoints.length === 0 && dataPoints.length > 0) {
-                // Find the most recent point before the cutoff to provide context
-                const pointsBeforeCutoff = dataPoints.filter(point => point.x < cutoffTimestamp);
-                if (pointsBeforeCutoff.length > 0) {
-                    const mostRecentBeforeCutoff = pointsBeforeCutoff[pointsBeforeCutoff.length - 1];
-                    // Create a synthetic point at the cutoff date with the same value
-                    const syntheticPoint = {
-                        x: cutoffTimestamp,
-                        y: mostRecentBeforeCutoff.y,
-                        synthetic: true,
-                        entry: mostRecentBeforeCutoff.entry
-                    };
-                    console.log('No points in range, adding synthetic point at cutoff:', syntheticPoint);
-                    return [syntheticPoint];
-                } else {
-                    console.log('No points in range and no points before cutoff');
-                    return [];
-                }
-            }
-
-            // If we have filtered points, add a connecting point at the cutoff if needed
-            if (filteredPoints.length > 0 && dataPoints.length > filteredPoints.length) {
-                const firstFilteredPoint = filteredPoints[0];
-
-                // If the first filtered point is not exactly at the cutoff,
-                // add a synthetic point at the cutoff for better visualization
-                if (firstFilteredPoint.x > cutoffTimestamp) {
-                    const pointsBeforeCutoff = dataPoints.filter(point => point.x < cutoffTimestamp);
-                    if (pointsBeforeCutoff.length > 0) {
-                        const lastBeforeCutoff = pointsBeforeCutoff[pointsBeforeCutoff.length - 1];
-                        const syntheticPoint = {
-                            x: cutoffTimestamp,
-                            y: lastBeforeCutoff.y,
-                            synthetic: true,
-                            entry: lastBeforeCutoff.entry
-                        };
-                        filteredPoints.unshift(syntheticPoint);
-                        console.log('Added synthetic connecting point at cutoff');
-                    }
-                }
-            }
-
-            return filteredPoints;
-        }
-
-        function formatCurrency(value, currency) {
-            try {
-                return new Intl.NumberFormat('en-US', {
-                    style: 'currency',
-                    currency: currency,
-                    minimumFractionDigits: 0,
-                    maximumFractionDigits: 0
-                }).format(value);
-            } catch (e) {
-                return `${currency} ${value.toLocaleString()}`;
-            }
-        }
-
-        // Period selection handlers
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('chart-period-btn')) {
-                document.querySelectorAll('.chart-period-btn').forEach(btn => {
-                    btn.classList.remove('active');
-                });
-                e.target.classList.add('active');
-
-                currentPeriod = e.target.dataset.period;
-                if (chartData.length > 0) {
-                    updateChart(chartData);
-                }
-            }
-        });
-
-        // Initialize the page
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('Collection page loaded');
-            initChart();
-        });
     </script>
 </body>
 </html>

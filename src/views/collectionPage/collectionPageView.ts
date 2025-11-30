@@ -202,6 +202,17 @@ export class CollectionPageView {
                     }
                 );
 
+                // Replace shared script URIs
+                htmlContent = htmlContent.replace(
+                    /src="\.\.\/shared\/([^"]+)"/g,
+                    (match, filename) => {
+                        const resourceUri = webview.asWebviewUri(
+                            vscode.Uri.joinPath(this._extensionUri, 'src', 'views', 'shared', filename)
+                        );
+                        return `src="${resourceUri}"`;
+                    }
+                );
+
                 // Inject theme class
                 const themeKind = vscode.window.activeColorTheme.kind;
                 const themeClass = themeKind === vscode.ColorThemeKind.Dark ? 'vscode-dark' :
