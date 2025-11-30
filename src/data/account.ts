@@ -1,4 +1,4 @@
-import { AccountDefinitionData, AssetNetValueData } from './interfaces';
+import { AccountDefinitionData, AssetNetValueData, AssetDailyRecordData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 import { Asset } from './asset';
 import { AssetCollection } from './assetCollection';
@@ -46,5 +46,14 @@ export class Account {
     public async calculateTotalValue(): Promise<AssetNetValueData> {
         const assets = await this.getAssets();
         return await AssetCollection.calculateCurrentValue(assets);
+    }
+
+    /**
+     * Calculate daily value history for this account
+     * Aggregates value histories from all assets in the account
+     */
+    public async calculateValueHistory(): Promise<AssetDailyRecordData[]> {
+        const assets = await this.getAssets();
+        return await AssetCollection.calculateValueHistory(assets);
     }
 }

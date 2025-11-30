@@ -7,8 +7,8 @@ import { AssetNetValueData } from '../data/interfaces';
 export class TagNode implements PortfolioExplorerNode {
     public nodeType: 'tag' = 'tag';
     public tag: string;
-    
-    constructor(tag: string, private provider: PortfolioExplorerProvider) {
+
+    constructor(tag: string, public provider: PortfolioExplorerProvider) {
         this.tag = tag;
     }
 

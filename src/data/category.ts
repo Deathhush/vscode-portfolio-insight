@@ -1,6 +1,6 @@
 import { Asset } from './asset';
 import { AssetCollection } from './assetCollection';
-import { CategoryData, AssetNetValueData } from './interfaces';
+import { CategoryData, AssetNetValueData, AssetDailyRecordData } from './interfaces';
 import { PortfolioDataAccess } from './portfolioDataAccess';
 
 export class Category {
@@ -160,5 +160,41 @@ export class Category {
             valueInCNY: totalValueInCNY,
             lastUpdateDate: latestUpdateDate
         };
+    }
+
+    /**
+     * Get ALL assets in this category including from all subcategories recursively
+     *
+     * @returns Array of all unique assets in this category and its subcategories
+     */
+    async getAllAssets(): Promise<Asset[]> {
+        // Get assets that directly belong to this category
+        const directAssets = await this.getAssets();
+
+        // Get all subcategories
+        const subCategories = await this.getSubCategories();
+
+        // Recursively collect assets from subcategories
+        const allAssets = new Set<Asset>(directAssets);
+
+        for (const subCategory of subCategories) {
+            const subCategoryAssets = await subCategory.getAllAssets();
+            for (const asset of subCategoryAssets) {
+                allAssets.add(asset);
+            }
+        }
+
+        return Array.from(allAssets);
+    }
+
+    /**
+     * Calculate daily value history for this category
+     * Aggregates value histories from all assets in this category and its subcategories
+     *
+     * @returns Array of daily records with combined values in CNY
+     */
+    async calculateValueHistory(): Promise<AssetDailyRecordData[]> {
+        const allAssets = await this.getAllAssets();
+        return AssetCollection.calculateValueHistory(allAssets);
     }
 }
