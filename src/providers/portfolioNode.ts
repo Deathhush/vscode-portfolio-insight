@@ -6,8 +6,8 @@ import { AssetNetValueData } from '../data/interfaces';
 
 export class PortfolioNode implements PortfolioExplorerNode {
     public nodeType: 'portfolio' = 'portfolio';
-    
-    constructor(private provider: PortfolioExplorerProvider) {
+
+    constructor(public provider: PortfolioExplorerProvider) {
     }
 
     private async getDescription(): Promise<string> {
